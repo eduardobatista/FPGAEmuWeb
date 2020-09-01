@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>DE2 Emulator</title>
+  <!-- MDB icon -->
+  <!-- <link rel="icon" href="img/mdb-favicon.ico" type="image/x-icon"> -->
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css">
+  <!-- Google Fonts Roboto -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="static/css/bootstrap.min.css">
+  <!-- Material Design Bootstrap -->
+  <link rel="stylesheet" href="static/css/mdb.min.css">
+  <!-- Your custom styles (optional) -->
+  <!-- <link rel="stylesheet" href="static/css/style.css"> -->
+  <style>
+            .swlabel {
+                position: absolute;
+                left: 0px;
+                top: 28px;
+                width: 32px;
+                height: 20px;
+                font-size: 11px;
+                font-weight: bold;
+                text-align: center;
+                padding: 0px;
+                margin: 0px;
+                /* text-shadow: rgba(0,0,0,.01) 0 0 1px;    */
+                z-index: 2;
+            }
+
+            /* The switch - the box around the slider */
+            .switch {
+                position: relative;
+                display: inline-block;
+                /* width: 36px;  */
+                /* height: 18px; */
+                width: 32px;
+                height: 16px;
+                margin: 0px;
+                margin-bottom: 28px;
+                margin-top: 16px;
+                /* padding: 10px; */
+                /* margin-left: 10px; */
+                /* margin-right: 10px; */
+                /* transform: rotate(-90deg); */
+            }
+
+            /* Hide default HTML checkbox */
+            .switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            /* The slider */
+            .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                /* opacity: 0.5; */
+                background-color: #ccc;
+                -webkit-transition: .4s;
+                transition: .4s;
+                z-index: 0;
+                transform: rotate(-90deg);
+            }
+
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 12px;
+                width: 12px;
+                left: 2px;
+                bottom: 2px;
+                background-color: white;
+                -webkit-transition: .4s;
+                transition: .4s;
+                z-index: 1;
+            }
+
+            input:checked + .slider {
+                background-color: #2196F3;
+            }
+
+            input:focus + .slider {
+                box-shadow: 0 0 1px #2196F3;
+            }
+
+            input:checked + .slider:before {
+                -webkit-transform: translateX(16px);
+                -ms-transform: translateX(16px);
+                transform: translateX(16px);
+            }
+
+            /* Rounded sliders */
+            .slider.round {
+                border-radius: 16px;
+            }
+
+            .slider.round:before {
+                border-radius: 50%;
+            }
+
+  </style>
+</head>
+<body>
+
+    
+    <!--Main Navigation-->
+    <header>
+        
+        <!--Navbar-->
+        <nav class="navbar navbar-expand-sm navbar-dark primary-color">
+
+            <!-- Navbar brand -->
+            <a class="navbar-brand" href="#">DE2 Emulator</a>
+        
+            <!-- Collapse button -->
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#basicExampleNav" aria-controls="basicExampleNav"
+                aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        
+            <!-- Collapsible content -->
+            <div class="collapse navbar-collapse" id="basicExampleNav">
+        
+                <!-- Links -->
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Files
+                            <span class="sr-only">(current)</span>
+                        </a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/emulation">Emulation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/editor">Editor</a>
+                    </li>
+        
+                    <!-- Dropdown -->
+                    <!-- <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Dropdown</a>
+                        <div class="dropdown-menu dropdown-primary" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="#">Action</a>
+                            <a class="dropdown-item" href="#">Another action</a>
+                            <a class="dropdown-item" href="#">Something else here</a>
+                        </div>
+                    </li> -->
+        
+                </ul>
+        
+            </div>
+            <!-- Collapsible content -->
+        
+        </nav>
+    <!--/.Navbar-->
+
+    </header>
+    <!--Main Navigation-->
+
+    <!--Main layout-->
+    <main>
+
+        <div class="container mt-1">
+            Your <strong>id</strong> is {{ username }}.        
+        </div>
+
+        <!-- {%- if filenames is defined -%} -->
+        <div class="container mt-4">
+            Files in your folder:
+            <ul>                
+                {% for file in filenames %}
+                    <li>file</li>
+                {% endfor %}                
+            </ul>
+        </div>
+        <!-- {% endif %} -->
+
+        
+
+        <div class="container mt-2 p-0">
+            <img src="/static/all_leds.jpg" width="100%" id="mainImg" style="position: relative; z-index: -1;">
+            <!-- <canvas id="myCanvas" width="961px" height="292px"></canvas> -->
+            <canvas id="drawCanvas" width="961px" height="292px" style="position: absolute; top: 0px; left: 0px; margin: 0px;"></canvas>
+        </div>
+
+        <div class="container text-center" id="switches">         
+       
+        </div>
+    
+        <div class="container d-flex flex-wrap justify-content-center" id="keys">
+        </div>
+
+        <div class="container d-flex justify-content-center mt-2">
+            <button id="iniciar" type="button" class="btn btn-danger" onclick="Emular();">Start Emulation</button>
+        </div>
+
+        
+
+        <div class="container mt-2">
+            <div class="container w-100">
+                <div id="status" class="alert alert-dark w-100 p-2 m-0" role="alert"></div>
+            </div>
+
+            <!-- <div id="status">
+    
+            </div> -->
+    
+        </div>
+
+    </main>
+    <!--Main layout-->
+
+    <!--Footer-->
+    <footer>
+
+    </footer>
+    <!--Footer-->
+
+    <!-- jQuery -->
+    <script type="text/javascript" src="static/js/jquery.min.js"></script>
+    <!-- Bootstrap tooltips -->
+    <script type="text/javascript" src="static/js/popper.min.js"></script>
+    <!-- Bootstrap core JavaScript -->
+    <script type="text/javascript" src="static/js/bootstrap.min.js"></script>
+    <!-- MDB core JavaScript -->
+    <script type="text/javascript" src="static/js/mdb.min.js"></script>
+    <!-- Socket.IO: -->
+    <script src="/static/socket.io.js"></script>
+    <!-- Your custom scripts (optional) -->
+    <script type="text/javascript">
+
+        window.socket = 0;
+        window.socketOn = false;
+        window.scl = 1;
+
+        function adjustCanvas() {
+            console.log("!!!");
+            var rect = document.getElementById("mainImg").getBoundingClientRect();
+            // console.log(rect.top, rect.right, rect.bottom, rect.left);
+            console.log($("#mainImg").width())
+            console.log($("#drawCanvas").width())
+            $("#drawCanvas").css("top",rect.top);
+            $("#drawCanvas").css("left",rect.left);
+            $("#drawCanvas").width( $("#mainImg").width() );
+            $("#drawCanvas").height( $("#mainImg").height() );
+            var canvas = document.getElementById('drawCanvas');
+            var ctx = canvas.getContext('2d');
+            window.scl = $("#mainImg").width() / 961;
+            // canvas.scale(window.scl,window.scl);
+        }
+
+        $("#mainImg").ready(adjustCanvas);
+
+        $(window).resize(adjustCanvas);
+
+        window.LEDRState = [0,0,0];
+        window.HEXState = [0,0,0,0,0,0,0,0];
+
+        function paint_ledr(iled, status) {
+            if (iled > 17) { return; }      
+            // console.log(iled);   
+            var canvas = document.getElementById('drawCanvas');
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = "rgba(255,0,0,0.5)";
+            ctx.fillRect(0,0,0.5,0.5);
+            imageWidth = canvas.width;
+            startx = (923 - iled*52);
+            starty = 263 ;
+            endx = (932 - iled*52);
+            endy = 277 ;
+            if (status == 1) {
+                ctx.fillStyle = "rgba(255,0,0,0.7)";
+                ctx.fillRect(startx,starty,10,14);
+            } else {
+                ctx.clearRect(startx,starty,10,14);
+            }
+        }
+
+        function updateLEDRs(newvalues) {
+            for (var j = 0; j < 3; j++) {
+                for (var k = 0; k < 8; k++) {
+                    var val = ((newvalues[j] >>> k) & 0x01);
+                    if ( val  !=  ((window.LEDRState[j] >>> k) & 0x01) ) {
+                        paint_ledr(j*8+k,val);
+                    }
+                }
+            }
+            window.LEDRState = newvalues;
+        }
+
+
+        hexposy = 111;
+        hexposx = [563, 506, 447, 390, 238, 179, 65, 5];
+        hexseg = [ [19,19,45,19,39,25,23,25], // segment a
+                   [47,21,43,48,38,45,41,25], // segment b
+                   [43,51,39,78,34,73,38,53], // segment c
+                   [35,79,11,79,16,72,31,72], // segment d
+                   [9,74,13,50,17,54,15,70], // segment e
+                   [14,46,17,21,22,26,20,43], // segment f
+                   [20,45,38,45,37,52,18,52]]; // segment g
+
+        function updateHEXs(segsdata, status) {
+            var canvas = document.getElementById('drawCanvas');
+            var ctx = canvas.getContext('2d'); 
+            for (var ihex = 0; ihex < 8; ihex++) {
+                if (window.HEXState[ihex] == segsdata[ihex]) { continue; }
+                base = [hexposx[ihex],hexposy];
+                ctx.clearRect(base[0],base[1],56,97);
+                for (var isegm = 0; isegm < 7; isegm++) {
+                    if (((segsdata[ihex] >>> isegm) & 0x01) == 0) {
+                        ctx.beginPath();                    
+                        ctx.moveTo(base[0]+hexseg[isegm][0], base[1]+hexseg[isegm][1]); 
+                        ctx.lineTo(base[0]+hexseg[isegm][2], base[1]+hexseg[isegm][3]);
+                        ctx.lineTo(base[0]+hexseg[isegm][4], base[1]+hexseg[isegm][5]);
+                        ctx.lineTo(base[0]+hexseg[isegm][6], base[1]+hexseg[isegm][7]);
+                        ctx.closePath();
+                        ctx.fillStyle = "rgba(255,0,0,0.8)";
+                        ctx.fill();
+                    }                
+                }
+                window.HEXState[ihex] = segsdata[ihex];
+            }     
+        }
+
+        function getInputStates() {
+            var ret = 0;
+            for (var k = 0; k < 18; k++) {
+                ret = ret | ( ($("#SW" + k).is(":checked") ? 1 : 0) << k);
+            }            
+            for (var k = 0; k < 4; k++) {
+                ret = ret | (1 << (k+20));
+            }
+            return ret;
+        }
+
+        
+
+        $( document ).ready(function() {
+            $("mainImg").css("margin-bottom","-" + $("mainImg").height() + "px;")             
+            $("#meuform").submit(function () { return false; });
+            $("#switches").html("");
+            for (var k = 17; k >= 0; k--) {
+                $("#switches").append(`                   
+                    <label class="switch">
+                        <span class="swlabel">SW${k}</span>
+                        <input id="SW${k}" type="checkbox" onchange="swchanged(${k});">
+                        <span class="slider round"></span>
+                    </label>
+                `);
+                //if ( ((k%6) == 0) && (k > 0) ) {$("#switches").append("<br>")}
+            }
+            $("#keys").html("");
+            for (var k = 3; k >= 0; k--) {
+                $("#keys").append(`
+                    <button type="button" id="KEY${k}" class="btn btn-primary p-1 m-1" onmousedown="mousedown(${k});" onmouseup="mouseup(${k});">KEY${k}</button>
+                `);
+            }
+        });   
+        
+        function mousedown(element) {
+            if (window.socketOn) {
+                window.socket.emit("action","k" + element + "p");
+            }
+        }
+        function mouseup(element) {
+            if (window.socketOn) {
+                window.socket.emit('action',"k" + element + "r");
+            }
+        }
+        function swchanged(idx) {
+            if (window.socketOn) {
+                var elid = "SW" + idx;
+                var value = $("#"+elid).is(":checked") ? 1 : 0;
+                window.socket.emit('action',("s" + String.fromCharCode(idx+0x30)) + value);
+            }
+        }
+        
+        
+        function Emular() {
+
+            if ( $("#iniciar").html().startsWith("Start") ) {
+
+                $("#iniciar").html("Stop Emulation");
+                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul')
+                window.socket.send("Emular");
+                window.socket.on('bytes', function(msg) {
+                    //$('#status').append('<br>'+String(msg));  
+                    const view = new Int8Array(msg);
+                    var aux = [parseInt(view[0]),parseInt(view[1]),parseInt(view[2])];
+                    updateLEDRs(aux);
+                    aux = [parseInt(view[10]),parseInt(view[9]),parseInt(view[8]),parseInt(view[7]),
+                           parseInt(view[6]),parseInt(view[5]),parseInt(view[4]),parseInt(view[3])];
+                    updateHEXs(aux);
+                    // aux = byte2bits(view[2]) + byte2bits(view[1]) + byte2bits(view[0]);
+                    // $('#LEDR').html(aux);
+                });
+                window.socket.on('message', function(msg){    
+                    if (($('#status').html() == "") || String(msg).startsWith("Starting")) {
+                        $('#status').html(String(msg));
+                    } else {
+                        $('#status').append('<br>'+String(msg));
+                    }      
+                    
+                });
+                window.socket.on('error', function(msg){
+                    $('#status').append('<br>Erro:<br>'+String(msg));
+                });
+                window.socket.on('status', function(msg){
+                    if (msg.startsWith("Parado")) {
+                        $("#iniciar").html("Start Emulation");
+                        $('#status').append('<br>Emulation has stopped.');
+                    }
+                });
+                window.socket.on('disconnect', function(msg){
+                    window.socketOn = false;
+                });
+                window.socket.on('started', function(msg){
+                    window.socket.emit("initstate",getInputStates());
+                });
+                window.socketOn = true;
+
+            } else {
+                
+                window.socket.send("Parar");                
+
+            }
+            
+            
+            
+        }
+        
+    </script>
+
+</body>
+</html>
