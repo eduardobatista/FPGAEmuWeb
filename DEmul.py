@@ -8,13 +8,15 @@ from werkzeug.utils import secure_filename
 from random import randrange
 from zipfile import ZipFile
 import re
-import os
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
+        - Proteger uploads de arquivos grandes.
+        - Proteger savamentos de arquivos grandes.
         - Melhorar gerenciamento de usuários.
-        - Fazer About
+        - Fazer About.
+        - Manutenção de subdiretórios: apagar os com mais de um dia sem uso.
 '''
 
 app = Flask(__name__)
@@ -85,13 +87,21 @@ def createFpgaTest(sessionpath,toplevelfile):
     fpgatest = open(Path(sessionpath,"fpgatest.aux"),'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt))
     fpgatest.close()
-    
+
+def createnewuser(basepath):
+    subdirs = list(basepath.glob("*"))
+    print(subdirs)
+    candidate = str(randrange(10000))
+    while candidate in subdirs:
+        candidate = str(randrange(10000)) 
+    return candidate
+
+
 @app.route('/')
-def sendfiles():
-    if 'username' in session:
-        pass
-    else:
-        session['username'] = str(randrange(1000))
+def sendfiles():    
+    basepath = Path(MAINPATH,'work')
+    if 'username' not in session:               
+        session['username'] = createnewuser(basepath)
     basepath = Path(MAINPATH,'work')
     sessionpath = Path(basepath, session['username'])
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
@@ -100,19 +110,16 @@ def sendfiles():
 
 @app.route('/emulation')
 def emular():
-    if 'username' in session:
-        pass
-    else:
-        session['username'] = str(randrange(1000))
+    basepath = Path(MAINPATH,'work')
+    if 'username' not in session:               
+        session['username'] = createnewuser(basepath)
     return render_template('emulation.html',username=session['username'])
 
 @app.route('/editor')
-def editor():
-    if 'username' in session:
-        pass
-    else:
-        session['username'] = str(randrange(1000))
+def editor():    
     basepath = Path(MAINPATH,'work')
+    if 'username' not in session:               
+        session['username'] = createnewuser(basepath)    
     sessionpath = Path(basepath, session['username'])
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
@@ -177,6 +184,8 @@ def getfile(filename):
 def savefile(dataa):
     basepath = Path(MAINPATH,'work')
     sessionpath = Path(basepath, session['username'])
+    if not sessionpath.exists():
+        sessionpath.mkdir(parents=True,exist_ok=True)
     fname = Path(sessionpath,dataa['filename'])
     data = open(fname,'w').write(dataa['data'])
     emit("filesaved",dataa['filename'])

@@ -1,0 +1,30 @@
+1) Building GHDL with LLVM:
+    - If git not present: "sudo apt install git"
+    - Create a temporary directory <ghdl> and:
+        - "git clone https://github.com/ghdl/ghdl.git"
+    - Install GNAT: "sudo apt-get install gnat"
+    - Install llvm: "sudo apt install llvm"
+    - Install make: "sudo apt install make"
+    - Install clang: "sudo apt-get install clang"
+    - Install libz-dev: "sudo apt-get install libz-dev"
+    - Then: 
+            $ cd <ghdl>
+            $ mkdir build
+            $ cd build
+            $ ../configure --with-llvm-config --prefix=/usr/local
+            $ make
+            $ sudo make install
+
+2) Python3
+    - Install Python3 if needed: "sudo apt-get install python3"
+    - Install pip "sudo apt install python3-pip"
+    - Install dependencies: "sudo pip3 install flask flask_socketio"
+
+3) DEmul 
+    - Unzip DEmul.zip to directory OR Clone with git: "git clone https://gitlab.com/dudubatista/demul.git"
+    - Compile backend:
+        - "cd backend"
+        - "sudo chmod 744 compilebackend.sh"
+        - "./compilebackend.sh"
+    - get back to DEmul dir and run the server: "python3 DEmul.py"
+    
