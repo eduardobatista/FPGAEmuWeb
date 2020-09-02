@@ -100,7 +100,7 @@ def createFpgaTest(sessionpath,toplevelfile):
 
 def createnewuser(basepath):
     subdirs = list(basepath.glob("*"))
-    print(subdirs)
+    # print(subdirs)
     candidate = str(randrange(10000))
     while candidate in subdirs:
         candidate = str(randrange(10000)) 
