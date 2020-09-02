@@ -12,6 +12,8 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
+        x BUG!!!: Extração de ports na emulação dá erro se "end entity" ao invés de "end usertop".
+        - Controlar melhor processos de emulação.
         - Implementar Botões RENAME.
         - Implementar escolha para compilação.
         - Compilar backend quando servidor iniciar?
@@ -84,19 +86,24 @@ end archtest;
 # Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
 availableports = "(CLOCK_50|CLK_500Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
 def createFpgaTest(sessionpath,toplevelfile):
+    fpgatestfile = Path(sessionpath,'fpgatest.aux')
+    if fpgatestfile.exists(): fpgatestfile.unlink()
     toplevel = open(Path(sessionpath,toplevelfile), 'r')
     data = toplevel.read().replace("\n"," ");
     toplevel.close();
     entityname = re.findall(r"entity \w+ is",data)[0][7:-3]
-    aux = re.findall(rf"entity {entityname} is.*end {entityname}",data)[0]
-    foundports = re.findall(rf"{availableports}(:|,|\s)",aux)
+    aux = re.findall(rf"entity {entityname} is.*end {entityname}",data)
+    if len(aux) == 0:
+        return False
+    foundports = re.findall(rf"{availableports}(:|,|\s)",aux[0])
     portmaptxt = "port map("
     for port in foundports:
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
     portmaptxt = portmaptxt[:-1] + ");"
-    fpgatest = open(Path(sessionpath,"fpgatest.aux"),'w')
+    fpgatest = open(fpgatestfile,'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt))
     fpgatest.close()
+    return True
 
 def createnewuser(basepath):
     subdirs = list(basepath.glob("*"))
@@ -218,7 +225,10 @@ def stream(cmd):
         compilerpath = Path(MAINPATH,'backend','fpgacompileweb')
         basepath = Path(MAINPATH,'work')
         sessionpath = Path(basepath, session['username'])
-        createFpgaTest(sessionpath,'usertop.vhd')
+        if not createFpgaTest(sessionpath,'usertop.vhd'):
+            emit('errors', "Could not find ports or usertop entity.")
+            disconnect()
+            return
         aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
         filenames = [x.name for x in aux]
         proc = subprocess.Popen(

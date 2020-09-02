@@ -43,5 +43,5 @@ begin
    outbytes1 <= to_bitvector('0' & HEX3 & '0' & HEX4 & '0' & HEX5 & '0' & HEX6,'1');
    outbytes2 <= to_bitvector(x"00" & '0' & HEX0 & '0' & HEX1 & '0' & HEX2,'1');
    udut : entity work.usertop
-   port map(CLOCK_50 => CLOCK_50,CLK_500Hz => CLK_500Hz,RKEY => RKEY,KEY => KEY,RSW => RSW,SW => SW,LEDR => LEDR,HEX0 => HEX0,HEX1 => HEX1,HEX2 => HEX2,HEX3 => HEX3,HEX4 => HEX4,HEX5 => HEX5,HEX6 => HEX6,HEX7 => HEX7);
+   port map(SW => SW,LEDR => LEDR);
 end archtest;
