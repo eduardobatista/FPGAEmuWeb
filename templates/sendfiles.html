@@ -89,7 +89,7 @@
                 {% for fname in filenames %}
                     <li class="list-group-item">{{ fname }} 
                         <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}');">Delete</button>
-                        <button class="btn btn-secondary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}');">Rename</button>
+                        <button class="btn btn-secondary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}');" disabled>Rename</button>
                         <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="settop('{{ fname }}');" disabled>Set top level</button>                        
                     </li>
                 {% endfor %}                
@@ -110,7 +110,7 @@
                         accept=".vhd,.vhdl" multiple>
                     <label class="custom-file-label" for="fileToUpload">Choose file(s) to upload...</label>                    
                     </div> 
-                <button class="btn btn-primary py-2 px-4" onclick="uploadfile();" style="margin-top: 13px;">Upload</button>
+                <button type="button" class="btn btn-primary py-2 px-4" onclick="uploadfile();" style="margin-top: 13px;">Upload</button>
 
                 </div>
             </form> 
@@ -195,9 +195,19 @@
     <!-- Your custom scripts (optional) -->
     <script type="text/javascript">
 
-        function uploadfile() {  
+        function uploadfile() { 
+
+            var numFiles = $("#fileToUpload")[0].files.length;
+            if ( numFiles > 20 ) {
+                alert("Too many files at once.");
+                return;
+            } else if (numFiles == 0) {
+                alert("No file to upload.");
+                return;
+            }
 
             var fdata = new FormData( $("#meuform").get(0) );
+            
             // var ajaxUrl = "process-upload.php";				
             $.ajax({
                 url : 'upload',
@@ -207,16 +217,18 @@
                 // required so that all data are correctly transferred
                 contentType : false,
                 processData : false
-            }).done(function(response){
+            }).done(function(response,statusText, xhr){
                 if (response == "Done!") {
-                    $("#status").html("<br>File(s) sent.");
+                    // $("#status").html("<br>File(s) sent.");
+                    location.href = "/";
                     // fpgaCompile();
                 }                
                 // In this callback you get the AJAX response to check
                 // if everything is right...
-            }).fail(function(response){
+            }).fail(function(response,statusText, xhr){
                 // Here you should treat the http errors (e.g., 403, 404)
-                $("#status").html(response);
+                // $("#status").html(response); 
+                alert(String(xhr));
             }).always(function(){
                 // alert("AJAX request finished!");
             });

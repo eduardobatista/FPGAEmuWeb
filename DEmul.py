@@ -12,8 +12,17 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
-        - Proteger uploads de arquivos grandes.
-        - Proteger savamentos de arquivos grandes.
+        - Implementar Botões RENAME.
+        - Implementar escolha para compilação.
+        - Compilar backend quando servidor iniciar?
+        - Limpeza periódica dos diretórios de trabalho...
+        x Dar msg de erro se tentar emular sem compilar.
+        - Desabilitar botões e chaves quando simulação não estiver rodando?
+        x Após upload, dar refresh na página de uploads para aparecer lista ou puxar lista de arquivos.
+        x Quando der "Save As" no Editor, abrir página com arquivo salvo aberto.
+        - Disponibilizar template de usertop?
+        x Proteger uploads de arquivos grandes.
+        x Proteger salvamentos de arquivos grandes.
         - Melhorar gerenciamento de usuários.
         - Fazer About.
         - Manutenção de subdiretórios: apagar os com mais de um dia sem uso.
@@ -21,6 +30,7 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 app.secret_key = b'_5#y2L"F4z\n\xec]/'
+app.config['MAX_CONTENT_LENGTH'] = 1000000 
 socketio = SocketIO(app)
 
 fpgatesttemplate = '''
@@ -239,21 +249,25 @@ def closeEmul(username):
 def stream(cmd):
     if cmd == "Parar":
         if session['username'] not in procs.keys():
-            emit('error',f'Emulação não está rodando para {session["username"]}.')
+            emit('error',f'Emulation not running for {session["username"]}.')
             return
         else:
             closeEmul(session['username'])
             emit('status',"Parado")
     elif cmd == "Emular":
         if session['username'] in procs.keys():
-            emit('error',f'Emulação já rodando para {session["username"]}.')
+            emit('error',f'Emulation already running for {session["username"]}.')
             return
         else:
             emit('message','Starting emulation...')
         basepath = Path(MAINPATH,'work')
         sessionpath = Path(basepath, session['username'])
+        fpgatestpath = Path(sessionpath, 'fpgatest')
+        if not fpgatestpath.exists():
+            emit('error',f'Compilation required before emulation.')
+            return
         proc = subprocess.Popen(
-                    [Path(sessionpath, 'fpgatest')],
+                    [fpgatestpath],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     cwd=sessionpath 

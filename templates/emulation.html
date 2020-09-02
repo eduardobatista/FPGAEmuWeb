@@ -413,7 +413,7 @@
                     
                 });
                 window.socket.on('error', function(msg){
-                    $('#status').append('<br>Erro:<br>'+String(msg));
+                    $('#status').append('<br>Error:<br>'+String(msg));
                 });
                 window.socket.on('status', function(msg){
                     if (msg.startsWith("Parado")) {

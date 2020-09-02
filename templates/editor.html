@@ -217,10 +217,27 @@
 
     <script type="text/javascript">
 
-        // $("#fullHeightModalRight").on('show.bs.modal', function(){
-        //     $("#gotoemul").attr('disabled', true);
-        //     fpgaCompile();
-        // });
+        var getUrlParameter = function getUrlParameter(sParam) {
+            var sPageURL = window.location.search.substring(1),
+                sURLVariables = sPageURL.split('&'),
+                sParameterName,
+                i;
+
+            for (i = 0; i < sURLVariables.length; i++) {
+                sParameterName = sURLVariables[i].split('=');
+
+                if (sParameterName[0] === sParam) {
+                    return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+                }
+            }
+        };
+        $(document).ready(function() {
+            var arq = getUrlParameter("file");
+            if (arq != undefined) {
+                $('#fileselect').val(arq);
+                openfile(); 
+            }
+        });
 
         window.filechanged = false;
 
@@ -256,7 +273,7 @@
                 $("#centralModalSm").modal();
                 window.filechanged = false;
                 if (window.lastfilesaveopt >= 1) {
-                    location.href = "/editor";
+                    location.href = "/editor?file=" + String(msg);
                 }
             }); 
             window.socket.on('filecontent', function(msg){

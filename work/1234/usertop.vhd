@@ -29,7 +29,7 @@ begin
     X1: xorr port map (SW(0),SW(1),Y0); 
 
     LEDR(17 downto 2) <= SW(17 downto 2);
-    LEDR(1) <= KEY(2);
+    LEDR(1) <= '1';
     LEDR(0) <= Y0;
     HEX7 <= "1111111";
     HEX6 <= "1111111";
