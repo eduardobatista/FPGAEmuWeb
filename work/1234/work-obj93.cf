@@ -1,10 +1,10 @@
 v 4
-file . "fpgatest.aux" "9b0a27a0e1122f1a08a4ae86e93e6976adf004be" "20200902180117.528":
+file . "fpgatest.aux" "0e18e37827bf2b36851c8998690e2eaafd0e71fe" "20200903012127.841":
   entity fpgatest at 2( 1) + 0 on 15;
   architecture archtest of fpgatest at 10( 172) + 0 on 16;
-file / "/home/pi/DEmul/backend/fpgaemu.vhd" "9938ef507ad43502d77f42d46d3c99200746c1f6" "20200902180115.211":
+file / "/home/pi/DEmul/backend/fpgaemu.vhd" "9938ef507ad43502d77f42d46d3c99200746c1f6" "20200903012126.937":
   package fpgaemu at 4( 79) + 0 on 11 body;
   package body fpgaemu at 38( 953) + 0 on 12;
-file . "usertop.vhd" "979eac09e8faa805c81b95ad4b5cff0a051deba4" "20200902180115.777":
+file . "usertop.vhd" "dc9c8dcb84b96913e715f0561e2b0e28577170a7" "20200903012127.267":
   entity usertop at 1( 0) + 0 on 13;
-  architecture struct of usertop at 12( 308) + 0 on 14;
+  architecture rtl of usertop at 13( 285) + 0 on 14;

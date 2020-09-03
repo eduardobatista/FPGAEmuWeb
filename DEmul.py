@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import subprocess,time,os,select
+import subprocess,time,os,select,sys
 import threading
 from pathlib import Path
 from flask import Flask, url_for, request, session, request, render_template, Response, send_from_directory
@@ -124,6 +124,10 @@ def sendfiles():
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
     return render_template('sendfiles.html',username=session['username'],filenames=filenames) # app.send_static_file('main.html')
+
+@app.route('/help')
+def hhelp():
+    return render_template('help.html')
 
 @app.route('/emulation')
 def emular():
@@ -265,7 +269,11 @@ def stream(cmd):
             closeEmul(session['username'])
             emit('status',"Parado")
     elif cmd == "Emular":
-        if session['username'] in procs.keys():
+        keysprocs = procs.keys()
+        if len(keysprocs) >= 25:
+            emit('error',f'Too many emulations running, please try again in a minute or two.')
+            return
+        elif session['username'] in keysprocs:
             emit('error',f'Emulation already running for {session["username"]}.')
             return
         else:
@@ -342,4 +350,7 @@ def test_disconnect():
         closeEmul(session['username'])
         emit('status',"Parado")
 
-socketio.run(app,host='0.0.0.0',port=5000,debug=True)
+dbg = True
+if 'nodebug' in sys.argv:
+    dbg = False
+socketio.run(app,host='0.0.0.0',port=5000,debug=dbg)
