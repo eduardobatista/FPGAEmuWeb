@@ -316,7 +316,7 @@
             var canvas = document.getElementById('drawCanvas');
             var ctx = canvas.getContext('2d'); 
             for (var ihex = 0; ihex < 8; ihex++) {
-                if (window.HEXState[ihex] == segsdata[ihex]) { continue; }
+                // if (window.HEXState[ihex] == segsdata[ihex]) { continue; }
                 base = [hexposx[ihex],hexposy];
                 ctx.clearRect(base[0],base[1],56,97);
                 for (var isegm = 0; isegm < 7; isegm++) {

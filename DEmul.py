@@ -12,6 +12,9 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
+        - TIMEOUT sem interação do usuário.
+        - 
+        x BUG!!!: Sem arquivo, parece estar compilando.
         x BUG!!!: Extração de ports na emulação dá erro se "end entity" ao invés de "end usertop".
         - Controlar melhor processos de emulação.
         - Implementar Botões RENAME.
@@ -86,9 +89,11 @@ end archtest;
 # Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
 availableports = "(CLOCK_50|CLK_500Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
 def createFpgaTest(sessionpath,toplevelfile):
+    toplevel = Path(sessionpath,toplevelfile)
+    if not toplevel.exists(): return False;
     fpgatestfile = Path(sessionpath,'fpgatest.aux')
     if fpgatestfile.exists(): fpgatestfile.unlink()
-    toplevel = open(Path(sessionpath,toplevelfile), 'r')
+    toplevel = open(Path(sessionpath,toplevelfile), 'r')    
     data = toplevel.read().replace("\n"," ");
     toplevel.close();
     entityname = re.findall(r"entity \w+ is",data)[0][7:-3]
@@ -230,7 +235,7 @@ def stream(cmd):
         basepath = Path(MAINPATH,'work')
         sessionpath = Path(basepath, session['username'])
         if not createFpgaTest(sessionpath,'usertop.vhd'):
-            emit('errors', "Could not find ports or usertop entity.")
+            emit('errors', "Could not find usertop.vhd, its ports or usertop entity.")
             disconnect()
             return
         aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
