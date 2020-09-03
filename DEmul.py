@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import subprocess,time,os,select,sys
+import subprocess,time,os,select,sys,socket
 import threading
 from pathlib import Path
 from flask import Flask, url_for, request, session, request, render_template, Response, send_from_directory
@@ -13,7 +13,7 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 '''
     TODO:
         - TIMEOUT sem interação do usuário.
-        - 
+        - Matar outro processo do usuário na criação de um novo.
         x BUG!!!: Sem arquivo, parece estar compilando.
         x BUG!!!: Extração de ports na emulação dá erro se "end entity" ao invés de "end usertop".
         - Controlar melhor processos de emulação.
@@ -37,6 +37,8 @@ app = Flask(__name__)
 app.secret_key = b'_5#y2L"F4z\n\xec]/'
 app.config['MAX_CONTENT_LENGTH'] = 1000000 
 socketio = SocketIO(app)
+
+newuserprefix = socket.gethostbyname(socket.gethostname())[-2:]
 
 fpgatesttemplate = '''
 library ieee;
@@ -113,9 +115,9 @@ def createFpgaTest(sessionpath,toplevelfile):
 def createnewuser(basepath):
     subdirs = list(basepath.glob("*"))
     # print(subdirs)
-    candidate = str(randrange(10000))
+    candidate = newuserprefix + str(randrange(10000))
     while candidate in subdirs:
-        candidate = str(randrange(10000)) 
+        candidate = newuserprefix + str(randrange(10000)) 
     return candidate
 
 
