@@ -151,8 +151,13 @@ void init_gui()
    // if (getcwd(cwd, sizeof(cwd)) != NULL) {
    //     printf("Current working dir: %s\n", cwd);
    // }
-   char * myfifo = "myfifo"; 
-   char * myfifo2 = "myfifo2"; 
+   int pid = getpid();   
+   char * myfifo = malloc(20);
+   sprintf(myfifo,"myfifo%d",pid);
+   char * myfifo2 = malloc(20);
+   sprintf(myfifo2,"myfifo2%d",pid);
+   // char * myfifo = "myfifo";
+   // char * myfifo2 = "myfifo2"; 
    mkfifo(myfifo, 0666);
    fifoout = open(myfifo, O_WRONLY | O_CREAT);
    fifoarr[0] = 'o';

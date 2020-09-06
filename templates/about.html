@@ -52,10 +52,10 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/editor">Editor</a>
                     </li>
-                    <li class="nav-item active">
+                    <li class="nav-item">
                         <a class="nav-link" href="/help">Help</a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item active">
                         <a class="nav-link" href="/about">About</a>
                     </li>
         
@@ -83,17 +83,21 @@
     <!--Main layout-->
     <main>
 
-        <div class="container mt-3">
-            <h2 class="mb-3">General Instructions</h2>
-            <p>The top-level entity must be named <strong>usertop</strong> and be defined in file <strong>usertop.vhd</strong>.</p>
-            <p>The following <strong>ports</strong> are mapped to the DE2 kit emulator:</p>
-            <ul class="list-group">
-                <li class="list-group-item">CLK_500Hz: in std_logic;</li>
-                <li class="list-group-item">KEY: in std_logic_vector(3 downto 0)</li>
-                <li class="list-group-item">SW: in std_logic_vector(17 downto 0)</li>
-                <li class="list-group-item">LEDR: out std_logic_vector(17 downto 0)</li>
-                <li class="list-group-item">HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7	: out std_logic_vector(6 downto 0)</li>
-            </ul>
+        <div class="container mt-4">
+
+            <h2>Credits</h2>
+
+            The <strong>DE2 Emulator</strong> has been developed by <strong>Prof. Eduardo L. O. Batista</strong> (web front and back ends) and 
+            <strong>Prof. Fabian L. Cabrera</strong> (emulation backend), both from the <a href="http://www.eel.ufsc.br" target="_BLANK">Department of Electrical 
+            and Electronics Engineering</a> at the <a href="http://www.ufsc.br" target="_BLANK">Federal University of Santa Catarina (UFSC)</a>.
+
+            <h2 class="mt-3 mb-2">Platforms and Dependencies</h2>
+            <p><strong>Emulation backend</strong>: GHDL-based.</p>
+            <p><strong>Web backend</strong>: Python and Flask.</p>
+            <p><strong>Web frontend</strong>: MDBootstrap, JQuery, SocketIO, and the outstanding Ace Editor.</p>
+
+
+            
         </div>
 
     

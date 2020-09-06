@@ -55,6 +55,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/help">Help</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About</a>
+                    </li>
         
                     <!-- Dropdown -->
                     <!-- <li class="nav-item dropdown">
@@ -92,7 +95,7 @@
                 {% for fname in filenames %}
                     <li class="list-group-item">{{ fname }} 
                         <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}');">Delete</button>
-                        <button class="btn btn-secondary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}');" disabled>Rename</button>
+                        <button class="btn btn-secondary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}');">Rename</button>
                         <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="settop('{{ fname }}');" disabled>Set top level</button>                        
                     </li>
                 {% endfor %}                
@@ -175,6 +178,28 @@
             </div>
         </div>
         <!-- Full Height Modal Right -->
+
+        <div class="modal fade" id="modalSaveAs" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">Rename to...</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body mx-3">
+                    <div class="md-form mb-5">
+                    <input type="text" id="filenameas" class="form-control validate" autofocus>
+                    <label data-error="wrong" data-success="right" for="filenameas">File Name</label>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button class="btn btn-secondary btn-sm" onclick="renameTo()">Rename<i class="fas fa-paper-plane-o ml-1"></i></button>
+                </div>
+                </div>
+            </div>
+        
 
     </main>
     <!--Main layout-->
@@ -271,8 +296,34 @@
                 $("#gotoemul").attr('disabled', false);
                 $("#myspinner").hide();
             });
-
+            window.socket.on('error',function(msg){
+                alert("Error: " + String(msg));
+            });
+            window.socket.on('filerenamed',function(msg){
+                location.href = '/';
+            });
       
+        }
+
+        window.filetorename = "";
+        function rename(fname) {
+            window.filetorename = fname;
+            $("#filenameas").val(fname);
+            $("#modalSaveAs").modal();
+            $("#filenameas").focus();
+        }
+
+        function renameTo() {
+            $("#modalSaveAs").modal('hide');
+            val = $("#filenameas").val();
+            if ((val != "") && (val != window.filetorename)) {
+                if (val.endsWith(".vhd") || val.endsWith(".vhdl")) {
+                    if (!window.socketOn) { openSocket(); }
+                    window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});                  
+                } else {
+                    alert("Error: File does not end with .vhd or .vhdl.")
+                }            
+            }     
         }
 
         function deletefile(fname) {

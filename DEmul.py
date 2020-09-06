@@ -12,25 +12,28 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
-        - TIMEOUT sem interação do usuário.
-        - Matar outro processo do usuário na criação de um novo.
+        - Melhorar Timeouts: fazer inactivity para entrada e saída diferentes.
+        - Botão "Delete All"
+        x TIMEOUT sem interação do usuário.
+        nn Matar outro processo do usuário na criação de um novo.
         x BUG!!!: Sem arquivo, parece estar compilando.
         x BUG!!!: Extração de ports na emulação dá erro se "end entity" ao invés de "end usertop".
-        - Controlar melhor processos de emulação.
-        - Implementar Botões RENAME.
+        nn Controlar melhor processos de emulação.
+        x Implementar Botões RENAME.
         - Implementar escolha para compilação.
-        - Compilar backend quando servidor iniciar?
+        x Compilar backend quando servidor iniciar?
+        - Limpar todos os "fpgatest" após compilação inicial?
         - Limpeza periódica dos diretórios de trabalho...
         x Dar msg de erro se tentar emular sem compilar.
-        - Desabilitar botões e chaves quando simulação não estiver rodando?
+        nn Desabilitar botões e chaves quando simulação não estiver rodando?
         x Após upload, dar refresh na página de uploads para aparecer lista ou puxar lista de arquivos.
         x Quando der "Save As" no Editor, abrir página com arquivo salvo aberto.
         - Disponibilizar template de usertop?
         x Proteger uploads de arquivos grandes.
         x Proteger salvamentos de arquivos grandes.
         - Melhorar gerenciamento de usuários.
-        - Fazer About.
-        - Manutenção de subdiretórios: apagar os com mais de um dia sem uso.
+        x Fazer About.
+        - Manutenção de subdiretórios: apagar com certo tempo sem uso.
 '''
 
 app = Flask(__name__)
@@ -136,6 +139,10 @@ def sendfiles():
 def hhelp():
     return render_template('help.html')
 
+@app.route('/about')
+def aabout():
+    return render_template('about.html')
+
 @app.route('/emulation')
 def emular():
     basepath = Path(MAINPATH,'work')
@@ -207,6 +214,20 @@ def getfile(filename):
     fname = Path(sessionpath,filename)
     data = open(fname,'r').read()
     emit("filecontent",data)
+
+@socketio.on('renamefile', namespace='/stream') 
+def renamefile(dataa):
+    basepath = Path(MAINPATH,'work')
+    sessionpath = Path(basepath, session['username'])
+    if not sessionpath.exists():
+        emit("error","Directory not found.")
+        return
+    filetorename = Path(sessionpath,dataa['filename'])
+    if not filetorename.exists():
+        emit("error","File to rename not found.")
+        return
+    filetorename.rename(Path(sessionpath,dataa['filenameto']))
+    emit("filerenamed",dataa['filenameto'])
 
 @socketio.on('savefile', namespace='/stream') 
 def savefile(dataa):
@@ -287,6 +308,11 @@ def stream(cmd):
             emit('message','Starting emulation...')
         basepath = Path(MAINPATH,'work')
         sessionpath = Path(basepath, session['username'])
+        try: 
+            for k in sessionpath.rglob("myfifo*"):
+                k.unlink();
+        except:
+            pass
         fpgatestpath = Path(sessionpath, 'fpgatest')
         if not fpgatestpath.exists():
             emit('error',f'Compilation required before emulation.')
@@ -300,12 +326,13 @@ def stream(cmd):
         procs[session['username']] = proc
         time.sleep(0.5)      
         # print("Opening FIFO...")
-        fiforead = os.open(Path(sessionpath,'myfifo'), os.O_RDONLY | os.O_NONBLOCK)
+        fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
         select.select([fiforead], [], [fiforead]) # Blocks until ready to read
         # print("FIFO opened")
         print(os.read(fiforead,3).decode())
-        fifowrite[session['username']] = os.open(Path(sessionpath,'myfifo2'), os.O_WRONLY)  
-        emit('started','Ok!')       
+        fifowrite[session['username']] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
+        emit('started','Ok!')
+        lasttime = time.time()       
         while True:
             aux,aux1,aux2 = select.select([fiforead], [fifowrite[session['username']]], [fiforead]) # Blocks until ready to read
             if len(aux) > 0:
@@ -315,6 +342,12 @@ def stream(cmd):
                     # print("Writer closed.")
                     break
                 emit('bytes', data)
+                lasttime = time.time()
+            else:
+                if ((time.time()-lasttime) >= 120 ):
+                    emit('error','Inactivity timeout...')
+                    closeEmul(session['username'])
+                    emit('status','Parado')
             time.sleep(0.2)
         # print("Saiu!")
         os.close(fifowrite[session['username']])
@@ -355,8 +388,17 @@ def action(msg):
 def test_disconnect():   
     if session['username'] in procs.keys():        
         closeEmul(session['username'])
-        emit('status',"Parado")
+        emit('status',"Parado") 
 
+print('Compiling the backend...')
+backendpath = Path(MAINPATH,'backend')
+subprocess.Popen(
+                    [Path(backendpath,'compilebackend.sh')],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=backendpath 
+            )
+print('Backend compiled.')
 dbg = True
 if 'nodebug' in sys.argv:
     dbg = False
