@@ -12,6 +12,7 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
+        - Adicionar /opt/local/bin to path
         - Melhorar Timeouts: fazer inactivity para entrada e saída diferentes.
         - Botão "Delete All"
         x TIMEOUT sem interação do usuário.
@@ -398,7 +399,7 @@ subprocess.Popen(
                     [backendcompilerpath],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    cwd=backendpath 
+                    cwd=Path(MAINPATH,'backend') 
             )
 print('Backend compiled.')
 dbg = True
