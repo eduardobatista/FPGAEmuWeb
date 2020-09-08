@@ -324,12 +324,13 @@ def stream(cmd):
                     cwd=sessionpath 
             )
         procs[session['username']] = proc
-        time.sleep(0.5)      
+        time.sleep(0.3)      
         # print("Opening FIFO...")
         fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
         select.select([fiforead], [], [fiforead]) # Blocks until ready to read
         # print("FIFO opened")
         print(os.read(fiforead,3).decode())
+        time.sleep(0.3)
         fifowrite[session['username']] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
         emit('started','Ok!')
         lasttime = time.time()       
@@ -391,9 +392,10 @@ def test_disconnect():
         emit('status',"Parado") 
 
 print('Compiling the backend...')
-backendpath = Path(MAINPATH,'backend')
+backendcompilerpath = Path(MAINPATH,'backend','compilebackend.sh')
+backendcompilerpath.chmod(0o744)
 subprocess.Popen(
-                    [Path(backendpath,'compilebackend.sh')],
+                    [backendcompilerpath],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     cwd=backendpath 

@@ -396,6 +396,7 @@
 
             if ( $("#iniciar").html().startsWith("Start") ) {
 
+                adjustCanvas();
                 $("#iniciar").html("Stop Emulation");
                 window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul')
                 window.socket.send("Emular");
