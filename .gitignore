@@ -8,3 +8,4 @@ work/1234/fpgatest.o
 work/1234/usertop.o
 work/1234/usertop.vhd
 work/1234/work-obj93.cf
+*.pyc
