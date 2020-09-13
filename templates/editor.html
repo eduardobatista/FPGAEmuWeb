@@ -327,11 +327,17 @@
         }
 
         function savefile(opt) {
+            /*
+                opt = 0: Save.
+                opt = 1: Save As.
+                opt = 2: Save New.
+            */
 
             window.lastfilesaveopt = opt; 
 
             var val = $("#fileselect").children("option:selected").val();
-            if (((opt == 1) && (val != 0)) || (opt == 2)) {
+            // if (((opt == 1) && (val != 0)) || (opt == 2)) {
+            if ( opt > 0 ) {
                 val = $("#filenameas").val();
             } 
 

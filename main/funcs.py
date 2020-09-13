@@ -62,11 +62,13 @@ def createFpgaTest(sessionpath,toplevelfile):
     toplevel = open(Path(sessionpath,toplevelfile), 'r')    
     data = toplevel.read().replace("\n"," ");
     toplevel.close();
-    entityname = re.findall(r"entity \w+ is",data)[0][7:-3]
-    aux = re.findall(rf"entity {entityname} is.*end {entityname}",data)
-    if len(aux) == 0:
+    entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE).group(1)
+    if entityname is None: 
         return False
-    foundports = re.findall(rf"{availableports}(:|,|\s)",aux[0])
+    aux = re.search(rf"(entity {entityname} is.*end entity|entity {entityname} is.*end {entityname})",data,re.IGNORECASE)
+    if aux is None:
+        return False
+    foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
     portmaptxt = "port map("
     for port in foundports:
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
