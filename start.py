@@ -4,7 +4,7 @@ from pathlib import Path
 from appp import create_app, socketio
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
-print('Compiling the backend...')
+# print('Compiling the backend...')
 backendcompilerpath = Path(MAINPATH,'backend','compilebackend.sh')
 backendcompilerpath.chmod(0o744)
 subprocess.Popen(
@@ -13,9 +13,9 @@ subprocess.Popen(
                     stderr=subprocess.PIPE,
                     cwd=Path(MAINPATH,'backend') 
             )
-print('Backend compiled.')
+print('Backend compiled.\nStarting server...')
 
-app = create_app(debug=True,mainpath=MAINPATH)
+app = create_app(debug=False,mainpath=MAINPATH)
 
 if __name__ == '__main__':
     socketio.run(app,host='0.0.0.0',port=5000)

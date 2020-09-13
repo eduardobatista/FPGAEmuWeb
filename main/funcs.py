@@ -1,6 +1,8 @@
-import re,socket
+import re,socket,time,subprocess,select,os
 from random import randrange
 from pathlib import Path
+
+from appp import socketio
 
 newuserprefix = socket.gethostbyname(socket.gethostname())[-2:]
 
@@ -86,6 +88,104 @@ def createnewuser(basepath):
         candidate = newuserprefix + str(randrange(10000)) 
     return candidate
 
-def closeEmul(app, username):
-    app.procs[username].terminate()
-    del app.procs[username]
+def compilefile(username,sid,mainpath):
+    compilerpath = Path(mainpath,'backend','fpgacompileweb')
+    basepath = Path(mainpath,'work')
+    sessionpath = Path(basepath, username)
+    if not createFpgaTest(sessionpath,'usertop.vhd'):
+        socketio.emit('errors', "Could not find usertop.vhd, its ports or usertop entity.",namespace="/stream",room=sid)
+        socketio.disconnect(namespace="/stream",room=sid)
+        return
+    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    filenames = [x.name for x in aux]
+    proc = subprocess.Popen(
+                [compilerpath,sessionpath] + filenames + ['fpgatest.aux'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+        )
+    rline = 'start'
+    while rline != b'':
+        rline = proc.stdout.readline()
+        socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+        socketio.sleep(0.1)
+    aux = proc.stderr.read()
+    if aux != b'':
+        socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+    else:
+        socketio.emit("success","done",namespace="/stream",room=sid);
+    # socketio.disconnect(namespace="/stream",room=sid)
+
+emulprocs = {}
+fifowrite = {}
+def doEmulation(username,sid,mainpath):
+    keysprocs = emulprocs.keys()
+    if len(keysprocs) >= 25:
+        socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=sid)
+        return
+    elif username in keysprocs:
+        socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=sid)
+        return
+    else:
+        socketio.emit('message','Starting emulation...',namespace="/emul",room=sid)
+    basepath = Path(mainpath,'work')
+    sessionpath = Path(basepath, username)
+    try: 
+        for k in sessionpath.rglob("myfifo*"):
+            k.unlink();
+    except:
+        pass
+    fpgatestpath = Path(sessionpath, 'fpgatest')
+    if not fpgatestpath.exists():
+        socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=sid)
+        return
+    proc = subprocess.Popen(
+                [fpgatestpath],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=sessionpath 
+        )
+    emulprocs[username] = proc
+    socketio.sleep(0.2)      
+    # print("Opening FIFO...")
+    fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
+    select.select([fiforead], [], [fiforead]) # Blocks until ready to read
+    # print("FIFO opened")
+    os.read(fiforead,3).decode()
+    # print(os.read(fiforead,3).decode())
+    socketio.sleep(0.2)
+    fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
+    socketio.emit('started','Ok!',namespace="/emul",room=sid)
+    lasttime = time.time()       
+    while True:
+        aux,aux1,aux2 = select.select([fiforead], [fifowrite[username]], [fiforead]) # Blocks until ready to read
+        if len(aux) > 0:
+            data = os.read(fiforead,11)
+            # print(data)                
+            if len(data) == 0:
+                # print("Writer closed.")
+                break
+            socketio.emit('bytes', data, namespace="/emul", room=sid)
+            lasttime = time.time()
+        else:
+            if ((time.time()-lasttime) >= 120 ):
+                socketio.emit('error','Inactivity timeout...',namespace="/emul", room=sid)
+                closeEmul(username)
+                socketio.emit('status','Parado',namespace="/emul", room=sid)
+        socketio.sleep(0.1)
+    # print("Saiu!")
+    os.close(fifowrite[username])
+    os.close(fiforead)
+    del fifowrite[username]
+    # socketio.disconnect(namespace="/emul",room=sid)
+
+def stopEmulation(username,sid):
+    if username not in emulprocs.keys():
+        socketio.emit('error',f'Emulation not running for {username}.',namespace="/emul", room=sid)
+        return
+    else:
+        closeEmul(username)
+        socketio.emit('status',"Parado",namespace="/emul", room=sid)
+
+def closeEmul(username):
+    emulprocs[username].terminate()
+    del emulprocs[username]
