@@ -175,7 +175,7 @@ def writeinitstate(msg):
 @socketio.on('action', namespace='/emul') 
 def action(msg):
     if session['username'] not in fifowrite.keys():
-        emit('error',"Emulation not running.")
+        # emit('error',"Emulation not running.")
         return
     aux = list(msg.encode('utf-8'))
     aux[1] = aux[1] - 0x30
