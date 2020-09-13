@@ -174,6 +174,9 @@ def writeinitstate(msg):
 
 @socketio.on('action', namespace='/emul') 
 def action(msg):
+    if session['username'] not in fifowrite.keys():
+        emit('error',"Emulation not running.")
+        return
     aux = list(msg.encode('utf-8'))
     aux[1] = aux[1] - 0x30
     if msg[0] == 's': 
@@ -189,4 +192,5 @@ def action(msg):
 def test_disconnect():   
     if session['username'] in emulprocs.keys():        
         closeEmul(session['username'])
+        emit('error','Stopped on disconnect...')
         emit('status',"Parado")

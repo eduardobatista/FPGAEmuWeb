@@ -171,7 +171,7 @@ def doEmulation(username,sid,mainpath):
                 socketio.emit('error','Inactivity timeout...',namespace="/emul", room=sid)
                 closeEmul(username)
                 socketio.emit('status','Parado',namespace="/emul", room=sid)
-        socketio.sleep(0.1)
+        socketio.sleep(0.2)
     # print("Saiu!")
     os.close(fifowrite[username])
     os.close(fiforead)
