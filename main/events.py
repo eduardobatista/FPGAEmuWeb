@@ -84,8 +84,9 @@ def stream(cmd):
         disconnect()
 
 @socketio.on('message', namespace='/emul') 
-def stream(cmd):
+def stream2(cmd):
     if cmd == "Parar":
+        current_app.logger.info(f"Stoping emulation for {session['username']}.")
         stopEmulation(session['username'],request.sid)
         # if session['username'] not in current_app.procs.keys():
         #     emit('error',f'Emulation not running for {session["username"]}.')
@@ -94,6 +95,7 @@ def stream(cmd):
         #     closeEmul(current_app,session['username'])
         #     emit('status',"Parado")
     elif cmd == "Emular":
+        current_app.logger.info(f"Starting emulation for {session['username']}.")
         socketio.start_background_task(doEmulation,session['username'],request.sid,current_app.MAINPATH)
         # keysprocs = current_app.procs.keys()
         # if len(keysprocs) >= 25:
@@ -191,6 +193,6 @@ def action(msg):
 @socketio.on('disconnect', namespace='/emul')
 def test_disconnect():   
     if session['username'] in emulprocs.keys():        
-        closeEmul(session['username'])
+        # closeEmul(session['username'])
         emit('error','Stopped on disconnect...')
         emit('status',"Parado")

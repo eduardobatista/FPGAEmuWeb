@@ -426,6 +426,8 @@
                     if (msg.startsWith("Parado")) {
                         $("#iniciar").html("Start Emulation");
                         $('#status').append('<br>Emulation has stopped.');
+                        window.socket.disconnect();
+                        window.socketOn = false;
                     }
                 });
                 window.socket.on('disconnect', function(msg){

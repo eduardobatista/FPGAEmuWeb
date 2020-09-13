@@ -76,6 +76,8 @@ void *updatee()
       }
       if ((change == 1) || (forcedwrite == 1)) {
          write(fifoout,outmem,11);  
+         // fifoarr[0] = '\n';
+         // write(fifoout,fifoarr,1);
          forcedwrite = 0;        
       }
 

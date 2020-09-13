@@ -2,6 +2,7 @@
 import subprocess,os
 from pathlib import Path
 from appp import create_app, socketio
+import logging
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
@@ -15,7 +16,10 @@ subprocess.Popen(
             )
 print('Backend compiled.\nStarting server...')
 
-app = create_app(debug=False,mainpath=MAINPATH)
+app = create_app(debug=True,mainpath=MAINPATH)
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 if __name__ == '__main__':
     socketio.run(app,host='0.0.0.0',port=5000)
