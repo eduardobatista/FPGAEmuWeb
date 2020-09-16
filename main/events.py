@@ -193,6 +193,6 @@ def action(msg):
 @socketio.on('disconnect', namespace='/emul')
 def test_disconnect():   
     if session['username'] in emulprocs.keys():        
-        # closeEmul(session['username'])
+        closeEmul(session['username'])
         emit('error','Stopped on disconnect...')
         emit('status',"Parado")
