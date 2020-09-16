@@ -12,6 +12,7 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
+        - Timeouts do socketio: ping e timeout
         - Compilar só arquivos que importam (i.e., pegar usertop e components lá declarados)
         x BUG: No Editor, usuário já tem ele aberto e pode editar mas, nesse caso, "Save As" não funciona.
         x Adicionar /opt/local/bin to path
