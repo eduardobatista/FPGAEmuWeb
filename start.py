@@ -6,6 +6,8 @@ import logging
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
+analyzerpath = Path(MAINPATH,'backend','analyze.sh')
+analyzerpath.chmod(0o744)
 backendcompilerpath = Path(MAINPATH,'backend','compilebackend.sh')
 backendcompilerpath.chmod(0o744)
 subprocess.Popen(
