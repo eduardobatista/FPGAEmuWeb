@@ -32,7 +32,8 @@
             </select>            
             <button class="btn btn-primary btn-sm" onclick="savefile(0);">Save</button>
             <button class="btn btn-primary btn-sm" onclick="savefileas()">Save As...</button>
-            <button class="btn btn-primary btn-sm" onclick="newfile();">New</button>
+            <button class="btn btn-primary btn-sm" onclick="newfile();">New</button>            
+            <button class="btn btn-warning btn-sm" onclick="analyze()">Analyze Current File</button>
             <button class="btn btn-danger btn-sm" onclick="fpgaCompile()">Compile</button>
         </div>
         
@@ -78,7 +79,6 @@
         <!-- Full Height Modal Right -->
 
         <div class="modal fade" id="centralModalSm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"  aria-hidden="true">
-
             <!-- Change class .modal-sm to change the size of the modal -->
             <div class="modal-dialog modal-sm" role="document">
                 <div class="modal-content">
@@ -118,7 +118,7 @@
                 </div>
                 </div>
             </div>
-            </div>
+        </div>
 
         
 {% endblock %}
@@ -216,6 +216,14 @@
                 $("#gotoemul").attr('disabled', false);
                 $("#myspinner").hide();
             });
+            window.socket.on('asuccess',function(msg){
+                $('#status').append(`
+                    <span style="color:blue;">
+                        Analysis end up successfully!
+                    </span>
+                `);
+                $("#myspinner").hide();
+            });
             window.socket.on('disconnect', function(msg){
                 window.socketOn = false;
             });
@@ -296,6 +304,26 @@
                 openSocket();
             }
             window.socket.send("Compile")            
+        }
+
+        function analyze() {
+            if (window.filechanged) {
+                var r = confirm("The current file is not saved.\nAnalyze anyways?");
+                if (r == false) {
+                    return;
+                }
+            }
+            var val = $("#fileselect").children("option:selected").val();
+            if (val != 0) {               
+                $("#status").html("");
+                $("#myspinner").show();
+                $("#gotoemul").attr('disabled', true);
+                $("#fullHeightModalRight").modal();
+                if (!window.socketOn) {
+                    openSocket();
+                }
+                window.socket.emit("Analyze",val)
+            }
         }
         
     </script>

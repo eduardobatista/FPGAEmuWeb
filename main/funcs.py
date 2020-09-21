@@ -116,6 +116,27 @@ def compilefile(username,sid,mainpath):
         socketio.emit("success","done",namespace="/stream",room=sid);
     # socketio.disconnect(namespace="/stream",room=sid)
 
+def analyzefile(username,sid,mainpath,filename):
+    compilerpath = Path(mainpath,'backend','analyze.sh')
+    basepath = Path(mainpath,'work')
+    sessionpath = Path(basepath, username)    
+    proc = subprocess.Popen(
+                [compilerpath,sessionpath,filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+        )
+    rline = 'start'
+    while rline != b'':
+        rline = proc.stdout.readline()
+        socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+        socketio.sleep(0.1)
+    aux = proc.stderr.read()
+    if aux != b'':
+        socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+    else:
+        socketio.emit("asuccess","done",namespace="/stream",room=sid);
+
+
 emulprocs = {}
 fifowrite = {}
 def doEmulation(username,sid,mainpath):

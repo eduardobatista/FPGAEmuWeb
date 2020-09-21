@@ -50,6 +50,10 @@ def deletefile(filename):
         emit("deleteerror","Only .vhd and .vhdl files allowed.")
     
 
+@socketio.on('Analyze', namespace='/stream')
+def analyze(filename):
+    socketio.start_background_task(analyzefile,session['username'],request.sid,current_app.MAINPATH,filename)
+
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
     if cmd == "Compile":
