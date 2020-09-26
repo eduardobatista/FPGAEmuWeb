@@ -89,6 +89,24 @@ def createnewuser(basepath):
         candidate = newuserprefix + str(randrange(10000)) 
     return candidate
 
+def cleanfilelist(sessionpath,toplevelfile,filelist):
+    filesleft = [toplevelfile]
+    foundcomponents = [toplevelfile[:-4]]
+    while len(filesleft) > 0:
+        myfile = open(Path(sessionpath,filesleft[0]), 'r')    
+        data = myfile.read().replace("\n"," ")
+        found = re.findall(rf'component [\w\d\s]* is',data,re.IGNORECASE)
+        # print(found)
+        for ff in found:
+            foundcomponents.append(ff[9:-2].strip().lower())
+            filesleft.append(foundcomponents[-1] + ".vhd")
+        filesleft.pop(0)
+    # print(foundcomponents)
+    for k in range(len(filelist)-1,-1,-1):
+        if filelist[k].name[:-4].lower() not in foundcomponents:
+            filelist.pop(k) 
+    # print(filelist)
+
 def compilefile(username,sid,mainpath):
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     basepath = Path(mainpath,'work')
@@ -96,8 +114,9 @@ def compilefile(username,sid,mainpath):
     if not createFpgaTest(sessionpath,'usertop.vhd'):
         socketio.emit('errors', "Could not find usertop.vhd, its ports or usertop entity.",namespace="/stream",room=sid)
         socketio.disconnect(namespace="/stream",room=sid)
-        return
+        return    
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
     proc = subprocess.Popen(
                 [compilerpath,sessionpath] + filenames + ['fpgatest.aux'],

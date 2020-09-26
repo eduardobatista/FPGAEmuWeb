@@ -113,9 +113,12 @@
                     <label data-error="wrong" data-success="right" for="filenameas">File Name</label>
                     </div>
                 </div>
-                <div class="modal-footer d-flex justify-content-center">
-                    <button class="btn btn-secondary btn-sm" onclick="saveAsOrNew()">Save<i class="fas fa-paper-plane-o ml-1"></i></button>
-                </div>
+                    <div class="modal-footer d-flex justify-content-center">
+                        <button class="btn btn-secondary btn-sm" onclick="saveAsOrNew()">Save<i class="fas fa-paper-plane-o ml-1"></i></button>
+                    </div>
+                    <div id="saveasalert" data-dismiss="alert" class="alert alert-danger hide" role="alert">
+                        File extension must be ".vhd".                  
+                    </div>
                 </div>
             </div>
         </div>
@@ -152,6 +155,7 @@
                 $('#fileselect').val(arq);
                 openfile(); 
             }
+            $('#saveasalert').hide();
         });
 
         window.filechanged = false;
@@ -249,7 +253,7 @@
                 opt = 1: Save As.
                 opt = 2: Save New.
             */
-
+            $('#saveasalert').hide();
             window.lastfilesaveopt = opt; 
 
             var val = $("#fileselect").children("option:selected").val();
@@ -265,7 +269,10 @@
                         window.socket.emit("savefile",{filename: val, data:""});
                     } else {
                         window.socket.emit("savefile",{filename: val, data:editor.getValue()});
-                    }                    
+                    }     
+                               
+                } else {
+                    $('#saveasalert').show();
                 }                
             }          
 

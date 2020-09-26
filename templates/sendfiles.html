@@ -114,9 +114,12 @@
                     <label data-error="wrong" data-success="right" for="filenameas">File Name</label>
                     </div>
                 </div>
-                <div class="modal-footer d-flex justify-content-center">
-                    <button class="btn btn-secondary btn-sm" onclick="renameTo()">Rename<i class="fas fa-paper-plane-o ml-1"></i></button>
-                </div>
+                    <div class="modal-footer d-flex justify-content-center">
+                        <button class="btn btn-secondary btn-sm" onclick="renameTo()">Rename<i class="fas fa-paper-plane-o ml-1"></i></button>
+                    </div>
+                    <div id="saveasalert" data-dismiss="alert" class="alert alert-danger hide" role="alert">
+                        File extension must be ".vhd".                  
+                    </div>
                 </div>
             </div>
 
@@ -127,6 +130,10 @@
     <script src="/static/socket.io.js"></script>
     <!-- Your custom scripts (optional) -->
     <script type="text/javascript">
+
+        $(document).ready(function() {
+            $('#saveasalert').hide();
+        });
 
         function uploadfile() { 
 
@@ -218,15 +225,17 @@
             $("#filenameas").focus();
         }
 
-        function renameTo() {
-            $("#modalSaveAs").modal('hide');
+        function renameTo() {           
+            $('#saveasalert').hide();
             val = $("#filenameas").val();
             if ((val != "") && (val != window.filetorename)) {
                 if (val.endsWith(".vhd") || val.endsWith(".vhdl")) {
                     if (!window.socketOn) { openSocket(); }
-                    window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});                  
+                    window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});
+                    $("#modalSaveAs").modal('hide');              
                 } else {
-                    alert("Error: File does not end with .vhd or .vhdl.")
+                    //alert("Error: File does not end with .vhd or .vhdl.")
+                    $("#saveasalert").show();
                 }            
             }     
         }
