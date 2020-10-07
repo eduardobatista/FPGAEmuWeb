@@ -13,7 +13,7 @@ def sendfiles():
     basepath = Path(current_app.MAINPATH,'work')
     sessionpath = Path(basepath, session['username'])
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    filenames = [x.name for x in aux]
+    filenames = [x.stem for x in aux]
     return render_template('sendfiles.html',username=session['username'],filenames=filenames) # current_app.send_static_file('main.html')
 
 @main.route('/help')

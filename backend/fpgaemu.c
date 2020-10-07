@@ -27,6 +27,7 @@ Modified by Eduardo L. O. Batista (eduardo.batista at ufsc.br)
 #include <fcntl.h> 
 #include <sys/stat.h> 
 #include <sys/types.h> 
+#include <time.h> 
 #include <unistd.h> 
 
 int managereads();
@@ -43,19 +44,40 @@ char inmem[4] = {0x00, 0x00,0xF0,0x00};
 char lastout[12] = {0x00, 0x00, 0x00, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x00};
 char outmem[12] = {0xFF, 0xFF, 0xFF, 0x00,0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00};
 
-char ckmem[2] = {0};
+char ckmem[2] = {0,0};
 
 //void *updatee(void *arg)
 void *updatee()
 {
    int change = 0;
    int forcedwrite = 0;
+   int timewrite = 0;
    int currentbyte, comparebyte,currentbit;
    int i,j;
+   clock_t t1, t2;
+   clock_t t1hz;
+   double elapsedTime;
+
+   ckmem[0] = ckmem[0] & 0xFD;
+   t1hz = clock();
+   t1 = clock();
    
    while (1) {
 
-      ckmem[0] = ~ckmem[0];
+      if ( ((double)(clock()-t1hz)) >= CLOCKS_PER_SEC ) {
+         t1hz = clock();
+         if ((ckmem[0] & 0x02) == 0) {
+            ckmem[0] = ckmem[0] | 0x02;
+         } else {
+            ckmem[0] = ckmem[0] & 0xFD;
+         }
+      }
+      if ((ckmem[0] & 0x01) == 0) {
+         ckmem[0] = ckmem[0] | 0x01;
+      } else {
+         ckmem[0] = ckmem[0] & 0xFE;
+      }
+      //ckmem[0] = ~ckmem[0];
 
       change = 0;
 
@@ -74,11 +96,19 @@ void *updatee()
             lastout[i] = currentbyte;
          }
       }
-      if ((change == 1) || (forcedwrite == 1)) {
-         write(fifoout,outmem,11);  
+      if ((change == 1) || (forcedwrite == 1) || (timewrite == 1)) {         
+         t2 = clock();
+         elapsedTime = ((double)(t2 - t1))/CLOCKS_PER_SEC;
+         if (elapsedTime >= 0.2) {
+            write(fifoout,outmem,11);
+            t1 = clock();
+            forcedwrite = 0; 
+            timewrite = 0;
+         } else {
+            timewrite = 1;
+         }
          // fifoarr[0] = '\n';
-         // write(fifoout,fifoarr,1);
-         forcedwrite = 0;        
+         // write(fifoout,fifoarr,1);                
       }
 
       forcedwrite = managereads();

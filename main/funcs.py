@@ -23,6 +23,7 @@ architecture archtest of fpgatest is
     signal outbytes0,outbytes1,outbytes2: bit_vector(31 downto 0) := x"00000000";
     signal CLOCK_50:       std_logic := '0';
     signal CLK_500Hz:      std_logic := '0';
+    signal CLK_1Hz:        std_logic := '0';
     signal RKEY:           std_logic_vector(3 downto 0) := "1111";
     signal KEY:            std_logic_vector(3 downto 0) := "1111";
     signal RSW:            std_logic_vector(17 downto 0) := "000000000000000000";
@@ -35,6 +36,7 @@ begin
 	wait for 250 ns;
 	ckbyte <= to_unsigned(vhdlck(0),32);
 	CLK_500Hz <= ckbyte(0);
+    CLK_1Hz <= ckbyte(1);
 	vhdlout(0) := to_integer(signed(to_stdlogicvector(outbytes0)));
 	vhdlout(1) := to_integer(signed(to_stdlogicvector(outbytes1)));
 	vhdlout(2) := to_integer(signed(to_stdlogicvector(outbytes2)));
@@ -55,10 +57,10 @@ begin
 end archtest;
 '''
 # Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
-availableports = "(CLOCK_50|CLK_500Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
+availableports = "(CLOCK_50|CLK_500Hz|CLK_1Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
 def createFpgaTest(sessionpath,toplevelfile):
     toplevel = Path(sessionpath,toplevelfile)
-    if not toplevel.exists(): return False;
+    if not toplevel.exists(): return 1;
     fpgatestfile = Path(sessionpath,'fpgatest.aux')
     if fpgatestfile.exists(): fpgatestfile.unlink()
     toplevel = open(Path(sessionpath,toplevelfile), 'r')    
@@ -66,12 +68,14 @@ def createFpgaTest(sessionpath,toplevelfile):
     toplevel.close();
     entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
     if entityname is None: 
-        return False
+        return 2
     entityname = entityname.group(1)
     aux = re.search(rf"(entity {entityname} is.*end entity|entity {entityname} is.*end {entityname})",data,re.IGNORECASE)
     if aux is None:
-        return False
+        return 2
     foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
+    if len(foundports) == 0:
+        return 3
     portmaptxt = "port map("
     for port in foundports:
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
@@ -79,7 +83,7 @@ def createFpgaTest(sessionpath,toplevelfile):
     fpgatest = open(fpgatestfile,'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt))
     fpgatest.close()
-    return True
+    return 0
 
 def createnewuser(basepath):
     subdirs = list(basepath.glob("*"))
@@ -111,10 +115,21 @@ def compilefile(username,sid,mainpath):
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     basepath = Path(mainpath,'work')
     sessionpath = Path(basepath, username)
-    if not createFpgaTest(sessionpath,'usertop.vhd'):
-        socketio.emit('errors', "Could not find usertop.vhd, its ports or usertop entity.",namespace="/stream",room=sid)
+    retcode = createFpgaTest(sessionpath,'usertop.vhd')
+    if retcode == 0:
+        pass
+    elif retcode == 1:
+        socketio.emit('errors', "Could not find top level file: usertop.vhd.",namespace="/stream",room=sid)
         socketio.disconnect(namespace="/stream",room=sid)
-        return    
+        return
+    elif retcode == 2:   
+        socketio.emit('errors', "Error finding top level entity (usertop).",namespace="/stream",room=sid)
+        socketio.disconnect(namespace="/stream",room=sid)
+        return
+    elif retcode == 3:   
+        socketio.emit('errors', "Bad port names in usertop: port names do not match those from the emulator.",namespace="/stream",room=sid)
+        socketio.disconnect(namespace="/stream",room=sid)
+        return
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
