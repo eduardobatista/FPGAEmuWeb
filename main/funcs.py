@@ -109,7 +109,7 @@ def createFpgaTest(sessionpath,toplevelfile):
         dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
         aux4 = sepcomma.split(aux3[0])
         for pp in aux4:
-            if pp.upper() not in validportkeys:
+            if pp.strip().upper() not in validportkeys:
                 return f"Error: {pp} is not a valid port for usertop entity." 
             # portlist.append(pp)
             # portdirs.append(dirtype[0])
