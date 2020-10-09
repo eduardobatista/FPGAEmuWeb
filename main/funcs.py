@@ -58,24 +58,67 @@ end archtest;
 '''
 # Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
 availableports = "(CLOCK_50|CLK_500Hz|CLK_1Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
+validports = {'CLOCK_50':['in','std_logic'], 
+              'CLK_500HZ':['in','std_logic'], 
+              'CLK_1HZ':['in','std_logic'],
+              'KEY':['in','std_logic_vector(3 downto 0)'],
+              'RKEY':['in','std_logic_vector(3 downto 0)'],
+              'RSW':['in','std_logic_vector(17 downto 0)'],
+              'SW':['in','std_logic_vector(17 downto 0)'],
+              'LEDR':['out','std_logic_vector(17 downto 0)'],
+              'HEX0':['out','std_logic_vector(6 downto 0)'],
+              'HEX1':['out','std_logic_vector(6 downto 0)'],
+              'HEX2':['out','std_logic_vector(6 downto 0)'],
+              'HEX3':['out','std_logic_vector(6 downto 0)'],
+              'HEX4':['out','std_logic_vector(6 downto 0)'],
+              'HEX5':['out','std_logic_vector(6 downto 0)'],
+              'HEX6':['out','std_logic_vector(6 downto 0)'],
+              'HEX7':['out','std_logic_vector(6 downto 0)'],              
+             }
 def createFpgaTest(sessionpath,toplevelfile):
     toplevel = Path(sessionpath,toplevelfile)
-    if not toplevel.exists(): return 1;
+    if not toplevel.exists(): return "Error: usertop.vhd not found.";
     fpgatestfile = Path(sessionpath,'fpgatest.aux')
     if fpgatestfile.exists(): fpgatestfile.unlink()
     toplevel = open(Path(sessionpath,toplevelfile), 'r')    
-    data = toplevel.read().replace("\n"," ");
-    toplevel.close();
+    data = toplevel.read()
+    data = re.sub("--.*?\n|\n"," ",data)
+    data = re.sub("\s+"," ",data)
+    data = re.sub("\s+;",";",data)
+    toplevel.close()
     entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
     if entityname is None: 
-        return 2
+        return "Error: entity not found in usertop."
     entityname = entityname.group(1)
-    aux = re.search(rf"(entity {entityname} is.*end entity|entity {entityname} is.*end {entityname})",data,re.IGNORECASE)
+    # aux = re.search(rf"(entity {entityname} is.*end entity|entity {entityname} is.*end {entityname})",data,re.IGNORECASE)
+    # aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity(\s+|);|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname}(\s+|);",data,re.IGNORECASE)
+    aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity;|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname};",data,re.IGNORECASE)
     if aux is None:
-        return 2
+        return "Error: ports not found in usertop."
+    # portlist = []
+    # portdirs = []
+    # porttypes = []
+    # print(aux.group(3))
+    aux2 = re.split(";\s+|;",aux.group(3)[1:-1])
+    sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
+    sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
+    sepspace = re.compile(r"\s+")
+    validportkeys = validports.keys()
+    for item in aux2:
+        aux3 = sepdots.split(item)
+        dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
+        aux4 = sepcomma.split(aux3[0])
+        for pp in aux4:
+            if pp.upper() not in validportkeys:
+                return f"Error: {pp} is not a valid port for usertop entity." 
+            # portlist.append(pp)
+            # portdirs.append(dirtype[0])
+            # porttypes.append(dirtype[1])
+    
     foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
+    #foundports2 = re.findall(rf"{availableports}(;|\))",aux.group(0),re.IGNORECASE)
     if len(foundports) == 0:
-        return 3
+        return "Error: ports not found."
     portmaptxt = "port map("
     for port in foundports:
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
@@ -83,7 +126,7 @@ def createFpgaTest(sessionpath,toplevelfile):
     fpgatest = open(fpgatestfile,'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt))
     fpgatest.close()
-    return 0
+    return "Ok!"
 
 def createnewuser(basepath):
     subdirs = list(basepath.glob("*"))
@@ -116,20 +159,20 @@ def compilefile(username,sid,mainpath):
     basepath = Path(mainpath,'work')
     sessionpath = Path(basepath, username)
     retcode = createFpgaTest(sessionpath,'usertop.vhd')
-    if retcode == 0:
+    if retcode == "Ok!":
         pass
-    elif retcode == 1:
-        socketio.emit('errors', "Could not find top level file: usertop.vhd.",namespace="/stream",room=sid)
-        socketio.disconnect(namespace="/stream",room=sid)
+    else:
+        socketio.emit('errors', retcode, namespace="/stream", room=sid)
+        socketio.disconnect(namespace="/stream", room=sid)
         return
-    elif retcode == 2:   
-        socketio.emit('errors', "Error finding top level entity (usertop).",namespace="/stream",room=sid)
-        socketio.disconnect(namespace="/stream",room=sid)
-        return
-    elif retcode == 3:   
-        socketio.emit('errors', "Bad port names in usertop: port names do not match those from the emulator.",namespace="/stream",room=sid)
-        socketio.disconnect(namespace="/stream",room=sid)
-        return
+    # elif retcode == 2:   
+    #     socketio.emit('errors', "Error finding top level entity (usertop).",namespace="/stream",room=sid)
+    #     socketio.disconnect(namespace="/stream",room=sid)
+    #     return
+    # elif retcode == 3:   
+    #     socketio.emit('errors', "Bad port names in usertop: port names do not match those from the emulator.",namespace="/stream",room=sid)
+    #     socketio.disconnect(namespace="/stream",room=sid)
+    #     return
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
