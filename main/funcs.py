@@ -58,22 +58,22 @@ end archtest;
 '''
 # Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
 availableports = "(CLOCK_50|CLK_500Hz|CLK_1Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
-validports = {'CLOCK_50':['in','std_logic'], 
-              'CLK_500HZ':['in','std_logic'], 
-              'CLK_1HZ':['in','std_logic'],
-              'KEY':['in','std_logic_vector(3 downto 0)'],
-              'RKEY':['in','std_logic_vector(3 downto 0)'],
-              'RSW':['in','std_logic_vector(17 downto 0)'],
-              'SW':['in','std_logic_vector(17 downto 0)'],
-              'LEDR':['out','std_logic_vector(17 downto 0)'],
-              'HEX0':['out','std_logic_vector(6 downto 0)'],
-              'HEX1':['out','std_logic_vector(6 downto 0)'],
-              'HEX2':['out','std_logic_vector(6 downto 0)'],
-              'HEX3':['out','std_logic_vector(6 downto 0)'],
-              'HEX4':['out','std_logic_vector(6 downto 0)'],
-              'HEX5':['out','std_logic_vector(6 downto 0)'],
-              'HEX6':['out','std_logic_vector(6 downto 0)'],
-              'HEX7':['out','std_logic_vector(6 downto 0)'],              
+validports = {'CLOCK_50':['in',1], 
+              'CLK_500HZ':['in',1], 
+              'CLK_1HZ':['in',1],
+              'KEY':['in',4],
+              'RKEY':['in',4],
+              'RSW':['in',18],
+              'SW':['in',18],
+              'LEDR':['out',18],
+              'HEX0':['out',7],
+              'HEX1':['out',7],
+              'HEX2':['out',7],
+              'HEX3':['out',7],
+              'HEX4':['out',7],
+              'HEX5':['out',7],
+              'HEX6':['out',7],
+              'HEX7':['out',7],              
              }
 def createFpgaTest(sessionpath,toplevelfile):
     toplevel = Path(sessionpath,toplevelfile)
@@ -95,10 +95,6 @@ def createFpgaTest(sessionpath,toplevelfile):
     aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity;|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname};",data,re.IGNORECASE)
     if aux is None:
         return "Error: ports not found in usertop."
-    # portlist = []
-    # portdirs = []
-    # porttypes = []
-    # print(aux.group(3))
     aux2 = re.split(";\s+|;",aux.group(3)[1:-1])
     sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
     sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
@@ -107,14 +103,21 @@ def createFpgaTest(sessionpath,toplevelfile):
     for item in aux2:
         aux3 = sepdots.split(item)
         dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
+        typesize = 1
+        if "std_logic_vector" in dirtype[1].lower():
+            auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
+            if (auxx is None) or (len(auxx.groups()) < 2):
+                return "Error: Fail parsing " + dirtype[1] + "."
+            typesize = int(auxx.group(1)) - int(auxx.group(2)) 
+            if typesize < 0: typesize = -typesize
+            typesize = typesize+1
         aux4 = sepcomma.split(aux3[0])
         for pp in aux4:
-            if pp.strip().upper() not in validportkeys:
-                return f"Error: {pp} is not a valid port for usertop entity." 
-            # portlist.append(pp)
-            # portdirs.append(dirtype[0])
-            # porttypes.append(dirtype[1])
-    
+            ppp = pp.strip().upper()
+            if ppp not in validportkeys:
+                return f"Error: {pp} is not a valid port for usertop entity."  
+            if validports[ppp][1] != typesize:
+                return f"Error: Length of port {pp} does not match the corresponding DE2 port length."
     foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
     #foundports2 = re.findall(rf"{availableports}(;|\))",aux.group(0),re.IGNORECASE)
     if len(foundports) == 0:
