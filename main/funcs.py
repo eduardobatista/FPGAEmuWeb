@@ -166,7 +166,7 @@ def compilefile(username,sid,mainpath):
         pass
     else:
         socketio.emit('errors', retcode, namespace="/stream", room=sid)
-        socketio.disconnect(namespace="/stream", room=sid)
+        # socketio.disconnect(namespace="/stream", room=sid)
         return
     # elif retcode == 2:   
     #     socketio.emit('errors', "Error finding top level entity (usertop).",namespace="/stream",room=sid)
