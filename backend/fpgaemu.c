@@ -57,6 +57,7 @@ void *updatee()
    clock_t t1, t2;
    clock_t t1hz;
    double elapsedTime;
+   double clocksperhalfsec = (double)(CLOCKS_PER_SEC >> 1);
 
    ckmem[0] = ckmem[0] & 0xFD;
    t1hz = clock();
@@ -64,7 +65,7 @@ void *updatee()
    
    while (1) {
 
-      if ( ((double)(clock()-t1hz)) >= CLOCKS_PER_SEC ) {
+      if ( ((double)(clock()-t1hz)) >= clocksperhalfsec ) {
          t1hz = clock();
          if ((ckmem[0] & 0x02) == 0) {
             ckmem[0] = ckmem[0] | 0x02;

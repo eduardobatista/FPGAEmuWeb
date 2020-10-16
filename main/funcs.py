@@ -92,16 +92,27 @@ def createFpgaTest(sessionpath,toplevelfile):
     entityname = entityname.group(1)
     # aux = re.search(rf"(entity {entityname} is.*end entity|entity {entityname} is.*end {entityname})",data,re.IGNORECASE)
     # aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity(\s+|);|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname}(\s+|);",data,re.IGNORECASE)
-    aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity;|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname};",data,re.IGNORECASE)
+    # aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity;|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname};",data,re.IGNORECASE)
+    aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
+    if aux is None:
+        return "Erro: entity not found in usertop."
+    # print(aux.groups)
+    # print(aux.group(0))
+    # print(aux.group(1))
+    # print(aux.group(2))
+    aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
     if aux is None:
         return "Error: ports not found in usertop."
-    aux2 = re.split(";\s+|;",aux.group(3)[1:-1])
+    # print(aux.group(1))
+    aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
     sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
     sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
     sepspace = re.compile(r"\s+")
     validportkeys = validports.keys()
+    # print(aux2)
     for item in aux2:
         aux3 = sepdots.split(item)
+        # print(aux3)
         dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
         typesize = 1
         if "std_logic_vector" in dirtype[1].lower():
