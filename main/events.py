@@ -48,6 +48,18 @@ def deletefile(filename):
         emit("filedeleted",filename)
     else:
         emit("deleteerror","Only .vhd and .vhdl files allowed.")
+
+@socketio.on('deleteallfiles', namespace='/stream') 
+def deleteallfiles(fname):
+    try:
+        basepath = Path(current_app.MAINPATH,'work')
+        sessionpath = Path(basepath, session['username'])
+        aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+        for ff in aux:
+            ff.unlink()
+        emit("filedeleted","*")
+    except:
+        emit("deleteerror","Error deleting all files.")
     
 
 @socketio.on('Analyze', namespace='/stream')

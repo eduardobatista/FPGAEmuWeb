@@ -7,8 +7,9 @@
         </div>
 
         {%- if filenames is defined -%}
-        <div class="container mt-2">
+        <div class="container mt-2">            
             <button type="button" class="btn btn-primary m-0 ml-1 p-2 float-right" onclick="location.href = '/downloadfile';">Download All</button>
+            <button type="button" class="btn btn-danger m-0 ml-1 p-2 float-right" onclick="deleteAllFiles();">Delete All</button>
             <h4 class="mb-3">Current files:</h4>
             <ul class="list-group">             
                 {% for fname in filenames %}
@@ -250,6 +251,17 @@
             if (r == true) {
                 if (!window.socketOn) { openSocket(); }
                 window.socket.emit("deletefile",fname); 
+            } else {
+                txt = "You pressed Cancel!";
+            }
+        }
+
+        function deleteAllFiles() {
+            var txt;
+            var r = confirm("Deleting ALL FILES!!!\nAre you REALLY sure?");
+            if (r == true) {
+                if (!window.socketOn) { openSocket(); }
+                window.socket.emit("deleteallfiles",""); 
             } else {
                 txt = "You pressed Cancel!";
             }
