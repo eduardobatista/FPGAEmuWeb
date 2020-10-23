@@ -55,22 +55,33 @@ void *updatee()
    int currentbyte, comparebyte,currentbit;
    int i,j;
    clock_t t1, t2;
-   clock_t t1hz;
+   clock_t t1hz, t10hz, actualclock;
    double elapsedTime;
    double clocksperhalfsec = (double)(CLOCKS_PER_SEC >> 1);
+   double clocksper50ms = clocksperhalfsec / 10.0;
 
    ckmem[0] = ckmem[0] & 0xFD;
    t1hz = clock();
+   t10hz = clock();
    t1 = clock();
    
    while (1) {
 
-      if ( ((double)(clock()-t1hz)) >= clocksperhalfsec ) {
+      actualclock = clock();
+      if ( ((double)(actualclock-t1hz)) >= clocksperhalfsec ) {
          t1hz = clock();
          if ((ckmem[0] & 0x02) == 0) {
             ckmem[0] = ckmem[0] | 0x02;
          } else {
             ckmem[0] = ckmem[0] & 0xFD;
+         }
+      }
+      if ( ((double)(actualclock-t10hz)) >= clocksper50ms ) {
+         t10hz = clock();
+         if ((ckmem[0] & 0x04) == 0) {
+            ckmem[0] = ckmem[0] | 0x04;
+         } else {
+            ckmem[0] = ckmem[0] & 0xFB;
          }
       }
       if ((ckmem[0] & 0x01) == 0) {
@@ -100,7 +111,7 @@ void *updatee()
       if ((change == 1) || (forcedwrite == 1) || (timewrite == 1)) {         
          t2 = clock();
          elapsedTime = ((double)(t2 - t1))/CLOCKS_PER_SEC;
-         if (elapsedTime >= 0.2) {
+         if (elapsedTime >= 0.1) {
             write(fifoout,outmem,11);
             t1 = clock();
             forcedwrite = 0; 

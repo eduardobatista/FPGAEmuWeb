@@ -24,6 +24,7 @@ architecture archtest of fpgatest is
     signal CLOCK_50:       std_logic := '0';
     signal CLK_500Hz:      std_logic := '0';
     signal CLK_1Hz:        std_logic := '0';
+    signal CLK_10Hz:       std_logic := '0';
     signal RKEY:           std_logic_vector(3 downto 0) := "1111";
     signal KEY:            std_logic_vector(3 downto 0) := "1111";
     signal RSW:            std_logic_vector(17 downto 0) := "000000000000000000";
@@ -37,6 +38,7 @@ begin
 	ckbyte <= to_unsigned(vhdlck(0),32);
 	CLK_500Hz <= ckbyte(0);
     CLK_1Hz <= ckbyte(1);
+    CLK_10Hz <= ckbyte(2);
 	vhdlout(0) := to_integer(signed(to_stdlogicvector(outbytes0)));
 	vhdlout(1) := to_integer(signed(to_stdlogicvector(outbytes1)));
 	vhdlout(2) := to_integer(signed(to_stdlogicvector(outbytes2)));
@@ -57,10 +59,11 @@ begin
 end archtest;
 '''
 # Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
-availableports = "(CLOCK_50|CLK_500Hz|CLK_1Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
+availableports = "(CLOCK_50|CLK_500Hz|CLK_1Hz|CLK_10Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
 validports = {'CLOCK_50':['in',1], 
               'CLK_500HZ':['in',1], 
               'CLK_1HZ':['in',1],
+              'CLK_10HZ':['in',1],
               'KEY':['in',4],
               'RKEY':['in',4],
               'RSW':['in',18],
