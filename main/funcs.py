@@ -98,7 +98,7 @@ def createFpgaTest(sessionpath,toplevelfile):
     # aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity;|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname};",data,re.IGNORECASE)
     aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
     if aux is None:
-        return "Erro: entity not found in usertop."
+        return "Error: entity not found in usertop."
     # print(aux.groups)
     # print(aux.group(0))
     # print(aux.group(1))
@@ -113,25 +113,30 @@ def createFpgaTest(sessionpath,toplevelfile):
     sepspace = re.compile(r"\s+")
     validportkeys = validports.keys()
     # print(aux2)
-    for item in aux2:
-        aux3 = sepdots.split(item)
-        # print(aux3)
-        dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
-        typesize = 1
-        if "std_logic_vector" in dirtype[1].lower():
-            auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
-            if (auxx is None) or (len(auxx.groups()) < 2):
-                return "Error: Fail parsing " + dirtype[1] + "."
-            typesize = int(auxx.group(1)) - int(auxx.group(2)) 
-            if typesize < 0: typesize = -typesize
-            typesize = typesize+1
-        aux4 = sepcomma.split(aux3[0])
-        for pp in aux4:
-            ppp = pp.strip().upper()
-            if ppp not in validportkeys:
-                return f"Error: {pp} is not a valid port for usertop entity."  
-            if validports[ppp][1] != typesize:
-                return f"Error: Length of port {pp} does not match the corresponding DE2 port length."
+    try:
+        for item in aux2:
+            aux3 = sepdots.split(item)
+            if len(aux3) != 2:
+                continue
+            # print(aux3)
+            dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
+            typesize = 1
+            if "std_logic_vector" in dirtype[1].lower():
+                auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
+                if (auxx is None) or (len(auxx.groups()) < 2):
+                    return "Error: Fail parsing " + dirtype[1] + "."
+                typesize = int(auxx.group(1)) - int(auxx.group(2)) 
+                if typesize < 0: typesize = -typesize
+                typesize = typesize+1
+            aux4 = sepcomma.split(aux3[0])
+            for pp in aux4:
+                ppp = pp.strip().upper()
+                if ppp not in validportkeys:
+                    return f"Error: {pp} is not a valid port for usertop entity."  
+                if validports[ppp][1] != typesize:
+                    return f"Error: Length of port {pp} does not match the corresponding DE2 port length."
+    except:
+        return "Error parsing usertop ports."
     foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
     #foundports2 = re.findall(rf"{availableports}(;|\))",aux.group(0),re.IGNORECASE)
     if len(foundports) == 0:
@@ -229,6 +234,48 @@ def analyzefile(username,sid,mainpath,filename):
         socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
     else:
         socketio.emit("asuccess","done",namespace="/stream",room=sid);
+
+def simulatefile(username,sid,mainpath,stoptime):
+    simulatorpath = Path(mainpath,'backend','simulate.sh')
+    basepath = Path(mainpath,'work')
+    sessionpath = Path(basepath, username)
+    if "ns" not in stoptime:
+        socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=sid)
+        return    
+    stoptime = re.sub("\s+","",stoptime)
+    aux = re.sub("ns","",stoptime)
+    try:
+        if int(aux) > 1000:
+            socketio.emit("errors","Simulator limitation: stop time must be at most 1000 ns.",namespace="/stream",room=sid)
+            return
+    except:
+        socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=sid)
+    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    # cleanfilelist(sessionpath,'usertop.vhd',aux)
+    filenames = [x.name for x in aux]
+    proc = subprocess.Popen(
+                [simulatorpath,sessionpath,stoptime] + filenames,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+        )
+    rline = 'start'
+    hasError = False
+    errmsgs = ""
+    while rline != b'':
+        rline = proc.stdout.readline()
+        if ":error:" in rline.decode():
+            hasError = True
+            errmsgs += rline.decode() + "\n"
+        else:
+            socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+        socketio.sleep(0.1)
+    aux = proc.stderr.read()
+    if aux != b'':
+        socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+    elif hasError:
+        socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
+    else:
+        socketio.emit("success","done",namespace="/stream",room=sid)
 
 
 emulprocs = {}

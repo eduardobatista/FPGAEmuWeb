@@ -31,6 +31,13 @@ def emular():
         session['username'] = createnewuser(basepath)
     return render_template('emulation.html',username=session['username'])
 
+@main.route('/simulation')
+def simular():
+    basepath = Path(current_app.MAINPATH,'work')
+    if 'username' not in session:               
+        session['username'] = createnewuser(basepath)
+    return render_template('simulation.html',username=session['username'])
+
 @main.route('/editor')
 def editor():    
     basepath = Path(current_app.MAINPATH,'work')
@@ -55,6 +62,21 @@ def downloadfile():
         zipobj.write(f,f.name)    
     zipobj.close()
     return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True)
+
+@main.route("/downloadsimfile")
+def downloadsimfile():
+    basepath = Path(current_app.MAINPATH,'work')
+    sessionpath = Path(basepath, session['username'])
+    # aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    # filenames = [x.name for x in aux]
+    # zipname = Path(sessionpath,'VHDLFiles.zip')
+    # if zipname.exists(): 
+    #     zipname.unlink()
+    # zipobj = ZipFile(zipname, 'w')
+    # for f in aux:
+    #     zipobj.write(f,f.name)    
+    # zipobj.close()
+    return send_from_directory(sessionpath, 'output.ghw', as_attachment=True)
 
 @main.route('/upload', methods=['GET', 'POST'])
 def upload():
