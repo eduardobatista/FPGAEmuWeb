@@ -76,7 +76,7 @@ def downloadsimfile():
     # for f in aux:
     #     zipobj.write(f,f.name)    
     # zipobj.close()
-    return send_from_directory(sessionpath, 'output.ghw', as_attachment=True)
+    return send_from_directory(sessionpath, 'output.ghw', as_attachment=True, cache_timeout=-1)
 
 @main.route('/upload', methods=['GET', 'POST'])
 def upload():
