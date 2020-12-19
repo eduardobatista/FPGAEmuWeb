@@ -1,6 +1,7 @@
 import re,socket,time,subprocess,select,os
 from random import randrange
 from pathlib import Path
+import pkg_resources
 
 from appp import socketio
 
@@ -138,14 +139,14 @@ def createFpgaTest(sessionpath,toplevelfile):
     except:
         return "Error parsing usertop ports."
     foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
-    #foundports2 = re.findall(rf"{availableports}(;|\))",aux.group(0),re.IGNORECASE)
+    # foundports2 = re.findall(rf"{availableports}(;|\))",aux.group(0),re.IGNORECASE)
     if len(foundports) == 0:
         return "Error: ports not found."
     portmaptxt = "port map("
     for port in foundports:
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
     portmaptxt = portmaptxt[:-1] + ");"
-    fpgatest = open(fpgatestfile,'w')
+    fpgatest = open(fpgatestfile, 'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt))
     fpgatest.close()
     return "Ok!"
@@ -361,3 +362,9 @@ def closeEmul(username):
     if username in emulprocs.keys():
         emulprocs[username].terminate()
         del emulprocs[username]
+
+def getsocketiofile():
+    socketiofile = 'socket.io.3.js'
+    if pkg_resources.get_distribution("python-socketio").version.startswith('4'):
+        socketiofile = 'socket.io.js'
+    return socketiofile

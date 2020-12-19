@@ -2,6 +2,9 @@
 
 {% block styles %}
   <style>
+
+            body    {overflow-y:scroll;}
+
             .swlabel {
                 position: absolute;
                 left: 0px;
@@ -116,7 +119,7 @@
 
         
 
-        <div class="container mt-2 p-0">
+        <div class="container mt-2 p-0" id="imgDiv">
             <img src="/static/all_leds.jpg" width="100%" id="mainImg" style="position: relative; z-index: -1;">
             <!-- <canvas id="myCanvas" width="961px" height="292px"></canvas> -->
             <canvas id="drawCanvas" width="961px" height="292px" style="position: absolute; top: 0px; left: 0px; margin: 0px;"></canvas>
@@ -151,7 +154,7 @@
 {% block scripts %}
 
     <!-- Socket.IO: -->
-    <script src="/static/socket.io.js"></script>
+    <!-- <script src="/static/socket.io.js"></script> -->
     <!-- Your custom scripts (optional) -->
     <script type="text/javascript">
 
@@ -160,7 +163,7 @@
         window.scl = 1;
 
         function adjustCanvas() {
-            console.log("!!!");
+            // console.log("!!!");
             var rect = document.getElementById("mainImg").getBoundingClientRect();
             // console.log(rect.top, rect.right, rect.bottom, rect.left);
             console.log($("#mainImg").width())
@@ -176,6 +179,8 @@
         }
 
         $("#mainImg").ready(adjustCanvas);
+
+        // $("#imgDiv").resize(adjustCanvas);
 
         $(window).resize(adjustCanvas);
 

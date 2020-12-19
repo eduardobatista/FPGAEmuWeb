@@ -18,7 +18,7 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
         x BUG: No Editor, usuário já tem ele aberto e pode editar mas, nesse caso, "Save As" não funciona.
         x Adicionar /opt/local/bin to path
         - Melhorar Timeouts: fazer inactivity para entrada e saída diferentes.
-        - Botão "Delete All"
+        x Botão "Delete All"
         x TIMEOUT sem interação do usuário.
         nn Matar outro processo do usuário na criação de um novo.
         x BUG!!!: Sem arquivo, parece estar compilando.

@@ -13,8 +13,9 @@ def sendfiles():
     basepath = Path(current_app.MAINPATH,'work')
     sessionpath = Path(basepath, session['username'])
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    filenames = [x.stem for x in aux]
-    return render_template('sendfiles.html',username=session['username'],filenames=filenames) # current_app.send_static_file('main.html')
+    filenames = [x.stem for x in aux]    
+    print(getsocketiofile())
+    return render_template('sendfiles.html',username=session['username'],filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')
 
 @main.route('/help')
 def hhelp():
@@ -29,14 +30,14 @@ def emular():
     basepath = Path(current_app.MAINPATH,'work')
     if 'username' not in session:               
         session['username'] = createnewuser(basepath)
-    return render_template('emulation.html',username=session['username'])
+    return render_template('emulation.html',username=session['username'],socketiofile=getsocketiofile())
 
 @main.route('/simulation')
 def simular():
     basepath = Path(current_app.MAINPATH,'work')
     if 'username' not in session:               
         session['username'] = createnewuser(basepath)
-    return render_template('simulation.html',username=session['username'])
+    return render_template('simulation.html',username=session['username'],socketiofile=getsocketiofile())
 
 @main.route('/editor')
 def editor():    
@@ -46,7 +47,7 @@ def editor():
     sessionpath = Path(basepath, session['username'])
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
-    return render_template('editor.html',username=session['username'],filenames=filenames)
+    return render_template('editor.html',username=session['username'],filenames=filenames,socketiofile=getsocketiofile())
 
 @main.route("/downloadfile")
 def downloadfile():
