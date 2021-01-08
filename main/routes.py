@@ -1,21 +1,41 @@
 from pathlib import Path
-from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory
+from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash
 from werkzeug.utils import secure_filename
 from zipfile import ZipFile
 from . import main
 from .funcs import *
+from flask_login import login_required, current_user
+
+def getuserpath():
+    userpath = Path(current_app.MAINPATH,'work',current_user.email)
+    if not userpath.exists():
+        userpath.mkdir()
+    return userpath
+
+@main.route('/profile')
+@login_required
+def profile():
+    return f'User {current_user.name} is logged in.'
 
 @main.route('/')
-def sendfiles():   
-    basepath = Path(current_app.MAINPATH,'work')
-    if 'username' not in session:               
-        session['username'] = createnewuser(basepath)
-    basepath = Path(current_app.MAINPATH,'work')
-    sessionpath = Path(basepath, session['username'])
+def entrance():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.sendfiles')) 
+    else:
+        return redirect(url_for('auth.login'))
+
+@main.route('/files')
+@login_required
+def sendfiles():
+    # basepath = Path(current_app.MAINPATH,'work')
+    # if 'username' not in session:               
+    #     session['username'] = createnewuser(basepath)
+    # basepath = Path(current_app.MAINPATH,'work')
+    sessionpath = getuserpath()
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.stem for x in aux]    
-    print(getsocketiofile())
-    return render_template('sendfiles.html',username=session['username'],filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')
+    # print(getsocketiofile())
+    return render_template('sendfiles.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')
 
 @main.route('/help')
 def hhelp():
@@ -26,33 +46,29 @@ def aabout():
     return render_template('about.html')
 
 @main.route('/emulation')
+@login_required
 def emular():
-    basepath = Path(current_app.MAINPATH,'work')
-    if 'username' not in session:               
-        session['username'] = createnewuser(basepath)
-    return render_template('emulation.html',username=session['username'],socketiofile=getsocketiofile())
+    userpath = getuserpath()
+    return render_template('emulation.html',username=current_user.email,socketiofile=getsocketiofile())
 
 @main.route('/simulation')
+@login_required
 def simular():
-    basepath = Path(current_app.MAINPATH,'work')
-    if 'username' not in session:               
-        session['username'] = createnewuser(basepath)
-    return render_template('simulation.html',username=session['username'],socketiofile=getsocketiofile())
+    userpath = getuserpath()
+    return render_template('simulation.html',username=current_user.email,socketiofile=getsocketiofile())
 
 @main.route('/editor')
-def editor():    
-    basepath = Path(current_app.MAINPATH,'work')
-    if 'username' not in session:               
-        session['username'] = createnewuser(basepath)    
-    sessionpath = Path(basepath, session['username'])
+@login_required
+def editor():       
+    sessionpath = getuserpath()
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
-    return render_template('editor.html',username=session['username'],filenames=filenames,socketiofile=getsocketiofile())
+    return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
 
 @main.route("/downloadfile")
+@login_required
 def downloadfile():
-    basepath = Path(current_app.MAINPATH,'work')
-    sessionpath = Path(basepath, session['username'])
+    sessionpath = getuserpath()
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
     zipname = Path(sessionpath,'VHDLFiles.zip')
@@ -65,9 +81,9 @@ def downloadfile():
     return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True)
 
 @main.route("/downloadsimfile")
+@login_required
 def downloadsimfile():
-    basepath = Path(current_app.MAINPATH,'work')
-    sessionpath = Path(basepath, session['username'])
+    sessionpath = getuserpath()
     # aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # filenames = [x.name for x in aux]
     # zipname = Path(sessionpath,'VHDLFiles.zip')
@@ -80,10 +96,10 @@ def downloadsimfile():
     return send_from_directory(sessionpath, 'output.ghw', as_attachment=True, cache_timeout=-1)
 
 @main.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
     if request.method == 'POST':
-        basepath = Path(current_app.MAINPATH,'work')
-        sessionpath = Path(basepath, session['username'])
+        sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
         f = request.files.getlist("fileToUpload")
@@ -94,6 +110,7 @@ def upload():
         return "Fail..."
 
 @main.route('/compilar', methods=['GET', 'POST'])
+@login_required
 def compilar():
     if request.headers.get('accept') == 'text/event-stream':
         if proc is not None:

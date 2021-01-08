@@ -102,9 +102,9 @@
 
 {% block content %}
 
-        <div class="container mt-1">
+        <!-- <div class="container mt-1">
             Your <strong>id</strong> is {{ username }}.        
-        </div>
+        </div> -->
 
         <!-- {%- if filenames is defined -%} -->
         <div class="container mt-4">
@@ -195,7 +195,7 @@
             ctx.fillStyle = "rgba(255,0,0,0.5)";
             ctx.fillRect(0,0,0.5,0.5);
             imageWidth = canvas.width;
-            startx = (925 - iled*52.2);
+            startx = (925 - Math.round(iled*52.2));
             starty = 263 ;
             // endx = (932 - iled*52);
             // endy = 277 ;

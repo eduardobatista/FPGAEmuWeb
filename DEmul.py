@@ -12,6 +12,9 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
+        - Secret key dinâmica.
+        - Templates
+
         x Na hora de salvar, apensar extensão .vhd se não estiver correta.
         - Timeouts do socketio: ping e timeout
         - Compilar só arquivos que importam (i.e., pegar usertop e components lá declarados)

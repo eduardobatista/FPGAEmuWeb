@@ -1,5 +1,6 @@
 .vscode
 __pycach__
+db.sqlite
 work/
 work/1234/e~fpgatest.o
 work/1234/fpgatest

@@ -1,7 +1,8 @@
 # from . import create_app, socketio
 import subprocess,os
 from pathlib import Path
-from appp import create_app, socketio
+from appp import create_app, socketio, db
+import main.models
 import logging
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +22,9 @@ subprocess.Popen(
 print('Backend compiled.\nStarting server...')
 
 app = create_app(debug=True,mainpath=MAINPATH)
+
+with app.app_context():
+    db.create_all()
 
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)

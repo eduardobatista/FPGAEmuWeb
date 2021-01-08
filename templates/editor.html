@@ -18,9 +18,9 @@
 
 {% block content %}
 
-        <div class="container mt-2">
+        <!-- <div class="container mt-2">
             Your <strong>id</strong> is {{ username }}.        
-        </div>
+        </div> -->
 
         {%- if filenames is defined -%}
         <div class="container mt-2">
@@ -32,9 +32,19 @@
             </select>            
             <button class="btn btn-primary btn-sm" onclick="savefile(0);">Save</button>
             <button class="btn btn-primary btn-sm" onclick="savefileas()">Save As...</button>
-            <button class="btn btn-primary btn-sm" onclick="newfile();">New</button>            
+            <button class="btn btn-primary btn-sm" onclick="newfile();">New</button>
+            <div class="dropdown d-inline">
+                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Templates
+                </button>
+                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <a class="dropdown-item" href="#" onclick="fillWithUsertop();">usertop.vhd</a>
+                    <!-- <a class="dropdown-item" href="#">usertest.vhd</a> -->
+                    <!-- <a class="dropdown-item" href="#">Something else here</a> -->
+                </div>
+            </div> 
             <button class="btn btn-warning btn-sm" onclick="analyze()">Analyze Current File</button>
-            <button class="btn btn-danger btn-sm" onclick="fpgaCompile()">Compile</button>
+            <button class="btn btn-danger btn-sm" onclick="fpgaCompile()">Compile</button>   
         </div>
         
         <div class="container mt-0">
@@ -133,6 +143,7 @@
 
     <script type="text/javascript">
 
+        
         var getUrlParameter = function getUrlParameter(sParam) {
             var sPageURL = window.location.search.substring(1),
                 sURLVariables = sPageURL.split('&'),
@@ -329,6 +340,44 @@
                 }
                 window.socket.emit("Analyze",val)
             }
+        }
+
+        var usertoptemplate = `library ieee;
+use ieee.std_logic_1164.all;
+
+entity usertop is
+port(
+	KEY: in std_logic_vector(3 downto 0);
+	SW: in std_logic_vector(17 downto 0);
+	LEDR: out std_logic_vector(17 downto 0);
+	HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7	: out std_logic_vector(6 downto 0)
+	);
+end usertop;
+
+architecture rtl of usertop is
+begin
+    
+    LEDR(0) <= SW(0);
+    LEDR(1) <= SW(1);
+    LEDR(2) <= SW(2);
+    LEDR(3) <= SW(3);
+    
+    LEDR(16) <= KEY(0);
+    LEDR(17) <= KEY(1);
+    
+    HEX6 <= "0000110";
+    HEX5 <= "0000110";
+    HEX4 <= "1000111";
+    HEX3 <= "0010010";
+    HEX2 <= "1111001";
+    HEX1 <= "1000000";
+    HEX0 <= "0010010";
+
+end rtl;`;
+
+        function fillWithUsertop() {
+            editor.insert(usertoptemplate);
+            editor.focus();
         }
         
     </script>

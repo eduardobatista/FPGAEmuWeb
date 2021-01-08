@@ -5,19 +5,24 @@ from flask_socketio import send, emit, disconnect
 from appp import socketio
 from pathlib import Path
 from .funcs import *
+from flask_login import login_required, current_user
+
+def getuserpath():
+    userpath = Path(current_app.MAINPATH,'work',current_user.email)
+    if not userpath.exists():
+        userpath.mkdir()
+    return userpath
 
 @socketio.on('getfile', namespace='/stream') 
 def getfile(filename):
-    basepath = Path(current_app.MAINPATH,'work')
-    sessionpath = Path(basepath, session['username'])
+    sessionpath = getuserpath()
     fname = Path(sessionpath,filename)
     data = open(fname,'r').read()
     emit("filecontent",data)
 
 @socketio.on('renamefile', namespace='/stream') 
 def renamefile(dataa):
-    basepath = Path(current_app.MAINPATH,'work')
-    sessionpath = Path(basepath, session['username'])
+    sessionpath = getuserpath()
     if not sessionpath.exists():
         emit("error","Directory not found.")
         return
@@ -30,8 +35,7 @@ def renamefile(dataa):
 
 @socketio.on('savefile', namespace='/stream') 
 def savefile(dataa):
-    basepath = Path(current_app.MAINPATH,'work')
-    sessionpath = Path(basepath, session['username'])
+    sessionpath = getuserpath()
     if not sessionpath.exists():
         sessionpath.mkdir(parents=True,exist_ok=True)
     fname = Path(sessionpath,dataa['filename'])
@@ -41,8 +45,7 @@ def savefile(dataa):
 @socketio.on('deletefile', namespace='/stream') 
 def deletefile(filename):
     if (str(filename).endswith('.vhd') or str(filename).endswith('.vhdl')):
-        basepath = Path(current_app.MAINPATH,'work')
-        sessionpath = Path(basepath, session['username'])
+        sessionpath = getuserpath()
         fname = Path(sessionpath,filename)
         fname.unlink()
         emit("filedeleted",filename)
@@ -52,8 +55,7 @@ def deletefile(filename):
 @socketio.on('deleteallfiles', namespace='/stream') 
 def deleteallfiles(fname):
     try:
-        basepath = Path(current_app.MAINPATH,'work')
-        sessionpath = Path(basepath, session['username'])
+        sessionpath = getuserpath()
         aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
         for ff in aux:
             ff.unlink()
@@ -64,21 +66,21 @@ def deleteallfiles(fname):
 
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):
-    socketio.start_background_task(analyzefile,session['username'],request.sid,current_app.MAINPATH,filename)
+    socketio.start_background_task(analyzefile,current_user.email,request.sid,current_app.MAINPATH,filename)
 
 @socketio.on('Simulate', namespace='/stream')
 def simulate(stoptime):
-    socketio.start_background_task(simulatefile,session['username'],request.sid,current_app.MAINPATH,stoptime)
+    socketio.start_background_task(simulatefile,current_user.email,request.sid,current_app.MAINPATH,stoptime)
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
     if cmd == "Compile":
-        # compthread = threading.Thread(target=compilefile,args=(session['username'],request.sid,current_app))
+        # compthread = threading.Thread(target=compilefile,args=(current_user.email,request.sid,current_app))
         # compthread.start()
-        socketio.start_background_task(compilefile,session['username'],request.sid,current_app.MAINPATH)
+        socketio.start_background_task(compilefile,current_user.email,request.sid,current_app.MAINPATH)
     #     compilerpath = Path(current_app.MAINPATH,'backend','fpgacompileweb')
     #     basepath = Path(current_app.MAINPATH,'work')
-    #     sessionpath = Path(basepath, session['username'])
+    #     sessionpath = Path(basepath, current_user.email)
     #     if not createFpgaTest(sessionpath,'usertop.vhd'):
     #         emit('errors', "Could not find usertop.vhd, its ports or usertop entity.")
     #         disconnect()
@@ -106,28 +108,28 @@ def stream(cmd):
 @socketio.on('message', namespace='/emul') 
 def stream2(cmd):
     if cmd == "Parar":
-        current_app.logger.info(f"Stoping emulation for {session['username']}.")
-        stopEmulation(session['username'],request.sid)
-        # if session['username'] not in current_app.procs.keys():
+        current_app.logger.info(f"Stoping emulation for {current_user.email}.")
+        stopEmulation(current_user.email,request.sid)
+        # if current_user.email not in current_app.procs.keys():
         #     emit('error',f'Emulation not running for {session["username"]}.')
         #     return
         # else:
-        #     closeEmul(current_app,session['username'])
+        #     closeEmul(current_app,current_user.email)
         #     emit('status',"Parado")
     elif cmd == "Emular":
-        current_app.logger.info(f"Starting emulation for {session['username']}.")
-        socketio.start_background_task(doEmulation,session['username'],request.sid,current_app.MAINPATH)
+        current_app.logger.info(f"Starting emulation for {current_user.email}.")
+        socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH)
         # keysprocs = current_app.procs.keys()
         # if len(keysprocs) >= 25:
         #     emit('error',f'Too many emulations running, please try again in a minute or two.')
         #     return
-        # elif session['username'] in keysprocs:
+        # elif current_user.email in keysprocs:
         #     emit('error',f'Emulation already running for {session["username"]}.')
         #     return
         # else:
         #     emit('message','Starting emulation...')
         # basepath = Path(current_app.MAINPATH,'work')
-        # sessionpath = Path(basepath, session['username'])
+        # sessionpath = Path(basepath, current_user.email)
         # try: 
         #     for k in sessionpath.rglob("myfifo*"):
         #         k.unlink();
@@ -143,7 +145,7 @@ def stream2(cmd):
         #             stderr=subprocess.PIPE,
         #             cwd=sessionpath 
         #     )
-        # current_app.procs[session['username']] = proc
+        # current_app.procs[current_user.email] = proc
         # time.sleep(0.3)      
         # # print("Opening FIFO...")
         # fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
@@ -151,11 +153,11 @@ def stream2(cmd):
         # # print("FIFO opened")
         # print(os.read(fiforead,3).decode())
         # time.sleep(0.3)
-        # current_app.fifowrite[session['username']] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
+        # current_app.fifowrite[current_user.email] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
         # emit('started','Ok!')
         # lasttime = time.time()       
         # while True:
-        #     aux,aux1,aux2 = select.select([fiforead], [current_app.fifowrite[session['username']]], [fiforead]) # Blocks until ready to read
+        #     aux,aux1,aux2 = select.select([fiforead], [current_app.fifowrite[current_user.email]], [fiforead]) # Blocks until ready to read
         #     if len(aux) > 0:
         #         data = os.read(fiforead,11)
         #         # print(data)                
@@ -167,21 +169,21 @@ def stream2(cmd):
         #     else:
         #         if ((time.time()-lasttime) >= 120 ):
         #             emit('error','Inactivity timeout...')
-        #             closeEmul(current_app,session['username'])
+        #             closeEmul(current_app,current_user.email)
         #             emit('status','Parado')
         #     time.sleep(0.2)
         # # print("Saiu!")
-        # os.close(current_app.fifowrite[session['username']])
+        # os.close(current_app.fifowrite[current_user.email])
         # os.close(fiforead)
-        # del current_app.fifowrite[session['username']]
+        # del current_app.fifowrite[current_user.email]
     else:
         disconnect()
 
 @socketio.on('initstate', namespace='/emul')
 def writeinitstate(msg):
     # return
-    # if session['username'] not in current_app.fifowrite.keys():
-    if session['username'] not in fifowrite.keys():
+    # if current_user.email not in current_app.fifowrite.keys():
+    if current_user.email not in fifowrite.keys():
         return
     aux = []
     for k in range(3):
@@ -190,13 +192,13 @@ def writeinitstate(msg):
         aux.append( (msg >> (k*8)) & 0xFF )
         aux.append(2) # Has more bytes
     aux[-1] = 1    
-    select.select([], [fifowrite[session['username']]], [fifowrite[session['username']]])
-    os.write(fifowrite[session['username']],bytes(aux))
+    select.select([], [fifowrite[current_user.email]], [fifowrite[current_user.email]])
+    os.write(fifowrite[current_user.email],bytes(aux))
     
 
 @socketio.on('action', namespace='/emul') 
 def action(msg):
-    if session['username'] not in fifowrite.keys():
+    if current_user.email not in fifowrite.keys():
         # emit('error',"Emulation not running.")
         return
     aux = list(msg.encode('utf-8'))
@@ -204,15 +206,15 @@ def action(msg):
     if msg[0] == 's': 
         aux[2] = aux[2] - 0x30
     aux.append(1)
-    select.select([], [fifowrite[session['username']]], [fifowrite[session['username']]])
-    os.write(fifowrite[session['username']],bytes(aux))
+    select.select([], [fifowrite[current_user.email]], [fifowrite[current_user.email]])
+    os.write(fifowrite[current_user.email],bytes(aux))
     # print(msg,end=" ")
     # print(aux[1],end=" ")
     # print(aux[2])
 
 @socketio.on('disconnect', namespace='/emul')
 def test_disconnect():   
-    if session['username'] in emulprocs.keys():        
-        closeEmul(session['username'])
+    if current_user.email in emulprocs.keys():        
+        closeEmul(current_user.email)
         emit('error','Stopped on disconnect...')
         emit('status',"Parado")
