@@ -39,6 +39,7 @@ def signup_post():
     name = request.form.get('name').strip()
     password = request.form.get('password')
     role = "Student"
+    viewAs = ""
     
     for ff in [email,name,password]:
         if ff == "":
@@ -57,7 +58,7 @@ def signup_post():
         return redirect(url_for('auth.signup'))
 
     # create a new user with the form data. Hash the password so the plaintext version isn't saved.
-    new_user = User(email=email, name=name, password=generate_password_hash(password, method='sha256'), role=role)
+    new_user = User(email=email, name=name, password=generate_password_hash(password, method='sha256'), role=role, viewAs=viewAs)
 
     # add the new user to the database
     db.session.add(new_user)

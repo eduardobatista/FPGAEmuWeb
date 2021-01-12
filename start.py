@@ -31,7 +31,7 @@ with app.app_context():
     except OperationalError as err:
         print('Database does not exist, creating...')
         db.create_all()
-        new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin')
+        new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin', viewAs='')
         db.session.add(new_user)
         db.session.commit()  
 

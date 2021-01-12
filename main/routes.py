@@ -8,7 +8,10 @@ from flask_login import login_required, current_user
 from .models import User
 
 def getuserpath():
-    userpath = Path(current_app.MAINPATH,'work',current_user.email)
+    if (current_user.viewAs is None) or (current_user.viewAs == ''):
+        userpath = Path(current_app.MAINPATH,'work',current_user.email)
+    else:
+        userpath = Path(current_app.MAINPATH,'work',current_user.viewAs)
     if not userpath.exists():
         userpath.mkdir()
     return userpath

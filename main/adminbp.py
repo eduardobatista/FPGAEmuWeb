@@ -9,7 +9,20 @@ from flask_login import login_required, current_user
 @login_required
 def profile():
     # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    return render_template('profile.html')
+    print(current_user.viewAs)
+    userlist = User.query
+    return render_template('profile.html',userlist=userlist)
+
+@adm.route('/setViewAs', methods=['POST'])
+@login_required
+def setViewAs():
+    if (current_user.role == "Student"):
+        return redirect(url_for('main.sendfiles'))
+    email = request.form.get('viewAsSelect')
+    current_user.viewAs = email
+    db.session.commit()
+    return redirect(url_for('main.sendfiles')) 
+
 
 @adm.route('/admin')
 @login_required
@@ -50,17 +63,17 @@ def changepass():
 
     if newpass != repeatnew:
         flash("New passes do not match!")
-        return redirect(url_for('main.profile'))
+        return redirect(url_for('adm.profile'))
     
     if not check_password_hash(user.password, oldpass):
         flash("Old password is not correct!")
-        return redirect(url_for('main.profile'))
+        return redirect(url_for('adm.profile'))
 
     if newpass == "":
         flash("New pass is empty.")
-        return redirect(url_for('main.profile'))
+        return redirect(url_for('adm.profile'))
 
     user.password = generate_password_hash(newpass, method='sha256')
     db.session.commit()
     flash("Password changed successfully.")    
-    return redirect(url_for('main.profile'))
+    return redirect(url_for('adm.profile'))

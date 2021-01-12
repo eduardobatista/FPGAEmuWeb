@@ -8,7 +8,10 @@ from .funcs import *
 from flask_login import login_required, current_user
 
 def getuserpath():
-    userpath = Path(current_app.MAINPATH,'work',current_user.email)
+    if (current_user.viewAs is None) or (current_user.viewAs == ''):
+        userpath = Path(current_app.MAINPATH,'work',current_user.email)
+    else:
+        userpath = Path(current_app.MAINPATH,'work',current_user.viewAs)
     if not userpath.exists():
         userpath.mkdir()
     return userpath
@@ -66,18 +69,18 @@ def deleteallfiles(fname):
 
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):
-    socketio.start_background_task(analyzefile,current_user.email,request.sid,current_app.MAINPATH,filename)
+    socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename)
 
 @socketio.on('Simulate', namespace='/stream')
 def simulate(stoptime):
-    socketio.start_background_task(simulatefile,current_user.email,request.sid,current_app.MAINPATH,stoptime)
+    socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime)
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
     if cmd == "Compile":
         # compthread = threading.Thread(target=compilefile,args=(current_user.email,request.sid,current_app))
         # compthread.start()
-        socketio.start_background_task(compilefile,current_user.email,request.sid,current_app.MAINPATH)
+        socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH)
     #     compilerpath = Path(current_app.MAINPATH,'backend','fpgacompileweb')
     #     basepath = Path(current_app.MAINPATH,'work')
     #     sessionpath = Path(basepath, current_user.email)
@@ -118,7 +121,7 @@ def stream2(cmd):
         #     emit('status',"Parado")
     elif cmd == "Emular":
         current_app.logger.info(f"Starting emulation for {current_user.email}.")
-        socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH)
+        socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH,getuserpath())
         # keysprocs = current_app.procs.keys()
         # if len(keysprocs) >= 25:
         #     emit('error',f'Too many emulations running, please try again in a minute or two.')

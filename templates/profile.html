@@ -19,7 +19,25 @@
         {% endif %}
         {% endwith %}        
 
-        
+        {% if current_user.role == 'Professor' or current_user.role == 'Admin' %}
+            <form class="md-form border border-light p-5 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="setViewAs" method="POST">
+                <h3>View As</h3>
+
+                <select class="custom-select mb-2" id="viewAsSelect" name="viewAsSelect">               
+                    {% for uu in userlist %} 
+                        {% if uu.email == current_user.viewAs %}                       
+                            <option value="{{uu.email}}" selected>{{uu.email}}</option>
+                        {% elif (current_user.viewAs == '') and (uu.email == current_user.email )%}   
+                            <option value="{{uu.email}}" selected>{{uu.email}}</option>
+                        {% else %}
+                            <option value="{{uu.email}}">{{uu.email}}</option> 
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary mt-0 ml-0">Change View</button>
+
+            </form>
+        {% endif %}
 
         <form class="md-form border border-light p-5 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="changepass" method="POST">
             <h3>Change Password</h3>

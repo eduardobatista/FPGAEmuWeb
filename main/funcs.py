@@ -216,10 +216,10 @@ def compilefile(username,sid,mainpath):
         socketio.emit("success","done",namespace="/stream",room=sid);
     # socketio.disconnect(namespace="/stream",room=sid)
 
-def analyzefile(username,sid,mainpath,filename):
+def analyzefile(sessionpath,sid,mainpath,filename):
     compilerpath = Path(mainpath,'backend','analyze.sh')
     basepath = Path(mainpath,'work')
-    sessionpath = Path(basepath, username)    
+    # sessionpath = Path(basepath, username)    
     proc = subprocess.Popen(
                 [compilerpath,sessionpath,filename],
                 stdout=subprocess.PIPE,
@@ -236,10 +236,10 @@ def analyzefile(username,sid,mainpath,filename):
     else:
         socketio.emit("asuccess","done",namespace="/stream",room=sid);
 
-def simulatefile(username,sid,mainpath,stoptime):
+def simulatefile(sessionpath,sid,mainpath,stoptime):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
     basepath = Path(mainpath,'work')
-    sessionpath = Path(basepath, username)
+    # sessionpath = Path(basepath, username)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=sid)
         return    
@@ -281,7 +281,7 @@ def simulatefile(username,sid,mainpath,stoptime):
 
 emulprocs = {}
 fifowrite = {}
-def doEmulation(username,sid,mainpath):
+def doEmulation(username,sid,mainpath,sessionpath):
     keysprocs = emulprocs.keys()
     if len(keysprocs) >= 25:
         socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=sid)
@@ -292,7 +292,7 @@ def doEmulation(username,sid,mainpath):
     else:
         socketio.emit('message','Starting emulation...',namespace="/emul",room=sid)
     basepath = Path(mainpath,'work')
-    sessionpath = Path(basepath, username)
+    # sessionpath = Path(basepath, username)
     try: 
         for k in sessionpath.rglob("myfifo*"):
             k.unlink();
