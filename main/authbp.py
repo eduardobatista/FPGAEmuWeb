@@ -1,10 +1,11 @@
-from flask import current_app,render_template, redirect, url_for, request, flash
+from flask import current_app, render_template, redirect, url_for, request, flash
 from appp import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import auth
 from flask_login import login_user, logout_user
 from .models import User
 from sqlalchemy.exc import OperationalError
+from pathlib import Path
 
 @auth.route('/login')
 def login():
@@ -37,16 +38,16 @@ def signup_post():
     email = request.form.get('email').strip()
     name = request.form.get('name').strip()
     password = request.form.get('password')
-
+    role = "Student"
+    
     for ff in [email,name,password]:
         if ff == "":
             flash("At least one field is empty.")
             return redirect(url_for('auth.signup'))
         
-
     try:
         user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
-    except OperationalError:
+    except OperationalError as err:
         current_app.logger.error("Database does not exist.")
         flash("Database does not exist.") 
         return redirect(url_for('auth.login'))
@@ -56,7 +57,7 @@ def signup_post():
         return redirect(url_for('auth.signup'))
 
     # create a new user with the form data. Hash the password so the plaintext version isn't saved.
-    new_user = User(email=email, name=name, password=generate_password_hash(password, method='sha256'))
+    new_user = User(email=email, name=name, password=generate_password_hash(password, method='sha256'), role=role)
 
     # add the new user to the database
     db.session.add(new_user)
@@ -70,5 +71,6 @@ def logout():
     logout_user()
     # flash('User logged out.')
     return redirect(url_for('auth.login'))
+
 
 

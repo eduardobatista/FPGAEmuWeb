@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+
+    {% block styles %}
+    {% endblock %} 
+
+
+    {% block content %}
+
+    <div class="container mt-3">
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-danger">
+                {{ messages[0] }}
+            </div>
+        {% endif %}
+        {% endwith %}  
+
+        {% if current_user.role == 'Admin' %}
+
+        {%- if userlist is defined -%}
+
+        <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+
+                
+                {% for uu in userlist %}
+                <tr>
+                    <td>{{ uu.name }}</td>
+                    <td>{{ uu.email }}</td>
+                    <td>
+                        {% if uu.email == current_user.email %}
+                            <select class="custom-select" disabled>
+                        {% else %}
+                            <input type="hidden" id="val{{loop.index}}" value="{{uu.email}}">
+                            <select class="custom-select" id="sel{{loop.index}}" onchange="changerole({{loop.index}});">
+                        {% endif %}
+                            {% if uu.role == 'Student' %}
+                                <option value="Student" selected>Student</option>
+                                <option value="Professor">Professor</option>
+                                <option value="Admin">Admin</option>
+                            {% elif uu.role == 'Admin' %}
+                                <option value="Student">Student</option>
+                                <option value="Professor">Professor</option>
+                                <option value="Admin" selected>Admin</option>
+                            {% else %}
+                                <option value="Student">Student</option>
+                                <option value="Professor" selected>Professor</option>
+                                <option value="Admin">Admin</option>
+                            {% endif %}
+                          </select>
+                    </td>
+                    <td>
+                        {% if uu.email == current_user.email %}
+                            <button class="btn btn-danger btn-sm m-0 ml-1 p-2" disabled>Delete</button>
+                        {% else %}
+                            <button class="btn btn-danger btn-sm m-0 ml-1 p-2" onclick="deleteuser('{{loop.index}}');">Delete</button>
+                        {% endif %}
+                        
+                    </td>
+                </tr>
+                <!-- <li class="list-group-item" id="user{{uu}}">   -->
+                    <!-- <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}.vhd');">Delete</button>
+                    <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}.vhd');">Rename</button>
+                    <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button> -->
+                    <!-- <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="settop('{{ fname }}');" disabled>Set top level</button>                         -->
+                <!-- </li> -->
+                {% endfor %}
+
+
+
+            </tbody>
+          </table>
+
+        {% endif %}
+
+        {% endif %}
+        
+    </div>
+
+
+
+    {% endblock %}
+
+
+
+    {% block scripts %}
+        <script>
+
+            function changerole(userid) {
+                user = $("#val" + userid).val();
+                newrole = $("#sel" + userid + " option:selected").text();
+                $("#sel" + userid).prop('disabled', true);
+                $.post("/changerole",{ email: user, newrole: newrole} ).done(
+                    function (data) {
+                        if (data == "Role changed!") {
+                            $("#sel" + userid).prop('disabled', false);
+                        } else {
+                            alert("Error changing role.")
+                        }
+                    }
+                );
+            }
+
+            function deleteuser(userid) {
+                user = $("#val" + userid).val();
+                alert("Not implemented yet.\n" + user);
+            }
+
+        </script>
+
+
+
+    {% endblock %} 

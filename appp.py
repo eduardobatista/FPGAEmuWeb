@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from flask import Flask
 from flask_socketio import SocketIO
@@ -11,13 +12,27 @@ def create_app(debug=False,mainpath=""):
     """Create an application."""
     app = Flask(__name__)
     app.debug = debug
-    app.config['SECRET_KEY'] = b'_5#y2L"F4z\n\xec]/'
+
+    if Path(mainpath,"seckey").exists():
+        # print("Skey Found!")
+        f = open(Path(mainpath,"seckey"),"rb")
+        app.config['SECRET_KEY'] = f.read()
+        f.close()
+    else:
+        skey = os.urandom(16)
+        app.config['SECRET_KEY'] = skey
+        f = open(Path(mainpath,"seckey"),"wb")
+        f.write(skey)
+        f.close()
+
+    # app.config['SECRET_KEY'] = b'_5#y2L"F4z\n\xec]/'
     app.config['MAX_CONTENT_LENGTH'] = 1000000
     app.MAINPATH = mainpath
     
     # Database:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite' 
     db.init_app(app)
+
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
@@ -35,6 +50,8 @@ def create_app(debug=False,mainpath=""):
     app.register_blueprint(main_blueprint)
     from main import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
+    from main import adm as admin_blueprint
+    app.register_blueprint(admin_blueprint)
 
     socketio.init_app(app)
     

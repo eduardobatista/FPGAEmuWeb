@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+
+    {% block styles %}
+    {% endblock %} 
+
+
+    {% block content %}
+
+    <div class="container mt-3">
+
+        <h5 class="mb-3 mt-3">Current user is <strong><em>{{current_user.name}}</em></strong> (<strong>{{current_user.email}}</strong>).</h5>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-danger">
+                {{ messages[0] }}
+            </div>
+        {% endif %}
+        {% endwith %}        
+
+        
+
+        <form class="md-form border border-light p-5 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="changepass" method="POST">
+            <h3>Change Password</h3>
+            <div class="form-group mt-3">
+                <!-- <label for="exampleInputPassword1">Change Password</label> -->
+                <input type="password" class="form-control mb-2" id="oldpass" name="oldpass" placeholder="Old Password" required>
+                <input type="password" class="form-control mb-2" id="newpass" name="newpass" placeholder="New Password" required>
+                <input type="password" class="form-control mb-2" id="repeatnew" name="repeatnew" placeholder="Repeat New" required>
+                <input type="hidden" name="email" value="{{current_user.email}}">
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-0 ml-0">Change Pass</button>
+
+        </form>
+    </div>
+
+
+
+    {% endblock %}
+
+
+
+    {% block scripts %}
+    {% endblock %} 

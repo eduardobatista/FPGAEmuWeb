@@ -2,8 +2,10 @@
 import subprocess,os
 from pathlib import Path
 from appp import create_app, socketio, db
-import main.models
+from main.models import User
 import logging
+from sqlalchemy.exc import OperationalError
+from werkzeug.security import generate_password_hash
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
@@ -24,7 +26,16 @@ print('Backend compiled.\nStarting server...')
 app = create_app(debug=True,mainpath=MAINPATH)
 
 with app.app_context():
-    db.create_all()
+    try:
+        user = User.query.filter_by(email='admin@fpgaemu').first()
+    except OperationalError as err:
+        print('Database does not exist, creating...')
+        db.create_all()
+        new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin')
+        db.session.add(new_user)
+        db.session.commit()  
+
+
 
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)

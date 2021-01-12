@@ -12,8 +12,10 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 
 '''
     TODO:
-        - Secret key dinâmica.
-        - Templates
+        - Enviar emails, para recuperação de senha e confirmação de endereço.
+        - Secret key dinâmica (uma para cada PC, salvando em outro lugar, pois por enquanto está em arquivo).
+        - Melhorer Logging
+        - Templates.
 
         x Na hora de salvar, apensar extensão .vhd se não estiver correta.
         - Timeouts do socketio: ping e timeout

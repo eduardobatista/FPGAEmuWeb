@@ -5,17 +5,14 @@ from zipfile import ZipFile
 from . import main
 from .funcs import *
 from flask_login import login_required, current_user
+from .models import User
 
 def getuserpath():
     userpath = Path(current_app.MAINPATH,'work',current_user.email)
     if not userpath.exists():
         userpath.mkdir()
     return userpath
-
-@main.route('/profile')
-@login_required
-def profile():
-    return f'User {current_user.name} is logged in.'
+    
 
 @main.route('/')
 def entrance():
@@ -31,12 +28,16 @@ def sendfiles():
     # if 'username' not in session:               
     #     session['username'] = createnewuser(basepath)
     # basepath = Path(current_app.MAINPATH,'work')
+    # userlist = None
+    # if (current_user.role == 'Professor') or (current_user.role == 'Admin'):
+    #     userlist = User.query
     sessionpath = getuserpath()
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.stem for x in aux]    
     # print(getsocketiofile())
-    return render_template('sendfiles.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')
+    return render_template('sendfiles.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')        
 
+    
 @main.route('/help')
 def hhelp():
     return render_template('help.html')
