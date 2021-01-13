@@ -15,6 +15,14 @@
             {% endwith %}
 
             <h5 class="d-inline">User is <strong>{{ username }}</strong>.</h5>
+            <h6>
+                {% if (current_user.role == 'Admin') or (current_user.role == 'Professor') %}
+                    {% if (current_user.viewAs != '') and (current_user.viewAs != current_user.email) %}
+                        <span style="color: red;">(viewing as <strong>{{current_user.viewAs}})</strong>.</span>
+                    {% endif %}
+                {% endif %}
+            </h6>
+            
             
         </div>
 

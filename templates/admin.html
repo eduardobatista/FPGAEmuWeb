@@ -63,7 +63,7 @@
                         {% if uu.email == current_user.email %}
                             <button class="btn btn-danger btn-sm m-0 ml-1 p-2" disabled>Delete</button>
                         {% else %}
-                            <button class="btn btn-danger btn-sm m-0 ml-1 p-2" onclick="deleteuser('{{loop.index}}');">Delete</button>
+                            <button class="btn btn-danger btn-sm m-0 ml-1 p-2" onclick="delUser({{loop.index}});">Delete</button>
                         {% endif %}
                         
                     </td>
@@ -96,6 +96,15 @@
     {% block scripts %}
         <script>
 
+            function delUser(userid) {
+                user = $("#val" + userid).val();
+                if (confirm('Really delete user ' + user + '?')) {
+                    $.post("/deleteuser",{email: user}).done( function (data) {
+                        window.location.href = "/admin";
+                    });
+                }                 
+            }
+
             function changerole(userid) {
                 user = $("#val" + userid).val();
                 newrole = $("#sel" + userid + " option:selected").text();
@@ -111,10 +120,7 @@
                 );
             }
 
-            function deleteuser(userid) {
-                user = $("#val" + userid).val();
-                alert("Not implemented yet.\n" + user);
-            }
+            
 
         </script>
 

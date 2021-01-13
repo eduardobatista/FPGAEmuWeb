@@ -20,7 +20,7 @@
         {% endwith %}        
 
         {% if current_user.role == 'Professor' or current_user.role == 'Admin' %}
-            <form class="md-form border border-light p-5 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="setViewAs" method="POST">
+            <form class="md-form border border-light p-4 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="setViewAs" method="POST">
                 <h3>View As</h3>
 
                 <select class="custom-select mb-2" id="viewAsSelect" name="viewAsSelect">               
@@ -39,7 +39,7 @@
             </form>
         {% endif %}
 
-        <form class="md-form border border-light p-5 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="changepass" method="POST">
+        <form class="md-form border border-light p-4 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="changepass" method="POST">
             <h3>Change Password</h3>
             <div class="form-group mt-3">
                 <!-- <label for="exampleInputPassword1">Change Password</label> -->

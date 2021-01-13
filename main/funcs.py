@@ -151,13 +151,19 @@ def createFpgaTest(sessionpath,toplevelfile):
     fpgatest.close()
     return "Ok!"
 
-def createnewuser(basepath):
-    subdirs = list(basepath.glob("*"))
-    # print(subdirs)
-    candidate = newuserprefix + str(randrange(10000))
-    while candidate in subdirs:
-        candidate = newuserprefix + str(randrange(10000)) 
-    return candidate
+# def createnewuser(basepath):
+#     subdirs = list(basepath.glob("*"))
+#     # print(subdirs)
+#     candidate = newuserprefix + str(randrange(10000))
+#     while candidate in subdirs:
+#         candidate = newuserprefix + str(randrange(10000)) 
+#     return candidate
+
+def logactivity(sessionpath,userid,message):
+    with open(Path(sessionpath,'activity.log'),'a') as ff:
+        ff.write(f"{userid}:{message}\n")
+        ff.close()
+
 
 def cleanfilelist(sessionpath,toplevelfile,filelist):
     filesleft = [toplevelfile]
@@ -177,10 +183,10 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
             filelist.pop(k) 
     # print(filelist)
 
-def compilefile(username,sid,mainpath):
+def compilefile(sessionpath,sid,mainpath,userid):
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     basepath = Path(mainpath,'work')
-    sessionpath = Path(basepath, username)
+    # sessionpath = Path(basepath, username)
     retcode = createFpgaTest(sessionpath,'usertop.vhd')
     if retcode == "Ok!":
         pass
@@ -212,11 +218,13 @@ def compilefile(username,sid,mainpath):
     aux = proc.stderr.read()
     if aux != b'':
         socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+        logactivity(sessionpath,userid,"Compilation with errors.")
     else:
         socketio.emit("success","done",namespace="/stream",room=sid);
+        logactivity(sessionpath,userid,"Successful compilation.")
     # socketio.disconnect(namespace="/stream",room=sid)
 
-def analyzefile(sessionpath,sid,mainpath,filename):
+def analyzefile(sessionpath,sid,mainpath,filename,userid):
     compilerpath = Path(mainpath,'backend','analyze.sh')
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)    
@@ -233,10 +241,12 @@ def analyzefile(sessionpath,sid,mainpath,filename):
     aux = proc.stderr.read()
     if aux != b'':
         socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+        logactivity(sessionpath,userid,"Analysis with errors.")
     else:
-        socketio.emit("asuccess","done",namespace="/stream",room=sid);
+        socketio.emit("asuccess","done",namespace="/stream",room=sid)
+        logactivity(sessionpath,userid,"Successful analysis.")
 
-def simulatefile(sessionpath,sid,mainpath,stoptime):
+def simulatefile(sessionpath,sid,mainpath,stoptime,userid):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
@@ -273,10 +283,13 @@ def simulatefile(sessionpath,sid,mainpath,stoptime):
     aux = proc.stderr.read()
     if aux != b'':
         socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+        logactivity(sessionpath,userid,"Simulation with errors.")
     elif hasError:
         socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
+        logactivity(sessionpath,userid,"Simluation with errors.")
     else:
         socketio.emit("success","done",namespace="/stream",room=sid)
+        logactivity(sessionpath,userid,"Successful simulation.")
 
 
 emulprocs = {}

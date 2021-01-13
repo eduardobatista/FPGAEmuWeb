@@ -38,6 +38,15 @@ def admin():
 def deleteuser():
     if current_user.role != "Admin":
         return redirect(url_for('main.sendfiles'))
+    email = request.form.get('email')
+    try:
+        User.query.filter_by(email=email).delete()
+        db.session.commit()
+        # TODO: Delete user folder !?
+        return f"User {email} deleted successfully."
+    except Exception as e:
+        current_app.logger.error(f"Error deleting user {email}: {str(e)}.")
+        return f"Error deleteing user {email}."   
 
 
 @adm.route('/changerole', methods=['POST']) 

@@ -249,9 +249,11 @@
                 if (!window.socketOn) {
                     openSocket();
                 }
-                window.socket.emit("getfile",val); 
+                window.socket.emit("getfile",val);
+                // $('#editor').show();            
             } else {
                 editor.setValue("");
+                // $('#editor').hide();
             }           
 
         }

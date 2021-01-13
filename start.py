@@ -35,8 +35,6 @@ with app.app_context():
         db.session.add(new_user)
         db.session.commit()  
 
-
-
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)
 

@@ -69,18 +69,18 @@ def deleteallfiles(fname):
 
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):
-    socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename)
+    socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename,current_user.id)
 
 @socketio.on('Simulate', namespace='/stream')
 def simulate(stoptime):
-    socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime)
+    socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime,current_user.id)
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
     if cmd == "Compile":
         # compthread = threading.Thread(target=compilefile,args=(current_user.email,request.sid,current_app))
         # compthread.start()
-        socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH)
+        socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH,current_user.id)
     #     compilerpath = Path(current_app.MAINPATH,'backend','fpgacompileweb')
     #     basepath = Path(current_app.MAINPATH,'work')
     #     sessionpath = Path(basepath, current_user.email)

@@ -1,4 +1,4 @@
-import os
+import os,logging
 from pathlib import Path
 from flask import Flask
 from flask_socketio import SocketIO
@@ -33,6 +33,7 @@ def create_app(debug=False,mainpath=""):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite' 
     db.init_app(app)
 
+    # logging.basicConfig(filename=Path(mainpath,'activity.log'), level=logging.INFO)
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
