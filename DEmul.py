@@ -13,8 +13,8 @@ MAINPATH = os.path.dirname(os.path.abspath(__file__))
 '''
     TODO:
         - Enviar emails, para recuperação de senha e confirmação de endereço.
-        - Secret key dinâmica (uma para cada PC, salvando em outro lugar, pois por enquanto está em arquivo).
-        - Melhorer Logging
+        x Secret key dinâmica (uma para cada PC, salvando em outro lugar, pois por enquanto está em arquivo).
+        - Melhorar Logging
         - Templates.
 
         x Na hora de salvar, apensar extensão .vhd se não estiver correta.

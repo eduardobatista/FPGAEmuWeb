@@ -132,6 +132,26 @@
                 </div>
             </div>
         </div>
+        
+        <div class="modal fade" id="modalError" tabindex="-1" role="dialog" aria-labelledby="modalErrorLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="modalErrorLabel">Error</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage">Modal body text goes here.</p>
+                </div>
+                <div class="modal-footer">
+                <button type="button" id="bcloseerr" class="btn btn-danger btn-sm" data-dismiss="modal">Close</button>
+                <!-- <button type="button" class="btn btn-primary">Save changes</button> -->
+                </div>
+            </div>
+            </div>
+        </div>
 
         
 {% endblock %}
@@ -165,7 +185,23 @@
                 openfile(); 
             }
             $('#saveasalert').hide();
+            $("#filenameas").on('keyup', function (e) {
+                if (e.key === 'Enter' || e.keyCode === 13) {
+                    saveAsOrNew();
+                }
+            });
+            $('#modalSaveAs').on('shown.bs.modal', function () {
+                $('#filenameas').focus();
+            });
+            $('#modalError').on('shown.bs.modal', function () {
+                $('#bcloseerr').focus();
+            })  
         });
+
+        function errorMessage(msg) {
+            $("#errorMessage").html(msg);
+            $("#modalError").modal();
+        }
 
         window.filechanged = false;
 
@@ -240,6 +276,9 @@
             window.socket.on('disconnect', function(msg){
                 window.socketOn = false;
             });
+            window.socket.on('error',function(msg){
+                errorMessage(String(msg));
+            });
         }
 
         function openfile() {  
@@ -264,7 +303,7 @@
                 opt = 1: Save As.
                 opt = 2: Save New.
             */
-            $('#saveasalert').hide();
+            $('#saveasalert').hide(); 
             window.lastfilesaveopt = opt; 
 
             var val = $("#fileselect").children("option:selected").val();
@@ -276,12 +315,12 @@
             if (val != 0) {
                 if (val.endsWith(".vhd") || val.endsWith(".vhdl")) {
                     if (!window.socketOn) { openSocket(); }
+                    $("#modalSaveAs").modal('hide');
                     if (opt == 2) {
-                        window.socket.emit("savefile",{filename: val, data:""});
+                        window.socket.emit("savefile",{filename: val, data:""});                         
                     } else {
-                        window.socket.emit("savefile",{filename: val, data:editor.getValue()});
-                    }     
-                               
+                        window.socket.emit("savefile",{filename: val, data:editor.getValue()}); 
+                    }                               
                 } else {
                     $('#saveasalert').show();
                 }                
@@ -299,7 +338,7 @@
 
         function savefileas() {
             window.isnewfile = false;
-            $("#modalSaveAs").modal();            
+            $("#modalSaveAs").modal();   
         }
 
         function newfile() {

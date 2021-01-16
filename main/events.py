@@ -13,7 +13,7 @@ def getuserpath():
     else:
         userpath = Path(current_app.MAINPATH,'work',current_user.viewAs)
     if not userpath.exists():
-        userpath.mkdir()
+        userpath.mkdir(parents=True)
     return userpath
 
 @socketio.on('getfile', namespace='/stream') 
@@ -25,6 +25,9 @@ def getfile(filename):
 
 @socketio.on('renamefile', namespace='/stream') 
 def renamefile(dataa):
+    if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        emit("error","Not allowed while viewing as a different user.")
+        return
     sessionpath = getuserpath()
     if not sessionpath.exists():
         emit("error","Directory not found.")
@@ -38,6 +41,9 @@ def renamefile(dataa):
 
 @socketio.on('savefile', namespace='/stream') 
 def savefile(dataa):
+    if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        emit("error","Not allowed while viewing as a different user.")
+        return
     sessionpath = getuserpath()
     if not sessionpath.exists():
         sessionpath.mkdir(parents=True,exist_ok=True)
@@ -47,6 +53,9 @@ def savefile(dataa):
 
 @socketio.on('deletefile', namespace='/stream') 
 def deletefile(filename):
+    if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        emit("error","Not allowed while viewing as a different user.")
+        return
     if (str(filename).endswith('.vhd') or str(filename).endswith('.vhdl')):
         sessionpath = getuserpath()
         fname = Path(sessionpath,filename)
@@ -57,6 +66,9 @@ def deletefile(filename):
 
 @socketio.on('deleteallfiles', namespace='/stream') 
 def deleteallfiles(fname):
+    if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        emit("error","Not allowed while viewing as a different user.")
+        return
     try:
         sessionpath = getuserpath()
         aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))

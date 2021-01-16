@@ -13,7 +13,7 @@ def getuserpath():
     else:
         userpath = Path(current_app.MAINPATH,'work',current_user.viewAs)
     if not userpath.exists():
-        userpath.mkdir()
+        userpath.mkdir(parents=True)
     return userpath
     
 

@@ -1,4 +1,5 @@
 import re,socket,time,subprocess,select,os
+from datetime import datetime
 from random import randrange
 from pathlib import Path
 import pkg_resources
@@ -161,7 +162,9 @@ def createFpgaTest(sessionpath,toplevelfile):
 
 def logactivity(sessionpath,userid,message):
     with open(Path(sessionpath,'activity.log'),'a') as ff:
-        ff.write(f"{userid}:{message}\n")
+        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+        print(timestamp)
+        ff.write(f"{userid}\t{timestamp}\t{message}\n")
         ff.close()
 
 

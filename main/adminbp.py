@@ -7,9 +7,8 @@ from flask_login import login_required, current_user
 
 @adm.route('/profile')
 @login_required
-def profile():
-    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    print(current_user.viewAs)
+def profile():    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
+    
     userlist = User.query
     return render_template('profile.html',userlist=userlist)
 

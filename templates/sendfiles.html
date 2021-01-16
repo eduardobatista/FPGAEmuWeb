@@ -18,7 +18,7 @@
             <h6>
                 {% if (current_user.role == 'Admin') or (current_user.role == 'Professor') %}
                     {% if (current_user.viewAs != '') and (current_user.viewAs != current_user.email) %}
-                        <span style="color: red;">(viewing as <strong>{{current_user.viewAs}})</strong>.</span>
+                        <span style="color: red;">(viewing as <strong>{{current_user.viewAs}}</strong>).</span>
                     {% endif %}
                 {% endif %}
             </h6>
@@ -165,6 +165,27 @@
             </div>
           </div>
 
+          <!-- Modal -->
+        <div class="modal fade" id="modalError" tabindex="-1" role="dialog" aria-labelledby="modalErrorLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="modalErrorLabel">Error</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage">Modal body text goes here.</p>
+                </div>
+                <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                <!-- <button type="button" class="btn btn-primary">Save changes</button> -->
+                </div>
+            </div>
+            </div>
+        </div>
+
         
             
 
@@ -182,14 +203,19 @@
             $(('#vhd' + fname)).addClass('active').siblings().removeClass('active');
         }
 
+        function errorMessage(msg) {
+            $("#errorMessage").html(msg);
+            $("#modalError").modal();
+        }
+
         function uploadfile() { 
 
             var numFiles = $("#fileToUpload")[0].files.length;
             if ( numFiles > 20 ) {
-                alert("Too many files at once.");
+                errorMessage("Too many files at once.");
                 return;
             } else if (numFiles == 0) {
-                alert("No file to upload.");
+                errorMessage("No file to upload.");
                 return;
             }
 
@@ -212,10 +238,11 @@
                 }                
                 // In this callback you get the AJAX response to check
                 // if everything is right...
-            }).fail(function(response,statusText, xhr){
+            }).fail(function(response,statusText,xhr){
                 // Here you should treat the http errors (e.g., 403, 404)
                 // $("#status").html(response); 
-                alert(String(xhr));
+                errorMessage(String(xhr));
+                // alert(String(xhr));
             }).always(function(){
                 // alert("AJAX request finished!");
             });
@@ -256,7 +283,7 @@
                 $("#myspinner").hide();
             });
             window.socket.on('error',function(msg){
-                alert("Error: " + String(msg));
+                errorMessage(String(msg));
             });
             window.socket.on('filerenamed',function(msg){
                 location.href = '/';

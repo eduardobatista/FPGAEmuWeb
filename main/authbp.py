@@ -47,12 +47,15 @@ def signup_post():
             return redirect(url_for('auth.signup'))
         
     try:
-        user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
+        if User.query.count() >= 300:
+            flash('Too many users in the system. Please contact the administrator.')
+            return redirect(url_for('auth.signup'))        
     except OperationalError as err:
         current_app.logger.error("Database does not exist.")
         flash("Database does not exist.") 
         return redirect(url_for('auth.login'))
 
+    user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
     if user: # if a user is found, we want to redirect back to signup page so user can try again
         flash('Email address already exists.')
         return redirect(url_for('auth.signup'))
