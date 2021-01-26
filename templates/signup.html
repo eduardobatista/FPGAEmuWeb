@@ -1,71 +1,162 @@
 {% extends "base.html" %}
 
+
+{% block styles %}
+
+<style>
+    html,body{
+      /* background-image: url('http://getwallpapers.com/wallpaper/full/a/5/d/544750.jpg'); */
+      background-size: cover;
+      background-repeat: no-repeat;
+      height: 100%;
+      /* font-family: 'Numans', sans-serif; */
+      }
+      
+      .container{
+      height: 100%;
+      align-content: center;
+      }
+      
+      .card{
+      height: 370px;
+      margin-top: auto;
+      margin-bottom: auto;
+      width: 400px;
+      }
+      
+      .social_icon span{
+      font-size: 60px;
+      margin-left: 10px;
+      color: #FFC312;
+      }
+      
+      .social_icon span:hover{
+      color: white;
+      cursor: pointer;
+      }
+      
+      .card-header h3{
+      color: white;
+      /* font-weight: 600; */
+      }
+      
+      .social_icon{
+      position: absolute;
+      right: 20px;
+      top: -45px;
+      }
+      
+      .input-group-prepend span{
+      width: 50px;
+      /* background-color: #FFC312; */
+      color: black;
+      border:0 !important;
+      }
+      
+      input:focus{
+      outline: 0 0 0 0  !important;
+      box-shadow: 0 0 0 0 !important;
+      
+      }
+      
+      .remember{
+      color: white;
+      }
+      
+      .remember input
+      {
+      width: 20px;
+      height: 20px;
+      margin-left: 15px;
+      margin-right: 5px;
+      }
+      
+      .login_btn{
+      /* color: black; */
+      /* background-color: #FFC312; */
+      width: 120px;
+      }
+      
+      .login_btn:hover{
+      color: black;
+      background-color: white;
+      }
+      
+      .links{
+      color: white;
+      }
+      
+      .links a{
+      margin-left: 4px;
+      /* color: yellow; */
+      font-weight: bold;
+      }
+  </style>
+
+{% endblock %} 
+
+
+
 {% block content %}
-<!-- Default form login -->
-<div class="container mt-2">
-    <!-- Default form register -->
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-        <div class="alert alert-danger">
-            {{ messages[0] }}. Go to <a href="{{ url_for('auth.login') }}">login page</a>.
-        </div>
-    {% endif %}
-    {% endwith %}
-    <form class="text-center border border-light p-5" action="signup" method="POST">
 
-        <p class="h4 mb-4">Sign up</p>
-
-        <div class="form-row mb-4">
-            <div class="col">
-                <!-- First name -->
-                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="First name">
+<div class="container w-100">
+    
+    <div class="d-flex justify-content-center" style="height: 500px;">
+        
+        
+        
+		<div class="card bg-primary">
+                       
+			<div class="card-header">
+				<h3>Sign Up to FPGA Emul Web</h3>
+				<!-- <div class="d-flex justify-content-end social_icon">
+					<span><i class="fab fa-facebook-square"></i></span>
+					<span><i class="fab fa-google-plus-square"></i></span>
+					<span><i class="fab fa-twitter-square"></i></span>
+				</div> -->
+			</div>
+			<div class="card-body">
+				<form method="POST" action="signup">
+                    <div class="input-group form-group">
+						<div class="input-group-prepend">
+							<span class="input-group-text"><i class="fas fa-user"></i></span>
+						</div>
+						<input type="text" name="name" class="form-control" placeholder="name" required>						
+					</div>
+					<div class="input-group form-group">
+						<div class="input-group-prepend">
+							<span class="input-group-text"><i class="fas fa-envelope"></i></span>
+						</div>
+						<input type="email" name="email" class="form-control" placeholder="email" required>						
+					</div>
+					<div class="input-group form-group">
+						<div class="input-group-prepend">
+							<span class="input-group-text"><i class="fas fa-key"></i></span>
+						</div>
+						<input type="password" name="password" class="form-control" placeholder="password" required>
+					</div>
+					<!-- <div class="row align-items-center remember">
+						<input type="checkbox">Remember Me
+					</div> -->
+					<div class="form-group">
+						<input type="submit" value="Sign Up" class="btn float-right bg-light" >
+					</div>
+                </form>                
+			</div>
+			<div class="card-footer">
+				<div class="d-flex justify-content-center text-light">
+					<a href="login" class="text-white ml-1">Back to the Login Page</a>
+				</div>
             </div>
-            <div class="col">
-                <!-- Last name -->
-                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Last name">
-            </div>
-        </div>
-
-        <!-- E-mail -->
-        <input type="email" id="email" name="email" class="form-control mb-4" placeholder="E-mail">
-
-        <!-- Password -->
-        <input type="password" id="password" name="password" class="form-control" placeholder="Password" aria-describedby="defaultRegisterFormPasswordHelpBlock">
-        <!-- <small id="defaultRegisterFormPasswordHelpBlock" class="form-text text-muted mb-4">
-            At least 8 characters and 1 digit
-        </small> -->
-
-        <!-- Phone number -->
-        <!-- <input type="text" id="defaultRegisterPhonePassword" class="form-control" placeholder="Phone number" aria-describedby="defaultRegisterFormPhoneHelpBlock">
-        <small id="defaultRegisterFormPhoneHelpBlock" class="form-text text-muted mb-4">
-            Optional - for two step authentication
-        </small> -->
-
-        <!-- Newsletter -->
-        <!-- <div class="custom-control custom-checkbox">
-            <input type="checkbox" class="custom-control-input" id="defaultRegisterFormNewsletter">
-            <label class="custom-control-label" for="defaultRegisterFormNewsletter">Subscribe to our newsletter</label>
-        </div> -->
-
-        <!-- Sign up button -->
-        <button class="btn btn-info my-4 btn-block" type="submit">Sign in</button>
-
-        <!-- Social register -->
-        <!-- <p>or sign up with:</p>
-
-        <a href="#" class="mx-2" role="button"><i class="fab fa-facebook-f light-blue-text"></i></a>
-        <a href="#" class="mx-2" role="button"><i class="fab fa-twitter light-blue-text"></i></a>
-        <a href="#" class="mx-2" role="button"><i class="fab fa-linkedin-in light-blue-text"></i></a>
-        <a href="#" class="mx-2" role="button"><i class="fab fa-github light-blue-text"></i></a> -->
-
-        <!-- <hr> -->
-
-        <!-- Terms of service -->
-        <!-- <p>By clicking
-            <em>Sign up</em> you agree to our
-            <a href="" target="_blank">terms of service</a> -->
-
-    </form>
-<!-- Default form register -->
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-danger pb-1 pt-1 mb-0">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+            {% endwith %} 
+		</div>
+	</div>
 </div>
+
 {% endblock %}

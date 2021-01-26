@@ -17,14 +17,10 @@
 
 2) Python3
     - Install Python3 if needed: "sudo apt-get install python3"
-    - Install pip "sudo apt install python3-pip"
+    - Install pip: "sudo apt install python3-pip"
     - Install dependencies: "sudo pip3 install flask flask_socketio flask-login flask-sqlalchemy"
 
-3) DEmul 
-    - Unzip DEmul.zip to directory OR Clone with git: "git clone https://gitlab.com/dudubatista/demul.git"
-    - Compile backend:
-        - "cd backend"
-        - "sudo chmod 744 compilebackend.sh"
-        - "./compilebackend.sh"
-    - get back to DEmul dir and run the server: "python3 DEmul.py"
+3) FPGAEmuWeb 
+    - Clone with git: "git clone https://gitlab.com/dudubatista/fpgaemuweb.git"
+    - get back to FPGAEmuWeb dir and run the server: "python3 start.py"
     

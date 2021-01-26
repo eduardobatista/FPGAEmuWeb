@@ -8,3 +8,4 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(1000))
     role = db.Column(db.String(10))  # Admin, Professor, Student.
     viewAs = db.Column(db.String(100)) 
+    lastPassRecovery = db.Column(db.DateTime)

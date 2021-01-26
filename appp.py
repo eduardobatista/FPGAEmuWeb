@@ -46,6 +46,15 @@ def create_app(debug=False,mainpath=""):
         # since the user_id is just the primary key of our user table, use it in the query for the user
         return User.query.get(int(user_id))
     
+    try:
+        from yagmail import SMTP
+        oauthfile = Path(mainpath,"oauth2_creds.json")
+        if oauthfile.exists():
+            app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)
+        else:
+            app.yag = None
+    except ImportError as e:
+        app.yag = None
 
     from main import main as main_blueprint
     app.register_blueprint(main_blueprint)

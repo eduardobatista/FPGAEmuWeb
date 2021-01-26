@@ -22,7 +22,7 @@
 </head>
 <body>
 
-    
+    {% if current_user.is_authenticated %}
     <!--Main Navigation-->
     <header>
         
@@ -97,6 +97,7 @@
     <!--/.Navbar-->
 
     </header>
+    {% endif %}
     <!--Main Navigation-->
 
     <!--Main layout-->
@@ -126,7 +127,9 @@
     <!-- Socket.IO: -->
     <!-- <script src="/static/socket.io.js"></script> -->
     
+    {% if socketiofile %}
     <script src="/static/{{ socketiofile }}"></script>
+    {% endif %}
 
     {% block scripts %}
     {% endblock %}  
