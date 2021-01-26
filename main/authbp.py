@@ -83,6 +83,8 @@ def signup_post():
 
 @auth.route('/passrecovery',methods=['POST'])
 def passrecovery():
+    if current_app.yag is None:
+        return "Password recovery not working in this machine. Please contact fpgaemuweb@gmail.com."
     email = request.form.get('email').strip()
     if email == "admin@fpgaemu":
         return "Can't recover password for this user."
