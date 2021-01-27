@@ -56,7 +56,7 @@ begin
    outbytes0 <= part1 & part0;
    outbytes1 <= to_bitvector('0' & HEX3 & '0' & HEX4 & '0' & HEX5 & '0' & HEX6,'1');
    outbytes2 <= to_bitvector(x"00" & '0' & HEX0 & '0' & HEX1 & '0' & HEX2,'1');
-   udut : entity work.usertop
+   udut : entity work.{{toplevelentity}}
    {{portmap}}
 end archtest;
 '''
@@ -80,12 +80,12 @@ validports = {'CLOCK_50':['in',1],
               'HEX6':['out',7],
               'HEX7':['out',7],              
              }
-def createFpgaTest(sessionpath,toplevelfile):
-    toplevel = Path(sessionpath,toplevelfile)
-    if not toplevel.exists(): return "Error: usertop.vhd not found.";
+def createFpgaTest(sessionpath,toplevelentity):
+    toplevel = Path(sessionpath,toplevelentity + ".vhd")
+    if not toplevel.exists(): return f"Error: Top level entity not found.";
     fpgatestfile = Path(sessionpath,'fpgatest.aux')
     if fpgatestfile.exists(): fpgatestfile.unlink()
-    toplevel = open(Path(sessionpath,toplevelfile), 'r')    
+    toplevel = open(toplevel, 'r')    
     data = toplevel.read()
     data = re.sub("--.*?\n|\n"," ",data)
     data = re.sub("\s+"," ",data)
@@ -148,7 +148,7 @@ def createFpgaTest(sessionpath,toplevelfile):
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
     portmaptxt = portmaptxt[:-1] + ");"
     fpgatest = open(fpgatestfile, 'w')
-    fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt))
+    fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
     fpgatest.close()
     return "Ok!"
 
@@ -186,11 +186,11 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
             filelist.pop(k) 
     # print(filelist)
 
-def compilefile(sessionpath,sid,mainpath,userid):
+def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
-    retcode = createFpgaTest(sessionpath,'usertop.vhd')
+    retcode = createFpgaTest(sessionpath,toplevelentity)
     if retcode == "Ok!":
         pass
     else:
@@ -221,10 +221,10 @@ def compilefile(sessionpath,sid,mainpath,userid):
     aux = proc.stderr.read()
     if aux != b'':
         socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,"Compilation with errors.")
+        logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
     else:
         socketio.emit("success","done",namespace="/stream",room=sid);
-        logactivity(sessionpath,userid,"Successful compilation.")
+        logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
     # socketio.disconnect(namespace="/stream",room=sid)
 
 def analyzefile(sessionpath,sid,mainpath,filename,userid):

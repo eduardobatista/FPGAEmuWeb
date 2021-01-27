@@ -6,6 +6,7 @@ from . import main
 from .funcs import *
 from flask_login import login_required, current_user
 from .models import User
+from appp import db
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -37,15 +38,31 @@ def sendfiles():
     sessionpath = getuserpath()
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.stem for x in aux]    
+    if (current_user.topLevelEntity is None) or (current_user.topLevelEntity not in filenames):
+        if len(filenames) == 1:
+            current_user.topLevelEntity = filenames[0]
+        else:    
+            current_user.topLevelEntity = "usertop"
+        db.session.commit()
     # print(getsocketiofile())
-    return render_template('sendfiles.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')        
+    return render_template('sendfiles.html',username=current_user.email,toplevel=current_user.topLevelEntity,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')        
+
+@main.route('/settoplevel',methods=['POST'])
+@login_required
+def settoplevel():
+    toplevelfile = request.form.get('toplevelfile')
+    current_user.topLevelEntity = toplevelfile
+    db.session.commit()
+    return toplevelfile
 
     
 @main.route('/help')
+@login_required
 def hhelp():
     return render_template('help.html')
 
 @main.route('/about')
+@login_required
 def aabout():
     return render_template('about.html')
 

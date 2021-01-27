@@ -2,7 +2,7 @@
 import subprocess,os
 from pathlib import Path
 from appp import create_app, socketio, db
-from main.models import User, OldUser
+from main.models import User
 import logging
 from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash

@@ -37,7 +37,7 @@
                         <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}.vhd');">Delete</button>
                         <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}.vhd');">Rename</button>
                         <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button>
-                        <!-- <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="settop('{{ fname }}');" disabled>Set top level</button>                         -->
+                        <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2 settopbtl" onclick="settop('{{ fname }}',true);">Set top level</button>                        
                     </li>
                 {% endfor %}                
             </ul>
@@ -199,11 +199,21 @@
             $('#saveasalert').hide();
             $('#modalError').on('shown.bs.modal', function () {
                 $('#bcloseerr').focus();
-            }) 
+            });
+            settop('{{toplevel}}',false);
         });
 
-        function settop(fname) {
-            $(('#vhd' + fname)).addClass('active').siblings().removeClass('active');
+        function settop(fname,record) {
+            $(('#vhd' + fname)).addClass('list-group-item-primary').siblings().removeClass('list-group-item-primary');
+            $(".settopbtl").prop( "disabled", false );
+            $(('#btl' + fname)).prop( "disabled", true );
+            if (record == true) {
+                $.post("/settoplevel",{ toplevelfile: fname } ).done(
+                    function (data) {
+                        data = "";
+                    }
+                );
+            }
         }
 
         function errorMessage(msg) {

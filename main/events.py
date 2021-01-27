@@ -92,7 +92,8 @@ def stream(cmd):
     if cmd == "Compile":
         # compthread = threading.Thread(target=compilefile,args=(current_user.email,request.sid,current_app))
         # compthread.start()
-        socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH,current_user.id)
+        socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH,
+                                       current_user.id,current_user.topLevelEntity)
     #     compilerpath = Path(current_app.MAINPATH,'backend','fpgacompileweb')
     #     basepath = Path(current_app.MAINPATH,'work')
     #     sessionpath = Path(basepath, current_user.email)
