@@ -29,9 +29,10 @@ with engcloud.connect() as conncloud:
         userslocal = [row['email'] for row in localdata]
 
         for row in clouddata:
-            print(row['email'])
+            ndict = dict(zip(row.keys(),list(row)))
+            del ndict['id']
             if row['email'] not in userslocal:
-                connlocal.execute(table2.insert(), row)
+                connlocal.execute(table2.insert(), ndict)
                 print(f'{row["email"]} included in local database.')
 
 print('Finished...')

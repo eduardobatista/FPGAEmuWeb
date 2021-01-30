@@ -22,14 +22,20 @@ with engcloud.connect() as conncloud:
         # clouddata = conncloud.execute("select * from public.user")
         metadata1 = MetaData()        
         table1 = Table('user', metadata1, autoload=True, autoload_with=engcloud)
+
+        # d = table1.delete().where(table1.c.email == 'teste@ufsc.br')
+        # conncloud.execute(d)
+
         clouddata = conncloud.execute(table1.select())
         userscloud = [row['email'] for row in clouddata]
 
         localdata = connlocal.execute("select * from user")
 
         for row in localdata:
+            ndict = dict(zip(row.keys(),list(row)))
+            del ndict['id']
             if row['email'] not in userscloud:
-                conncloud.execute(table1.insert(), row)
+                conncloud.execute(table1.insert(), ndict)
                 print(f'{row["email"]} included in cloud database.')
 
 print('Finished...')
