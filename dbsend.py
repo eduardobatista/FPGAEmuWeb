@@ -23,15 +23,17 @@ with engcloud.connect() as conncloud:
         metadata1 = MetaData()        
         table1 = Table('user', metadata1, autoload=True, autoload_with=engcloud)
 
-        # d = table1.delete().where(table1.c.email == 'teste@ufsc.br')
+        # d = table1.delete().where(table1.c.email == 'emailgoeshere')
         # conncloud.execute(d)
-
+        
         clouddata = conncloud.execute(table1.select())
         userscloud = [row['email'] for row in clouddata]
+        print(userscloud)
 
         localdata = connlocal.execute("select * from user")
 
         for row in localdata:
+            # print(row)
             ndict = dict(zip(row.keys(),list(row)))
             del ndict['id']
             if row['email'] not in userscloud:

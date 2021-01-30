@@ -92,6 +92,19 @@ def signup_post():
     if user: # if a user is found, we want to redirect back to signup page so user can try again
         flash('Email address already exists.')
         return redirect(url_for('auth.signup'))
+    elif current_app.clouddb is not None:
+        try:             
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
+                if clouddata.first() is not None:
+                    flash('Email address already exists (cloud).')
+                    return redirect(url_for('auth.signup'))
+                clouddata.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
 
     # create a new user with the form data. Hash the password so the plaintext version isn't saved.
     new_user = User(email=email, name=name, password=generate_password_hash(password, method='sha256'), 
