@@ -12,3 +12,4 @@ work/1234/work-obj93.cf
 *.pyc
 seckey
 oauth2_creds.*
+clouddb.conf

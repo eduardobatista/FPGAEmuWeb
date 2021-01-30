@@ -5,6 +5,8 @@ from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy # Database
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from sqlalchemy import create_engine
+
 
 socketio = SocketIO()
 db = SQLAlchemy()  # Database
@@ -33,8 +35,16 @@ def create_app(debug=False,mainpath=""):
     app.MAINPATH = mainpath
     
     # Database:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite' 
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'     
     db.init_app(app)
+
+    # Cloud Database:
+    app.clouddb = None
+    clouddbfile = Path(mainpath) / 'clouddb.conf';
+    if clouddbfile.exists():
+        with open(clouddbfile,'r') as cfile:
+            clouddbconf = cfile.read();
+            app.clouddb = create_engine(clouddbconf)
     
     # logging.basicConfig(filename=Path(mainpath,'activity.log'), level=logging.INFO)
 

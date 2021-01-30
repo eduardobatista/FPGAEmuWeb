@@ -9,6 +9,7 @@ from pathlib import Path
 import random
 import string
 from datetime import datetime,timedelta
+from sqlalchemy import Table,MetaData
 
 @auth.route('/login')
 def login():
@@ -20,11 +21,30 @@ def login():
 def login_post():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))
-    email = request.form.get('email')
+    email = request.form.get('email').strip()
     password = request.form.get('password')
     # remember = True if request.form.get('remember') else False
 
     user = User.query.filter_by(email=email).first()
+
+    if (not user) and (current_app.clouddb is not None):
+        try:
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select())
+                for row in clouddata:
+                    if email == row['email']:
+                        new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
+                                        lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
+                        db.session.add(new_user)
+                        db.session.commit()
+                        user = new_user
+                clouddata.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
+
 
     # check if the user actually exists
     # take the user-supplied password, hash it, and compare it to the hashed password in the database
@@ -79,7 +99,25 @@ def signup_post():
 
     # add the new user to the database
     db.session.add(new_user)
-    db.session.commit()  
+    db.session.commit()
+
+    # add the new user to the cloud database
+    if current_app.clouddb is not None:
+        ndict = {'email': email, 'name': name, 'password': generate_password_hash(password, method='sha256'), 
+                        'role': role, 'viewAs': viewAs, 'lastPassRecovery': None, 'topLevelEntity': topLevelEntity, 'testEntity': testEntity}
+        try:             
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select())
+                cloudusers = [row['email'] for row in clouddata]
+                if email not in cloudusers:
+                    conncloud.execute(table1.insert(), ndict)
+                    conncloud.close()
+                clouddata.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
 
     login_user(new_user, remember=True)
     return redirect(url_for('main.sendfiles'))

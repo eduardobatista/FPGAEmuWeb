@@ -28,12 +28,14 @@ app = create_app(debug=True,mainpath=MAINPATH)
 with app.app_context():
     try:        
         user = User.query.filter_by(email='admin@fpgaemu').first()
-    except OperationalError as err:  
+    except:# OperationalError as err:  
         print('Database does not exist, creating...')
         db.create_all()
+        db.session.commit()
         new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin', viewAs='')
         db.session.add(new_user)
-        db.session.commit()  
+        db.session.commit()
+        
 
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)

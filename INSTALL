@@ -7,6 +7,7 @@
     - Install make: "sudo apt install make"
     - Install clang: "sudo apt-get install clang"
     - Install libz-dev: "sudo apt-get install libz-dev"
+    - GCC installation may also be needed: "sudo apt-get install gcc"
     - Then: 
             $ cd <ghdl>
             $ mkdir build
