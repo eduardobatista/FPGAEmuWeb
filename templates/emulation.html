@@ -327,7 +327,7 @@
                     // $('#LEDR').html(aux);
                 });
                 window.socket.on('message', function(msg){    
-                    if (($('#status').html() == "") || String(msg).startsWith("Starting")) {
+                    if (($('#status').html() == "") || String(msg).startsWith("Emulation started")) {
                         $('#status').html(String(msg));
                     } else {
                         $('#status').append('<br>'+String(msg));

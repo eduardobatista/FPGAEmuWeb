@@ -306,7 +306,7 @@ def doEmulation(username,sid,mainpath,sessionpath):
         socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=sid)
         return
     else:
-        socketio.emit('message','Starting emulation...',namespace="/emul",room=sid)
+        socketio.emit('message','Emulation started.',namespace="/emul",room=sid)
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
     try: 

@@ -19,7 +19,20 @@
 
         {% if current_user.role == 'Admin' %}
 
+        <h2>Cloud Database Info</h2>
+
+        <i id="running" class="fa fa-cog fa-spin fa-2x fa-fw" style="display: none;"></i>
+        <div id="cloudinfo">
+            
+        </div>
+
+        <button class="btn btn-primary btn-sm" onclick="checkCloudDb();">Check Cloud DB Info</button>
+
+    </div>
+
         {%- if userlist is defined -%}
+    <div class="container mt-3">
+        <h2>User List</h2>
 
         <table class="table">
             <thead>
@@ -118,6 +131,14 @@
                         }
                     }
                 );
+            }
+
+            function checkCloudDb() {
+                $("#running").css("display", "block");
+                $.get("/clouddbinfo",{}).done( function (data) {
+                    $('#cloudinfo').html(data);
+                    $("#running").css("display", "none");
+                });                                 
             }
 
             

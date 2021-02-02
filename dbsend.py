@@ -29,6 +29,7 @@ with engcloud.connect() as conncloud:
         clouddata = conncloud.execute(table1.select())
         userscloud = [row['email'] for row in clouddata]
         print(userscloud)
+        print(len(userscloud))
 
         localdata = connlocal.execute("select * from user")
 

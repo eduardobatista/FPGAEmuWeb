@@ -4,12 +4,14 @@ from .models import User
 from . import adm
 from appp import db
 from flask_login import login_required, current_user
+from sqlalchemy import Table,MetaData
 
 @adm.route('/profile')
 @login_required
 def profile():    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    
-    userlist = User.query
+    # TODO: Sort list and filter by student
+    userlist = sorted([row.email for row in User.query.filter_by(role='Student')])
+    userlist.insert(0,current_user.email)    
     return render_template('profile.html',userlist=userlist)
 
 @adm.route('/setViewAs', methods=['POST'])
@@ -31,6 +33,26 @@ def admin():
     userlist = User.query
     # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
     return render_template('admin.html',userlist=userlist)
+
+@adm.route('/clouddbinfo')
+@login_required
+def cloudinfo():
+    if current_user.role != "Admin":
+        return redirect(url_for('main.sendfiles'))
+    if current_app.clouddb:
+        try: 
+            with current_app.clouddb.connect() as conncloud:      
+                table1 = Table('user', MetaData() , autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select())
+                userscloud = [row['email'] for row in clouddata]
+                ret = f"{len(userscloud)} users are registered in the CloudDb.<br>"
+                ret += f"User list is: {userscloud}"
+                conncloud.close()
+                return ret
+        except BaseException as err:
+            return f"Could not reach the cloud database.<br>{str(err)}"
+    else:
+        return "CloudDb not set for this app (clouddb.conf is probably missing)."
 
 @adm.route('/deleteuser', methods=['POST']) 
 @login_required
