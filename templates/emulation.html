@@ -166,8 +166,10 @@
             // console.log("!!!");
             var rect = document.getElementById("mainImg").getBoundingClientRect();
             // console.log(rect.top, rect.right, rect.bottom, rect.left);
-            console.log($("#mainImg").width())
-            console.log($("#drawCanvas").width())
+            // console.log($("#mainImg").width())
+            // console.log($("#drawCanvas").width())
+            // console.log(rect.top);
+            // console.log(rect.left);
             $("#drawCanvas").css("top",rect.top);
             $("#drawCanvas").css("left",rect.left);
             $("#drawCanvas").width( $("#mainImg").width() );
@@ -179,8 +181,6 @@
         }
 
         $("#mainImg").ready(adjustCanvas);
-
-        // $("#imgDiv").resize(adjustCanvas);
 
         $(window).resize(adjustCanvas);
 
@@ -283,9 +283,23 @@
             $("#keys").html("");
             for (var k = 3; k >= 0; k--) {
                 $("#keys").append(`
-                    <button type="button" id="KEY${k}" class="btn btn-primary p-1 m-1" onmousedown="mousedown(${k});" onmouseup="mouseup(${k});">KEY${k}</button>
+                    <button type="button" id="KEY${k}" class="btn btn-primary p-1 m-1" onmousedown="mousedown(${k});" onmouseup="mouseup(${k});" onmouseout="mouseup(${k});">KEY${k}</button>
                 `);
             }
+            $('#basicExampleNav').on('hidden.bs.collapse', function () {
+                adjustCanvas();
+                $("#drawCanvas").show();
+            })
+            $('#basicExampleNav').on('shown.bs.collapse', function () {
+                adjustCanvas();
+                $("#drawCanvas").show();
+            })
+            $('#basicExampleNav').on('show.bs.collapse', function () {
+                $("#drawCanvas").hide();
+            })
+            $('#basicExampleNav').on('hide.bs.collapse', function () {
+                $("#drawCanvas").hide();
+            })
         });   
         
         function mousedown(element) {
