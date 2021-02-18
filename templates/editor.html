@@ -313,7 +313,7 @@
             } 
 
             if (val != 0) {
-                if (val.endsWith(".vhd") || val.endsWith(".vhdl")) {
+                if ( val.endsWith(".vhd") ) {
                     if (!window.socketOn) { openSocket(); }
                     $("#modalSaveAs").modal('hide');
                     if (opt == 2) {

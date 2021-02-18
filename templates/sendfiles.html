@@ -54,7 +54,7 @@
                 <div class="input-group">                    
                     <div class="custom-file">
                     <input type="file" name="fileToUpload" id="fileToUpload" class="custom-file-input m-0"
-                        accept=".vhd,.vhdl" multiple>
+                        accept=".vhd" multiple>
                     <label class="custom-file-label" for="fileToUpload">Choose file(s) to upload...</label>                    
                     </div> 
                 <button type="button" class="btn btn-primary py-2 px-4" onclick="uploadfile();" style="margin-top: 13px;">Upload</button>
@@ -316,7 +316,7 @@
             $('#saveasalert').hide();
             val = $("#filenameas").val();
             if ((val != "") && (val != window.filetorename)) {
-                if (val.endsWith(".vhd") || val.endsWith(".vhdl")) {
+                if ( val.endsWith(".vhd") ) {
                     if (!window.socketOn) { openSocket(); }
                     window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});
                     $("#modalSaveAs").modal('hide');              
