@@ -282,7 +282,7 @@
                 }                
             });
             window.socket.on('errors', function(msg){
-                $('#status').append('<span style="color:red;">Errors:<br>'+String(msg)+"</span>");
+                $('#status').append('<br><span style="color:red;">Errors:<br>'+String(msg)+"</span>");
                 $("#myspinner").hide();
             });
             window.socket.on('success',function(msg){
