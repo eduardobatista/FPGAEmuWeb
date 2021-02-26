@@ -187,6 +187,7 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
     # print(filelist)
 
 def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
+    socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=sid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
