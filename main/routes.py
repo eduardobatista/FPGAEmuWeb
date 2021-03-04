@@ -86,6 +86,14 @@ def editor():
     filenames = [x.name for x in aux]
     return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
 
+@main.route('/mapper')
+@login_required
+def mapper():       
+    sessionpath = getuserpath()
+    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    filenames = [x.name for x in aux]
+    return render_template('mapper.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
+
 @main.route("/downloadfile")
 @login_required
 def downloadfile():

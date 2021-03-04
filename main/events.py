@@ -23,6 +23,20 @@ def getfile(filename):
     data = open(fname,'r').read()
     emit("filecontent",data)
 
+@socketio.on('getmap', namespace='/stream') 
+def getmap(filename):
+    sessionpath = getuserpath()
+    data = getportlist(sessionpath=sessionpath,file=filename)
+    data2 = getexistingportmap(sessionpath=sessionpath,file=filename)
+    emit("portlist",[data,data2])
+
+@socketio.on('savemap', namespace='/stream') 
+def savemap(dataa):
+    sessionpath = getuserpath()
+    with open(sessionpath / (dataa['filename']+".map"),'w') as ff:
+        ff.write(dataa['data'])
+    emit("mapsavesuccess","ok!")
+
 @socketio.on('renamefile', namespace='/stream') 
 def renamefile(dataa):
     if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):

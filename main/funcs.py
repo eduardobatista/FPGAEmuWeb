@@ -152,6 +152,71 @@ def createFpgaTest(sessionpath,toplevelentity):
     fpgatest.close()
     return "Ok!"
 
+
+def getportlist(sessionpath,file):
+    toplevel = Path(sessionpath,file)
+    if not toplevel.exists(): return f"Error: Top level entity not found.";
+    toplevel = open(toplevel, 'r')    
+    data = toplevel.read()
+    data = re.sub("--.*?\n|\n"," ",data)
+    data = re.sub("\s+"," ",data)
+    data = re.sub("\s+;",";",data)
+    toplevel.close()
+    entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
+    if entityname is None: 
+        return "Error: entity not found in usertop."
+    entityname = entityname.group(1)
+    aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
+    if aux is None:
+        return "Error: entity not found in usertop."
+    aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
+    if aux is None:
+        return "Error: ports not found in usertop."
+    aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
+    sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
+    sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
+    sepspace = re.compile(r"\s+")
+    try:
+        myports = []
+        for item in aux2:
+            aux3 = sepdots.split(item)
+            if len(aux3) != 2:
+                continue
+            dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
+            typesize = 1
+            if "std_logic_vector" in dirtype[1].lower():
+                auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
+                if (auxx is None) or (len(auxx.groups()) < 2):
+                    return "Error: Fail parsing " + dirtype[1] + "."
+                typesize = int(auxx.group(1)) - int(auxx.group(2)) 
+                if typesize < 0: typesize = -typesize
+                typesize = typesize+1
+            aux4 = sepcomma.split(aux3[0])
+            for pp in aux4:
+                ppp = {'name':pp.strip().upper(),'typesize':typesize,'direction':dirtype[0].lower().strip()}
+                myports.append(ppp)
+        return myports
+    except:
+        return "Error parsing usertop ports."
+
+def getexistingportmap(sessionpath,file):
+    mapfile = Path(sessionpath,file + ".map")
+    if not mapfile.exists():
+        return []
+    else:
+        with open(mapfile,'r') as ff:
+            data = []
+            ff.readline()
+            for ll in ff:
+                if ll.endswith('\n'):
+                    ll = ll[:-1]
+                dd = ll.split(':')
+                dd = [dd[0]] + dd[1].split(',')
+                data.append(dd)
+            return data
+        return []
+
+
 # def createnewuser(basepath):
 #     subdirs = list(basepath.glob("*"))
 #     # print(subdirs)
@@ -221,7 +286,7 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
         socketio.sleep(0.1)
     aux = proc.stderr.read()
     if aux != b'':
-        socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+        socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
         logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
     else:
         socketio.emit("success","done",namespace="/stream",room=sid);
@@ -244,7 +309,7 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
         socketio.sleep(0.1)
     aux = proc.stderr.read()
     if aux != b'':
-        socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+        socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
         logactivity(sessionpath,userid,"Analysis with errors.")
     else:
         socketio.emit("asuccess","done",namespace="/stream",room=sid)
@@ -286,7 +351,7 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid):
         socketio.sleep(0.1)
     aux = proc.stderr.read()
     if aux != b'':
-        socketio.emit("errors",aux.decode().replace('\n','\n<br>'),namespace="/stream",room=sid)
+        socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
         logactivity(sessionpath,userid,"Simulation with errors.")
     elif hasError:
         socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
