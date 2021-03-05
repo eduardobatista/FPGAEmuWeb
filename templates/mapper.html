@@ -196,19 +196,31 @@
                 axx = "";
                 ax2 = "";
                 for (var jj = 0; jj < window.lastportdata.length; jj++) {
+                    // name = $( "#Name" + jj + " option:selected" ).text();
+                    // rangeA = $( "#rangeA" + jj).val();
+                    // axx = axx + name + "(" + rangeA;
+                    // ax2 = ax2 + window.lastportdata[jj].name + ":" 
+                    // if (window.lastportdata[jj].typesize == 1) {
+                    //     axx = axx + ") => " + window.lastportdata[jj].name + ",";
+                    //     ax2 = ax2 + name + "," + rangeA + "\n"
+                    // } else {
+                    //     rangeB = $( "#rangeB" + jj).val();
+                    //     axx = axx + " downto " +  rangeB + ") => " + window.lastportdata[jj].name + ",";
+                    //     ax2 = ax2 + name + "," + rangeA + "," + rangeB + "\n";
+                    // }
+                    // axx = axx + " "; // axx = axx + "\n";
                     name = $( "#Name" + jj + " option:selected" ).text();
                     rangeA = $( "#rangeA" + jj).val();
-                    axx = axx + name + "(" + rangeA;
-                    ax2 = ax2 + window.lastportdata[jj].name + ":" 
+                    axx = axx + window.lastportdata[jj].name + " => " + name + "(" + rangeA;
+                    ax2 = ax2 + window.lastportdata[jj].name + ":"
                     if (window.lastportdata[jj].typesize == 1) {
-                        axx = axx + ") => " + window.lastportdata[jj].name + ",";
+                        axx = axx + "), ";
                         ax2 = ax2 + name + "," + rangeA + "\n"
                     } else {
                         rangeB = $( "#rangeB" + jj).val();
-                        axx = axx + " downto " +  rangeB + ") => " + window.lastportdata[jj].name + ",";
+                        axx = axx + " downto " +  rangeB + "), ";
                         ax2 = ax2 + name + "," + rangeA + "," + rangeB + "\n";
                     }
-                    axx = axx + " "; // axx = axx + "\n";
                 }
                 ckb = $("#enableMapCheck").is(':checked');
                 window.socket.emit("savemap",{filename: val, data: (ckb ? axx.slice(0,-2) : "") + "\n" + ax2.slice(0,-1)});                

@@ -115,6 +115,8 @@ def createFpgaTest(sessionpath,toplevelentity):
     sepspace = re.compile(r"\s+")
     validportkeys = validports.keys()
     # print(aux2)
+    # foundports = []
+    # foundsizes = []
     try:
         for item in aux2:
             aux3 = sepdots.split(item)
@@ -136,7 +138,11 @@ def createFpgaTest(sessionpath,toplevelentity):
                 if ppp not in validportkeys:
                     return f"Error: {pp} is not a valid port for usertop entity."  
                 if validports[ppp][1] != typesize:
-                    return f"Error: Length of port {pp} does not match the corresponding DE2 port length."
+                    return f"Error: Length of port {pp} does not match the corresponding Emulator port length."
+                # if validports[ppp][1] > typesize:
+                #     return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
+                # foundports.append(ppp)
+                # foundsizes.append(typesize)
     except:
         return "Error parsing usertop ports."
     foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
@@ -144,9 +150,99 @@ def createFpgaTest(sessionpath,toplevelentity):
     if len(foundports) == 0:
         return "Error: ports not found."
     portmaptxt = "port map("
+    zz = 0
+    # for port,tsize in zip(foundports,foundsizes):
     for port in foundports:
         portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
+        # if tsize == 1:
+        #     portmaptxt = portmaptxt + f"{port} => {port},"
+        # else:            
+        #     compl = '0'*3
+        #     portmaptxt = portmaptxt + f'{port} => "{compl}" & {port}({tsize} downto 0),'
+        # portmaptxt = portmaptxt + f"{port[0]}({}) => {port[0]},"
     portmaptxt = portmaptxt[:-1] + ");"
+    # print(portmaptxt)
+    fpgatest = open(fpgatestfile, 'w')
+    fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
+    fpgatest.close()
+    return "Ok!"
+
+def createFpgaTest2(sessionpath,toplevelentity):
+    toplevel = Path(sessionpath,toplevelentity + ".vhd")
+    if not toplevel.exists(): return f"Error: Top level entity not found.";
+    fpgatestfile = Path(sessionpath,'fpgatest.aux')
+    if fpgatestfile.exists(): fpgatestfile.unlink()
+    
+    portmaptxt = None
+    mapfile = Path(sessionpath,toplevelentity + ".vhd.map")
+    if mapfile.exists():
+        ff = open(mapfile,'r')
+        portmap = ff.readline()
+        if len(portmap) > 2:
+            portmaptxt = "port map(" + portmap + ");"
+
+    if not portmaptxt:
+        toplevel = open(toplevel, 'r')    
+        data = toplevel.read()
+        data = re.sub("--.*?\n|\n"," ",data)
+        data = re.sub("\s+"," ",data)
+        data = re.sub("\s+;",";",data)
+        toplevel.close()
+        entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
+        if entityname is None: 
+            return f"Error: entity not found in {toplevelentity}.vhd."
+        entityname = entityname.group(1)
+        aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
+        if aux is None:
+            return f"Error: entity not found in {toplevelentity}.vhd."
+        aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
+        if aux is None:
+            return f"Error: ports not found in {toplevelentity}.vhd."
+        aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
+        sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
+        sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
+        sepspace = re.compile(r"\s+")
+        validportkeys = validports.keys()
+        foundports = []
+        foundsizes = []
+        founddifs = []
+        try:
+            for item in aux2:
+                aux3 = sepdots.split(item)
+                if len(aux3) != 2:
+                    continue
+                dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
+                typesize = 1
+                if "std_logic_vector" in dirtype[1].lower():
+                    auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
+                    if (auxx is None) or (len(auxx.groups()) < 2):
+                        return "Error: Fail parsing " + dirtype[1] + "."
+                    typesize = int(auxx.group(1)) - int(auxx.group(2)) 
+                    if typesize < 0: typesize = -typesize
+                    typesize = typesize+1
+                aux4 = sepcomma.split(aux3[0])
+                for pp in aux4:
+                    ppp = pp.strip().upper()
+                    if ppp not in validportkeys:
+                        return f"Error: {pp} is not a valid port for a top level entity. SW, LEDR, KEY and HEX should be used."
+                    if validports[ppp][1] < typesize:
+                        return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
+                    foundports.append(ppp)
+                    foundsizes.append(typesize)
+                    founddifs.append(validports[ppp][1]-typesize)
+        except:
+            return "Error parsing usertop ports."
+        if len(foundports) == 0:
+            return "Error: ports not found."
+        portmaptxt = "port map("
+        for port,tsize,dif in zip(foundports,foundsizes,founddifs):
+            if (tsize == 1) or (dif == 0):
+                portmaptxt = portmaptxt + f"{port} => {port},"
+            else:              
+                portmaptxt = portmaptxt + f'{port}({tsize-1} downto 0) => {port}({tsize-1} downto 0),'
+        portmaptxt = portmaptxt[:-1] + ");"
+
+    print(portmaptxt)
     fpgatest = open(fpgatestfile, 'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
     fpgatest.close()
@@ -254,9 +350,9 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
 def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
     socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=sid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
-    basepath = Path(mainpath,'work')
+    # basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
-    retcode = createFpgaTest(sessionpath,toplevelentity)
+    retcode = createFpgaTest2(sessionpath,toplevelentity)
     if retcode == "Ok!":
         pass
     else:

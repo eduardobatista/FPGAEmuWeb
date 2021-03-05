@@ -74,6 +74,9 @@ def deletefile(filename):
         sessionpath = getuserpath()
         fname = Path(sessionpath,filename)
         fname.unlink()
+        fmap = Path(sessionpath,filename+".map")
+        if fmap.exists():
+            fmap.unlink()
         emit("filedeleted",filename)
     else:
         emit("deleteerror","Only .vhd and .vhdl files allowed.")
@@ -88,6 +91,9 @@ def deleteallfiles(fname):
         aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
         for ff in aux:
             ff.unlink()
+        aux2 = list(sessionpath.glob("*.map"))
+        for ff2 in aux2:
+            ff2.unlink 
         emit("filedeleted","*")
     except:
         emit("deleteerror","Error deleting all files.")
