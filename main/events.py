@@ -32,6 +32,9 @@ def getmap(filename):
 
 @socketio.on('savemap', namespace='/stream') 
 def savemap(dataa):
+    if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        emit("error","Not allowed while viewing as a different user.")
+        return
     sessionpath = getuserpath()
     with open(sessionpath / (dataa['filename']+".map"),'w') as ff:
         ff.write(dataa['data'])

@@ -298,11 +298,13 @@ def getportlist(sessionpath,file):
 def getexistingportmap(sessionpath,file):
     mapfile = Path(sessionpath,file + ".map")
     if not mapfile.exists():
-        return []
+        return ["nomap"]
     else:
         with open(mapfile,'r') as ff:
-            data = []
-            ff.readline()
+            if len(ff.readline()) <= 2:
+                data = ["disabled"]
+            else:
+                data = ["enabled"]
             for ll in ff:
                 if ll.endswith('\n'):
                     ll = ll[:-1]
@@ -310,7 +312,7 @@ def getexistingportmap(sessionpath,file):
                 dd = [dd[0]] + dd[1].split(',')
                 data.append(dd)
             return data
-        return []
+        return ["nomap"]
 
 
 # def createnewuser(basepath):

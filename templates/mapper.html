@@ -36,7 +36,10 @@
             </div>
 
             <div id="portmap" style="text-size-adjust: 70%;"></div>
-            
+
+            <div id="alerts" class="alert mt-2 mb-2" style="display: none;">
+                Mapping has errors.
+            </div>          
 
             <button class='btn btn-sm btn-primary' onclick="buildmap()">Save</button>
 
@@ -96,14 +99,14 @@
                 aux = '<ul class="list-group">';
                 for (var ii = 0; ii < msg.length; ii++) {
                     plist.push(msg[ii].name);
-                    aux = aux + '<li class="list-group-item"><span class="portname">';
+                    aux = aux + '<li class="list-group-item" id="item' + ii + '"><span class="portname">';
                     aux = aux + msg[ii].name + "</span> " + gettypetext(msg[ii].typesize) + " => ";                   
                     aux = aux +  getform(ii,msg[ii].typesize,msg[ii].direction);
                     aux = aux + ' </li>\n';
                 }
                 aux = aux + '</ul>';
                 $("#portmap").html(aux);
-                for (var ii = 0; ii < msg2.length; ii++) {
+                for (var ii = 1; ii < msg2.length; ii++) {
                     var idx = plist.indexOf(String(msg2[ii][0]));
                     if (idx > -1) {
                         $("#Name" + idx + " option").filter(function() {
@@ -115,7 +118,12 @@
                         }
                     }
                 }
-                $('#enableMapCheck').prop('checked', true);
+                if (msg2[0] == "enabled") {
+                    $('#enableMapCheck').prop('checked', true);
+                } else {
+                    $('#enableMapCheck').prop('checked', false);
+                }
+                checkchanged();
                 
                 // alert('File saved successfully!');
                 // $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
@@ -126,43 +134,9 @@
                 // }
             }); 
             window.socket.on('mapsavesuccess', function(msg){
-                alert(msg);
+                $("#alerts").html("Map saved successfully!");
+                $("#alerts").removeClass("alert-danger").addClass("alert-primary").delay(100).fadeIn(300);
             });
-            // window.socket.on('message', function(msg){     
-            //     if ($('#status').html() == "") {
-            //         $('#status').html(String(msg));
-            //     } else {
-            //         $('#status').append('<br>'+String(msg));
-            //     }                
-            // });
-            // window.socket.on('errors', function(msg){
-            //     $('#status').append('<br><span style="color:red;">Errors:<br>'+String(msg)+"</span>");
-            //     $("#myspinner").hide();
-            // });
-            // window.socket.on('success',function(msg){
-            //     $('#status').append(`
-            //         <span style="color:blue;">
-            //             Compilation successful!<br>
-            //             You can now start your emulation.
-            //         </span>
-            //     `);
-            //     $("#gotoemul").attr('disabled', false);
-            //     $("#myspinner").hide();
-            // });
-            // window.socket.on('asuccess',function(msg){
-            //     $('#status').append(`
-            //         <span style="color:blue;">
-            //             Analysis end up successfully!
-            //         </span>
-            //     `);
-            //     $("#myspinner").hide();
-            // });
-            // window.socket.on('disconnect', function(msg){
-            //     window.socketOn = false;
-            // });
-            // window.socket.on('error',function(msg){
-            //     errorMessage(String(msg));
-            // });
         }
 
         function checkchanged() {
@@ -177,7 +151,7 @@
         }
 
         function openmap() {  
-
+            $("#alerts").hide();
             var val = $("#fileselect").children("option:selected").val();
             if (val != 0) {
                 if (!window.socketOn) {
@@ -192,23 +166,12 @@
 
         function buildmap() {
             var val = $("#fileselect").children("option:selected").val();
+            $("#alerts").hide();
             if (val != 0) {
+                errorflag = false;
                 axx = "";
                 ax2 = "";
                 for (var jj = 0; jj < window.lastportdata.length; jj++) {
-                    // name = $( "#Name" + jj + " option:selected" ).text();
-                    // rangeA = $( "#rangeA" + jj).val();
-                    // axx = axx + name + "(" + rangeA;
-                    // ax2 = ax2 + window.lastportdata[jj].name + ":" 
-                    // if (window.lastportdata[jj].typesize == 1) {
-                    //     axx = axx + ") => " + window.lastportdata[jj].name + ",";
-                    //     ax2 = ax2 + name + "," + rangeA + "\n"
-                    // } else {
-                    //     rangeB = $( "#rangeB" + jj).val();
-                    //     axx = axx + " downto " +  rangeB + ") => " + window.lastportdata[jj].name + ",";
-                    //     ax2 = ax2 + name + "," + rangeA + "," + rangeB + "\n";
-                    // }
-                    // axx = axx + " "; // axx = axx + "\n";
                     name = $( "#Name" + jj + " option:selected" ).text();
                     rangeA = $( "#rangeA" + jj).val();
                     axx = axx + window.lastportdata[jj].name + " => " + name + "(" + rangeA;
@@ -216,15 +179,56 @@
                     if (window.lastportdata[jj].typesize == 1) {
                         axx = axx + "), ";
                         ax2 = ax2 + name + "," + rangeA + "\n"
+                        if (!portok(1,name,rangeA,0)) {
+                            $("#item" + jj).addClass("list-group-item-warning");
+                            errorflag = true;
+                        } else {
+                            $("#item" + jj).removeClass("list-group-item-warning");
+                        }
                     } else {
                         rangeB = $( "#rangeB" + jj).val();
                         axx = axx + " downto " +  rangeB + "), ";
                         ax2 = ax2 + name + "," + rangeA + "," + rangeB + "\n";
+                        if (!portok(window.lastportdata[jj].typesize,name,rangeA,rangeB)) {
+                            $("#item" + jj).addClass("list-group-item-warning");
+                            errorflag = true;
+                        } else {
+                            $("#item" + jj).removeClass("list-group-item-warning");
+                        }
                     }
                 }
                 ckb = $("#enableMapCheck").is(':checked');
+                if (errorflag && ckb) {
+                    $("#alerts").html("Mapping has errors.")
+                    $("#alerts").removeClass("alert-primary").addClass("alert-danger").delay(100).fadeIn(300);
+                    return; 
+                }
                 window.socket.emit("savemap",{filename: val, data: (ckb ? axx.slice(0,-2) : "") + "\n" + ax2.slice(0,-1)});                
             } 
+        }
+
+        function portok(tsize,name,rangeA,rangeB) {
+            rangeA = parseInt(rangeA);
+            rangeB = parseInt(rangeB);
+            if (tsize == 1) { rangeB = rangeA; } 
+            var dif = rangeA - rangeB;
+            // console.log(tsize + name + rangeA + "" + rangeB + "" + dif);
+            if (rangeA < rangeB) {
+                return false;                
+            } else if ( dif != (tsize-1) ) {
+                return false;                
+            } else if (((name == "SW") || (name == "LEDR")) && ((rangeA > 17) || (rangeB > 17))) {
+                return false;                
+            } else if ( (name == "KEY") && ((rangeA > 3) || (rangeB > 3)) ) {
+                return false;                
+            } else if ( (name.startsWith("HEX")) && ((rangeA > 6) || (rangeB > 6)) ) {
+                return false;                
+            }
+            return true;
+        }
+
+        function maperror(idx) {
+            $("#item" + idx).addClass("list-group-item-danger");
         }
 
 
