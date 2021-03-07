@@ -27,6 +27,7 @@
             </select>   
         
             <h3 class="mt-3">Port Mapping</h3>
+            <p class="mb-2" style="color: red; font-weight: bold;">Only valid for emulating the Top Level Entity.</p>
 
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" value="" id="enableMapCheck" onchange="checkchanged()">
@@ -180,20 +181,20 @@
                         axx = axx + "), ";
                         ax2 = ax2 + name + "," + rangeA + "\n"
                         if (!portok(1,name,rangeA,0)) {
-                            $("#item" + jj).addClass("list-group-item-warning");
+                            $("#item" + jj).addClass("list-group-item-danger");
                             errorflag = true;
                         } else {
-                            $("#item" + jj).removeClass("list-group-item-warning");
+                            $("#item" + jj).removeClass("list-group-item-danger");
                         }
                     } else {
                         rangeB = $( "#rangeB" + jj).val();
                         axx = axx + " downto " +  rangeB + "), ";
                         ax2 = ax2 + name + "," + rangeA + "," + rangeB + "\n";
                         if (!portok(window.lastportdata[jj].typesize,name,rangeA,rangeB)) {
-                            $("#item" + jj).addClass("list-group-item-warning");
+                            $("#item" + jj).addClass("list-group-item-danger");
                             errorflag = true;
                         } else {
-                            $("#item" + jj).removeClass("list-group-item-warning");
+                            $("#item" + jj).removeClass("list-group-item-danger");
                         }
                     }
                 }
@@ -210,7 +211,9 @@
         function portok(tsize,name,rangeA,rangeB) {
             rangeA = parseInt(rangeA);
             rangeB = parseInt(rangeB);
-            if (tsize == 1) { rangeB = rangeA; } 
+            if ( isNaN(rangeA) || isNaN(rangeB)) {
+                return false;
+            } else if (tsize == 1) { rangeB = rangeA; } 
             var dif = rangeA - rangeB;
             // console.log(tsize + name + rangeA + "" + rangeB + "" + dif);
             if (rangeA < rangeB) {
