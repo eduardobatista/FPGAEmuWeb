@@ -36,7 +36,7 @@ def sendfiles():
     # if (current_user.role == 'Professor') or (current_user.role == 'Admin'):
     #     userlist = User.query
     sessionpath = getuserpath()
-    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    aux = getvhdfilelist(sessionpath) #list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.stem for x in aux]    
     if (current_user.topLevelEntity is None) or (current_user.topLevelEntity not in filenames):
         if len(filenames) == 1:
@@ -82,7 +82,7 @@ def simular():
 @login_required
 def editor():       
     sessionpath = getuserpath()
-    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    aux = getvhdfilelist(sessionpath) # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
     return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
 
@@ -90,7 +90,7 @@ def editor():
 @login_required
 def mapper():       
     sessionpath = getuserpath()
-    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    aux = getvhdfilelist(sessionpath)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
     return render_template('mapper.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
 
@@ -98,8 +98,8 @@ def mapper():
 @login_required
 def downloadfile():
     sessionpath = getuserpath()
-    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    filenames = [x.name for x in aux]
+    aux = getvhdfilelist(sessionpath)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    # filenames = [x.name for x in aux]
     zipname = Path(sessionpath,'VHDLFiles.zip')
     if zipname.exists(): 
         zipname.unlink()

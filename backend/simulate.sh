@@ -16,13 +16,13 @@ rm -fr output.ghw
 # echo "${@:3}"
 
 if [ -x "$(command -v ghdl)" ]; then
-    ghdl -a -fexplicit --ieee=synopsys ${@:3}
-    ghdl -e -fexplicit --ieee=synopsys usertest
-    ghdl -r usertest --wave=output.ghw --stop-time=$2
+    ghdl -a -fexplicit --ieee=synopsys ${@:4}
+    ghdl -e -fexplicit --ieee=synopsys $3
+    ghdl -r $3 --wave=output.ghw --stop-time=$2
 else 
-    /opt/local/bin/ghdl -a -fexplicit --ieee=synopsys ${@:3}
-    /opt/local/bin/ghdl -e -fexplicit --ieee=synopsys usertest
-    /opt/local/bin/ghdl -r usertest --wave=output.ghw --stop-time=$2
+    /opt/local/bin/ghdl -a -fexplicit --ieee=synopsys ${@:4}
+    /opt/local/bin/ghdl -e -fexplicit --ieee=synopsys $3
+    /opt/local/bin/ghdl -r $3 --wave=output.ghw --stop-time=$2
 fi
 
 

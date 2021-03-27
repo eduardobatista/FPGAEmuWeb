@@ -236,13 +236,13 @@ def createFpgaTest2(sessionpath,toplevelentity):
             return "Error: ports not found."
         portmaptxt = "port map("
         for port,tsize,dif in zip(foundports,foundsizes,founddifs):
+            
             if (tsize == 1) or (dif == 0):
                 portmaptxt = portmaptxt + f"{port} => {port},"
             else:              
                 portmaptxt = portmaptxt + f'{port}({tsize-1} downto 0) => {port}({tsize-1} downto 0),'
         portmaptxt = portmaptxt[:-1] + ");"
-
-    print(portmaptxt)
+    
     fpgatest = open(fpgatestfile, 'w')
     fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
     fpgatest.close()
@@ -293,7 +293,8 @@ def getportlist(sessionpath,file):
                 myports.append(ppp)
         return myports
     except:
-        return "Error parsing usertop ports."
+        #return "Error parsing usertop ports."
+        return []
 
 def getexistingportmap(sessionpath,file):
     mapfile = Path(sessionpath,file + ".map")
@@ -322,6 +323,12 @@ def getexistingportmap(sessionpath,file):
 #     while candidate in subdirs:
 #         candidate = newuserprefix + str(randrange(10000)) 
 #     return candidate
+
+def getvhdfilelist(sessionpath, sort=True):
+    if sort:
+        return list(sorted(sessionpath.glob("*.vhd"))) #+ list(sessionpath.glob("*.vhdl"))
+    else:
+        return list(sessionpath.glob("*.vhd"))
 
 def logactivity(sessionpath,userid,message):
     with open(Path(sessionpath,'activity.log'),'a') as ff:
@@ -415,7 +422,7 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
 
 def simulatefile(sessionpath,sid,mainpath,stoptime,userid):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
-    basepath = Path(mainpath,'work')
+    # basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=sid)
@@ -432,7 +439,7 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid):
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
     proc = subprocess.Popen(
-                [simulatorpath,sessionpath,stoptime] + filenames,
+                [simulatorpath,sessionpath,stoptime,"usertest"] + filenames,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
