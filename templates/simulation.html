@@ -132,6 +132,7 @@
                     </span>
                 `);
                 $("#gotoemul").attr('disabled', false);
+                $("#gotoplot").attr('disabled', false);
                 $("#myspinner").hide();
             });
             window.socket.on('error',function(msg){
@@ -145,6 +146,7 @@
             $("#status").html("");
             $("#myspinner").show();
             $("#gotoemul").attr('disabled', true);
+            $("#gotoplot").attr('disabled', true);
             $("#fullHeightModalRight").modal();
             if (!window.socketOn) { openSocket(); }
             // alert($("#stoptime").val());

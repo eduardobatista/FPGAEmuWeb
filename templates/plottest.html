@@ -10,12 +10,10 @@
 
     <div class="container w-100">
 
-        
-
         <div class="row">
 
             <div class="col-sm-12 col-md-4 col-lg-3 mt-4 p-0">
-                <div class="treeview w-100 border">
+                <div id="maintree" class="treeview w-100 border">
                     <h6 class="pt-3 pl-3">Instances & Signals</h6>
                     <hr>
                     <ul class="mb-1 pl-3 pb-2" id="instancelist">
@@ -23,7 +21,7 @@
                   </div>
             </div>
 
-            <div class="col-sm-12 col-md-8 col-lg-9 mt-4 ml-0 mr-0 p-0" style="border: 1px dotted gray;">
+            <div class="col-sm-12 col-md-8 col-lg-9 mt-4 ml-0 mr-0 p-0" style="border: 1px solid lightgray;">
                 
                 <div class="m-3">
                     <div id="slider-range"></div>
@@ -34,6 +32,8 @@
                 </div>
 
             </div>
+
+            <button id="gotoemul" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
 
 
         </div>
@@ -79,10 +79,10 @@
                 window.hie = data[0];
                 window.data = data[1];
                 populateinstlist(window.hie);
-                $('.treeview').mdbTreeview();
+                $('#maintree').mdbTreeview();
                 var tempdata = data[1][Object.keys(data[1])[0]];
                 var maxtime = tempdata[tempdata.length-2]/1000000;
-                console.log(maxtime);
+                // console.log(maxtime);
                 $("#slider-range").slider('option',{min: 0, max: maxtime});
             }); 
             window.socket.on('disconnect', function(msg){
@@ -107,8 +107,7 @@
             window.socket.emit("requestghwdata");
         }
 
-        var plotheight = 18;
-        var margintb = 2;
+        
 
         $( document ).ready(function() {  
             window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','absolute');
@@ -125,15 +124,7 @@
                     plotselecteddata(window.zoomlimits[0],window.zoomlimits[1]);
                     // $( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
                 }
-            });
-            // $('#slider-range').on('change', function( event, ui ) {
-            //         window.zoomlimits[0] = ui.values[0];
-            //         window.zoomlimits[1] = ui.values[1];
-            //         console.log(window.zoomlimits);
-            //         // $( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
-            //     });
-            // plotfigure();
-            // plotsvg();
+            });            
         });
 
         $(window).resize(function() {
@@ -144,9 +135,10 @@
             htmldata = "";
             var insts = Object.keys(hie);
             insts.forEach(inst => {
+                var activeornot = (inst == insts[0]) ? "active" : "";
                 htmldata = htmldata + `<li><i class="fas fa-angle-right rotate"></i> 
-                              <span><i class="fas fa-cube ic-w mx-1"></i>` + inst + `</span>
-                              <ul class="nested">`;
+                              <span><i class="fas fa-cube ic-w mx-1"></i>${inst}</span>
+                              <ul class="nested ${activeornot}">`;
                 var sigs = Object.keys(hie[inst]);
                 sigs.forEach(sig => {
                     var symboltext = "fas fa-wave-square";
@@ -156,8 +148,8 @@
                         symboltext = "fas fa-arrow-alt-circle-left";
                     }
                     htmldata = htmldata + `<li><i class="${symboltext} ic-w mr-1"></i>
-                        <input class="mr-1" type="checkbox" id="check${sig}" 
-                        onchange="changecheck('${inst}','${sig}',this);">${sig}</li>`;
+                        <input class="mr-1" type="checkbox" id="check${inst}.${sig}" 
+                        onchange="changecheck('${inst}','${sig}',this.checked);">${sig}</li>`;
                 });
                 htmldata = htmldata + `</ul>
                                      </li>`;
@@ -165,12 +157,11 @@
             $('#instancelist').html(htmldata);
         }
 
-        function changecheck(inst,sig,thecheck) {
+        function changecheck(inst,sig,ischecked) {
             keyy = inst + "." + sig;
-            if (thecheck.checked) {
+            if (ischecked) {
                 window.plotlist[keyy] = window.hie[inst][sig]['idxs'];
                 window.typelist[keyy] = window.hie[inst][sig]['datatype'];
-                console.log(window.typelist[keyy]);
             } else {
                 if (window.plotlist.hasOwnProperty(keyy)) {
                     delete window.plotlist[keyy];
@@ -180,7 +171,11 @@
             plotselecteddata();
         }
 
-
+        const plotheight = 22;
+        const rowheight = 26;        
+        const margintb = 2;
+        const fontsize = plotheight/2 + 1;
+        const fontdef = {family: 'Helvetica', size: fontsize, weight: 'bold', anchor: 'middle', leading: '1em'};
         function plotselecteddata(tmin=0,tmax) {
 
             var draw = window.draw;
@@ -193,41 +188,38 @@
             if (sinais.length == 0) { return; }
             
             var compwidth = $('#plotsvg').width()-20;  
-            var compheight = (sinais.length+1)*22+5;
+            var compheight = (sinais.length+1)*rowheight+5;
             draw.size(compwidth,compheight);
             draw.css('left',10);
 
             var vcddata = window.data[window.plotlist[sinais[0]]];
-
-            var fontdef = {family: 'Helvetica', size: 10, weight: 'bold', anchor: 'middle', leading: '1em'};
             
             maxtextsize = 0;
+            var consty = 2*margintb+fontsize/2;
             for (var j = 0; j < sinais.length; j++) {
                 var text = draw.text(sinais[j]);
                 text.font(fontdef);
                 if (text.length() > maxtextsize) { maxtextsize = text.length(); }
-                text.move(0,margintb+2+5+22*(j+1));
+                text.move(0,consty+rowheight*(j+1));
             }
             maxtextsize = maxtextsize + 5;
 
             wdraw.size(compwidth-maxtextsize,compheight);
-            console.log(wdraw.css('left'));
             wdraw.css('left',maxtextsize+10);
             
             var maxtime = vcddata[vcddata.length-2];
             if (typeof tmax == 'undefined') { tmax = maxtime; }
             else { maxtime = tmax*1000000; }            
             mintime = tmin*1000000;
-            // var scalex = (compwidth-maxtextsize)/maxtime;
             var scalex = (compwidth-maxtextsize)/(maxtime-mintime);
 
             var nsteps = 10;
             var timestep = (maxtime-mintime)/nsteps;
             var strokedata = {width: 1, dasharray: [3,3], color: '#AAAAAA'};
-            draw.line(0,0,compwidth,0).stroke(strokedata).move(0,margintb+2+22);
+            draw.line(0,0,compwidth,0).stroke(strokedata).move(0,margintb+rowheight);
             for (var j = 0; j < (nsteps+1); j++) {
-                var txt = draw.text((timestep/1000000*j+mintime/1000000).toString()+"ns").font(fontdef)
-                txt.move(j*scalex*timestep+maxtextsize-2-txt.length(),margintb+2+5);
+                var txt = draw.text((timestep/1000000*j+mintime/1000000).toFixed(1)+"ns").font(fontdef)
+                txt.move(j*scalex*timestep+maxtextsize-1-txt.length(),2*margintb+fontsize/2);
                 draw.line(0,0,0,compheight).stroke(strokedata)
                         .move(j*scalex*timestep+maxtextsize,0);
             }
@@ -243,16 +235,13 @@
                 for (var i = 0; i < vcddata.length-2; i = i + 2) {                    
                     var val = vcddata[i+1].replaceAll("'","");
                     if (flagvec) {
-                        draw_std_logic_vector_svg(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,5+22*(j+1));
+                        draw_std_logic_vector_svg(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));
                     } else {
-                        draw_std_logic_svg(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,5+22*(j+1));    
+                        draw_std_logic_svg(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));    
                     }                    
                     lastval = val;
                 }
             }
-
-            // draw.viewbox(0,0,200,200);
-            // console.log(draw.viewbox());
 
         }
 
@@ -284,26 +273,6 @@
 
         }
 
-        // function plotsvg() {
-        //     // var draw = SVG().addTo('#plotsvg');
-            
-        //     // var rect = draw.rect(100, 100).fill('#f06').radius(5);
-        //     // var polyline = draw.polyline('50,0 60,40 100,50 60,60 50,100 40,60 0,50 40,40');
-        //     // polyline.fill('none');
-        //     // polyline.stroke({ color: '#f06', width: 2, linecap: 'round', linejoin: 'round' });
-        //     draw_std_logic_vector_svg(draw,'0xF1','0xF1',10,40,5);  
-        //     draw_std_logic_vector_svg(draw,'0xF2','0xF1',40,120,5);
-        //     draw_std_logic_vector_svg(draw,'0x00','0xF2',120,200,5);
-
-        //     draw_std_logic_svg(draw,'0','1',10,40,30);
-        //     // draw_std_logic_svg(draw,'0','0',10,40,0);
-        //     draw_std_logic_svg(draw,'1','0',40,80,30);
-        //     draw_std_logic_svg(draw,'U','0',80,120,30);
-        //     draw_std_logic_svg(draw,'1','U',120,140,30);
-        //     draw_std_logic_svg(draw,'1','1',140,200,30);
-        //     draw_std_logic_svg(draw,'0','1',200,300,30);
-        // }
-
         var slopex = 2;
         function draw_std_logic_vector_svg(draw,val,lastval,xstart,xend,voffset) {
             var pheight = plotheight-margintb*2;
@@ -313,18 +282,8 @@
                                        [ll-slopex,pheight],[0+slopex,pheight],[0,pmiddle]]);
             pline1.fill('none').stroke({ color: '#00A000', width: 2, linecap: 'round', linejoin: 'round' });
             pline1.move(xstart,voffset+margintb);
-            // var pline2 = draw.polyline([[0,pmiddle],[0+slopex,pheight],[ll-slopex,pheight],[ll,pmiddle]]);
-            // pline2.fill('none').stroke({ color: '#00A000', width: 2, linecap: 'round', linejoin: 'round'});
-            // pline2.move(xstart,voffset+margintb+pmiddle);
             
-            var text = draw.text(val);
-            text.font({
-                family:   'Helvetica'
-                , size:     10
-                , weight:   'bold'
-                , anchor: 'middle'
-                , leading: '1em'
-            });
+            var text = draw.text(val).font(fontdef);
             text.move(xstart+(xend-xstart)/2-text.length()/2,margintb+2+voffset);
         }
 
@@ -366,121 +325,12 @@
                 var pline2 = draw.polyline(ppoints);
                 pline2.fill('none').stroke({ color: '#F00000', width: 2, linecap: 'round', linejoin: 'round', dasharray: [3,3]});
                 pline2.move(xstart,margintb+voffset+pheight);  
-                var text = draw.text(val);
-                text.font({
-                    family:   'Helvetica'
-                    , size:     10
-                    , weight:   'bold'
-                    , anchor: 'middle'
-                    , leading: '1em'
-                });
+                var text = draw.text(val).font(fontdef);
                 text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
             }
         }
 
 
-
-
-
-        // function plotfigure() {
-
-        //     var canvas = document.getElementById("plotcanvas");
-
-        //     var rect = canvas.getBoundingClientRect();       
-            
-        //     $('#plotcanvas').height('18px');
-        //     $('#plotcanvas').width(rect.width);
-
-        //     var ctx = canvas.getContext('2d');
-        //     ctx.width = rect.width;
-        //     console.log(ctx.width);
-
-        //     var pheight = 20;
-        //     var pwidth = 300;
-        //     var inset = 2
-            
-        //     draw_std_logic(ctx,'0','0',0,30);
-
-        //     draw_std_logic(ctx,'0','0',30,60);
-
-        //     draw_std_logic(ctx,'1','0',60,90);
-
-        //     draw_std_logic(ctx,'0','1',90,120);
-
-        //     draw_std_logic(ctx,'X','0',120,150);
-
-        //     draw_std_logic(ctx,'1','X',150,180);
-        //     draw_std_logic(ctx,'0','1',180,210);
-
-        //     draw_std_logic_vector(ctx,'0xF1','0xF1',210,240);
-        //     draw_std_logic_vector(ctx,'0xF2','0xF1',240,270);
-        //     draw_std_logic_vector(ctx,'0xF2','0xF1',270,300);
-
-        // }
-
-        
-
-        // function draw_std_logic(ctx,val,lastval,xstart,xend) {
-        //     var pheight = plotheight-margintb*2;
-        //     ctx.beginPath();
-        //     if (val == '0') {
-        //         ctx.strokeStyle = "#00A000FF";
-        //         if (lastval == '1') {
-        //             ctx.moveTo(xstart,0+margintb);
-        //             ctx.lineTo(xstart,pheight+margintb);
-        //         } else {
-        //             ctx.moveTo(xstart,pheight+margintb);
-        //         }
-        //         ctx.lineTo(xend,pheight+margintb);
-        //         ctx.stroke()
-        //     } else if (val == '1') {
-        //         ctx.strokeStyle = "#00A000FF";
-        //         if (lastval == '0') {
-        //             ctx.moveTo(xstart,pheight+margintb);
-        //             ctx.lineTo(xstart,0+margintb);
-        //         } else {
-        //             ctx.moveTo(xstart,0+margintb);
-        //         }                
-        //         ctx.lineTo(xend,0+margintb);
-        //         ctx.stroke();
-        //     } else {
-        //         ctx.font = (pheight-4).toString() + "px Arial";
-        //         ctx.fillStyle ="#000000";
-        //         var tw = ctx.measureText(val).width;
-        //         ctx.fillText(val, xstart + (xend-xstart)/2 - tw/2, pheight-2);
-        //         ctx.fillStyle ="#FF000070";
-        //         ctx.fillRect(xstart,0+margintb,xend-xstart,pheight);   
-        //         ctx.strokeStyle = "#FF0000FF";
-        //         ctx.setLineDash([3, 2]);
-        //         ctx.beginPath();
-        //         ctx.moveTo(xstart,0+margintb);
-        //         ctx.lineTo(xend,0+margintb);
-        //         ctx.moveTo(xstart,pheight+margintb);
-        //         ctx.lineTo(xend,pheight+margintb);
-        //         ctx.stroke();
-        //         ctx.setLineDash([1,0]);
-        //     }
-        // }
-
-        // // var slopex = 4;
-        // function draw_std_logic_vector(ctx,val,lastval,xstart,xend) {
-        //     var pheight = plotheight-margintb*2;
-        //     var pmiddle = pheight>>1;
-        //     ctx.beginPath();
-        //     ctx.strokeStyle = "#00A000FF";
-        //     ctx.moveTo(xstart,pheight+margintb);
-        //     ctx.lineTo(xstart+slopex,0+margintb);
-        //     ctx.lineTo(xend,0+margintb);            
-        //     ctx.moveTo(xstart,0+margintb);
-        //     ctx.lineTo(xstart+slopex,pheight+margintb);
-        //     ctx.lineTo(xend,pheight+margintb);
-        //     ctx.stroke();
-        //     ctx.beginPath();
-        //     ctx.font = (pheight-4).toString() + "px Arial";
-        //     ctx.fillStyle ="#000000";
-        //     var tw = ctx.measureText(val).width;
-        //     ctx.fillText(val, xstart + (xend-xstart)/2 - tw/2 + slopex/2, pheight-2);
-        // }
 
     </script>
 
