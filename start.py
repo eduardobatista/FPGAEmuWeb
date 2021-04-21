@@ -9,6 +9,10 @@ from werkzeug.security import generate_password_hash
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
+ghwhierarchypath = Path(MAINPATH,'backend','ghwhierarchy.sh')
+ghwhierarchypath.chmod(0o744)
+ghwsignalspath = Path(MAINPATH,'backend','ghwgetsignals.sh')
+ghwsignalspath.chmod(0o744)
 analyzerpath = Path(MAINPATH,'backend','analyze.sh')
 analyzerpath.chmod(0o744)
 simulatorpath = Path(MAINPATH,'backend','simulate.sh')

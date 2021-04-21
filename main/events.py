@@ -251,6 +251,27 @@ def action(msg):
     # print(aux[1],end=" ")
     # print(aux[2])
 
+
+@socketio.on('requestghwsignals', namespace='/stream') 
+def requestghwsignals():
+    sessionpath = getuserpath()
+    data = getghwsignals(sessionpath,current_app.MAINPATH,'output.ghw',['#5-#6','#1-#3'])
+    emit("ghwsignals",data)
+
+@socketio.on('requestghwdata', namespace='/stream') 
+def requestghwdata():
+    sessionpath = getuserpath()
+    hie = getghwhierarchy(sessionpath,current_app.MAINPATH,'output.ghw')
+    groups = []
+    for inst in hie:
+        for sig in hie[inst]:
+            aux = hie[inst][sig]['idxs']
+            if "-" in aux:
+                groups.append(aux)
+    data = [hie,getghwsignals(sessionpath,current_app.MAINPATH,'output.ghw',groups)]
+    emit("ghwdata",data)
+
+
 @socketio.on('disconnect', namespace='/emul')
 def test_disconnect():   
     if current_user.email in emulprocs.keys():        

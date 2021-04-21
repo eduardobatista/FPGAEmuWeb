@@ -113,15 +113,6 @@ def downloadfile():
 @login_required
 def downloadsimfile():
     sessionpath = getuserpath()
-    # aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    # filenames = [x.name for x in aux]
-    # zipname = Path(sessionpath,'VHDLFiles.zip')
-    # if zipname.exists(): 
-    #     zipname.unlink()
-    # zipobj = ZipFile(zipname, 'w')
-    # for f in aux:
-    #     zipobj.write(f,f.name)    
-    # zipobj.close()
     return send_from_directory(sessionpath, 'output.ghw', as_attachment=True, cache_timeout=-1)
 
 @main.route('/upload', methods=['GET', 'POST'])
@@ -152,6 +143,12 @@ def compilar():
                 rline = proc.stdout.readline()
         return Response(events(), content_type='text/event-stream')
     return "Error: Event stream not accepted."
-    # return "END!"
-    #now = f.read()
-    #return "Today is " + str(now)s
+
+@main.route('/plottest') 
+def plottest():
+    hie = getghwhierarchy(getuserpath(),current_app.MAINPATH,'output.ghw')
+    print(hie)
+    for inst in hie:
+        for sig in hie[inst]:
+            print(hie[inst][sig]['idxs'])
+    return render_template('plottest.html',socketiofile=getsocketiofile())

@@ -555,3 +555,142 @@ def getsocketiofile():
     if pkg_resources.get_distribution("python-socketio").version.startswith('4'):
         socketiofile = 'socket.io.js'
     return socketiofile
+
+def getghwhierarchy(sessionpath,mainpath,filename):
+    ghwhpath = Path(mainpath,'backend','ghwhierarchy.sh')   
+    proc = subprocess.Popen(
+                [ghwhpath,sessionpath,filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+        )
+    rline = 'START\n'
+    aux = b'aa'
+    while aux != b'':
+        aux = proc.stdout.readline()
+        rline = rline + aux.decode('unicode_escape')
+    aux = proc.stderr.read()
+    if aux != b'':
+        return f"Error reading {filename}."
+    # else:
+    #     rline = rline + "END!"
+    #     return rline    
+    # print(rline)
+    filedata = rline.split('\n')
+    # print(filedata)
+    parentstring = ""
+    lastinstance = None
+    baselevel = None
+    lastlevel = 0
+    parentlist = []
+    hierarchy = {}
+
+    for ll in filedata:
+
+        lls = ll.lstrip(' ')
+        level = len(ll) - len(lls)
+
+        if lastinstance:         
+            if (level == (lastlevel+1)):
+                parentstring = parentstring + "." + lastinstance
+                hierarchy[parentstring] = {}
+            else:
+                parentstring = ".".join(parentstring.split('.')[:level-baselevel+1])
+        parentlist.append(parentstring)
+
+        if lls.startswith('instance'):
+            instnameaux = re.search(r"instance (\w+):",lls,re.IGNORECASE)
+            if instnameaux is None: 
+                return "Error: entity not found in usertop."
+            if not baselevel:
+                baselevel = level
+            lastinstance = instnameaux.group(1)
+        elif lls.startswith("signal") or lls.startswith("port-in") or lls.startswith("port-out"):
+            parts = lls.split(": ") # separate type-name / datatype / index
+            p1 = parts[0].split(" ") # separate type / name
+            hierarchy[parentstring][p1[1]] = {'type': p1[0], 'datatype': parts[1], 'idxs': parts[2]}
+
+        lastlevel = level
+   
+    return hierarchy
+        
+
+def getghwsignals(sessionpath,mainpath,filename,groups):
+    ghwhpath = Path(mainpath,'backend','ghwgetsignals.sh')   
+    proc = subprocess.Popen(
+                [ghwhpath,sessionpath,filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+        )
+    rline = ''
+    aux = b'aa'
+    while aux != b'':
+        aux = proc.stdout.readline()
+        rline = rline + aux.decode('unicode_escape')
+    aux = proc.stderr.read()
+    if aux != b'':
+        return f"Error reading {filename}: {aux.decode('unicode_escape')}."
+       
+    filedata = rline.split('Time is ')
+    # Identifying signals
+    data = filedata[1].split("\n") 
+    inittime = data[0].split(" ")[0]
+    snames = []
+    vcds = {}
+    tempvals = []
+    for dd in data[1:-1]:
+        aux = dd.split(': ')
+        snames.append(aux[0])
+        vcds[aux[0]] = [inittime,aux[1].split(' ')[0]]
+        tempvals.append(vcds[aux[0]][1])
+    groupindexes = []
+    for gg in groups:
+        idxs = gg.split('-')
+        aux = (snames.index(idxs[0]),snames.index(idxs[1]))
+        groupindexes.append(aux)
+        val = "".join(tempvals[aux[0]:aux[1]+1]).replace("'","")
+        vcds[gg] = [inittime,val]
+
+    for tframe in filedata[2:-1]:
+        data = tframe.split("\n") 
+        ftime = data[0].split(" ")[0]
+        tempvals = []
+        for dd in data[1:-1]:
+            aux = dd.split(': ')
+            val = aux[1].split(' ')[0]
+            tempvals.append(val)
+            if ftime == vcds[aux[0]][-2]:  # Check if current time is the same as the last one and updates recorded value
+                vcds[aux[0]][-1] = val
+            elif vcds[aux[0]][-1] != val:  # Check if there is a change regarding the last value. If so, records...
+                vcds[aux[0]].append(ftime)
+                vcds[aux[0]].append(val)            
+        for gg,aux in zip(groups,groupindexes):        
+            val = "".join(tempvals[aux[0]:aux[1]+1]).replace("'","")
+            if ftime == vcds[gg][-2]:  # Check if current time is the same as the last one and updates recorded value
+                vcds[gg][-1] = val
+            elif vcds[gg][-1] != val:  # Check if there is a change regarding the last value. If so, records...
+                vcds[gg].append(ftime)
+                vcds[gg].append(val)
+
+    # Last time frame:
+    tframe = filedata[-1]
+    data = tframe.split("\n") 
+    ftime = data[0].split(" ")[0]
+    tempvals = []
+    for dd in data[1:-1]:
+        aux = dd.split(': ')
+        val = aux[1].split(' ')[0]
+        tempvals.append(val)
+        if ftime == vcds[aux[0]][-2]:  # Check if current time is the same as the last one and updates recorded value
+            vcds[aux[0]][-1] = val
+        else:  # Check if there is a change regarding the last value. If so, records...
+            vcds[aux[0]].append(ftime)
+            vcds[aux[0]].append(val)
+    for gg,aux in zip(groups,groupindexes):        
+            val = "".join(tempvals[aux[0]:aux[1]+1]).replace("'","")
+            if ftime == vcds[gg][-2]:  # Check if current time is the same as the last one and updates recorded value
+                vcds[gg][-1] = val
+            elif vcds[gg][-1] != val:  # Check if there is a change regarding the last value. If so, records...
+                vcds[gg].append(ftime)
+                vcds[gg].append(val)
+
+    return vcds
