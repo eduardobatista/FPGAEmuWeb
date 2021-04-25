@@ -689,7 +689,7 @@ def getghwsignals(sessionpath,mainpath,filename,groups):
             val = "".join(tempvals[aux[0]:aux[1]+1]).replace("'","")
             if ftime == vcds[gg][-2]:  # Check if current time is the same as the last one and updates recorded value
                 vcds[gg][-1] = val
-            elif vcds[gg][-1] != val:  # Check if there is a change regarding the last value. If so, records...
+            else:  # Check if there is a change regarding the last value. If so, records...
                 vcds[gg].append(ftime)
                 vcds[gg].append(val)
 

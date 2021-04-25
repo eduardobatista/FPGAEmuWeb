@@ -7,12 +7,15 @@
 
 {% block content %}
 
+    <div class="container w-100 pl-0 pt-3 mb-0 pb-0">
+        <button id="gotoemul" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
+    </div>
 
-    <div class="container w-100">
+    <div class="container w-100 mt-0 pt-0">
 
         <div class="row">
 
-            <div class="col-sm-12 col-md-4 col-lg-3 mt-4 p-0">
+            <div class="col-sm-12 col-md-4 col-lg-3 mt-2 p-0">
                 <div id="maintree" class="treeview w-100 border">
                     <h6 class="pt-3 pl-3">Instances & Signals</h6>
                     <hr>
@@ -21,7 +24,7 @@
                   </div>
             </div>
 
-            <div class="col-sm-12 col-md-8 col-lg-9 mt-4 ml-0 mr-0 p-0" style="border: 1px solid lightgray;">
+            <div class="col-sm-12 col-md-8 col-lg-9 mt-2 ml-0 mr-0 p-0" style="border: 1px solid lightgray;">
                 
                 <div class="m-3">
                     <div id="slider-range"></div>
@@ -33,10 +36,12 @@
 
             </div>
 
-            <button id="gotoemul" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
-
+            
 
         </div>
+
+        
+
        
 
         <!-- <canvas id="plotcanvas" width="300px" height="18px", style="border: 1px dotted gray; padding: 0px; margin: 0px">
@@ -124,7 +129,7 @@
                     plotselecteddata(window.zoomlimits[0],window.zoomlimits[1]);
                     // $( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
                 }
-            });            
+            });           
         });
 
         $(window).resize(function() {
@@ -215,6 +220,20 @@
 
             var nsteps = 10;
             var timestep = (maxtime-mintime)/nsteps;
+            var txttest = draw.text((timestep/1000000*nsteps+mintime/1000000).toFixed(1)+"ns").font(fontdef)
+            while (txttest.length() > scalex*timestep) {
+                nsteps = nsteps - 2;
+                if (nsteps == 0) {
+                    nsteps = 1;
+                    timestep = (maxtime-mintime)/nsteps;
+                    break;
+                }
+                timestep = (maxtime-mintime)/nsteps;                
+                txttest.clear();
+                txttest = draw.text((timestep/1000000*nsteps+mintime/1000000).toFixed(1)+"ns").font(fontdef)
+            }
+            txttest.clear();
+
             var strokedata = {width: 1, dasharray: [3,3], color: '#AAAAAA'};
             draw.line(0,0,compwidth,0).stroke(strokedata).move(0,margintb+rowheight);
             for (var j = 0; j < (nsteps+1); j++) {
@@ -226,18 +245,23 @@
 
             maxtextsize = 0;
             var flagvec = false;
+            var flagslvec = false;
             for (var j = 0; j < sinais.length; j++) {
                 ss = window.plotlist[sinais[j]];
                 if (window.typelist[sinais[j]] == 'std_logic') {flagvec = false;}
-                else {flagvec = true;}
+                else {
+                    flagvec = true;
+                    if (window.typelist[sinais[j]] == 'std_logic_vector') { flagslvec = true; }
+                    else { flagslvec = false; }
+                }
                 vcddata = data[ss];
                 var lastval = 'U';
                 for (var i = 0; i < vcddata.length-2; i = i + 2) {                    
-                    var val = vcddata[i+1].replaceAll("'","");
+                    var val = vcddata[i+1].replaceAll("'","");                    
                     if (flagvec) {
-                        draw_std_logic_vector_svg(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));
+                        draw_others(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1),flagslvec);
                     } else {
-                        draw_std_logic_svg(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));    
+                        draw_std_logic(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));    
                     }                    
                     lastval = val;
                 }
@@ -263,9 +287,9 @@
                 for (var i = 0; i < vcddata.length-2; i = i + 2) {                    
                     var val = vcddata[i+1].replaceAll("'","");
                     if (flagvec) {
-                        draw_std_logic_vector_svg(draw,val,lastval,vcddata[i]*scalex,vcddata[i+2]*scalex,5+22*j);
+                        draw_others(draw,val,lastval,vcddata[i]*scalex,vcddata[i+2]*scalex,5+22*j);
                     } else {
-                        draw_std_logic_svg(draw,val,lastval,vcddata[i]*scalex,vcddata[i+2]*scalex,5+22*j);    
+                        draw_std_logic(draw,val,lastval,vcddata[i]*scalex,vcddata[i+2]*scalex,5+22*j);    
                     }                    
                     lastval = val;
                 }
@@ -274,7 +298,7 @@
         }
 
         var slopex = 2;
-        function draw_std_logic_vector_svg(draw,val,lastval,xstart,xend,voffset) {
+        function draw_others(draw,val,lastval,xstart,xend,voffset,isStdLogicVec) {
             var pheight = plotheight-margintb*2;
             var pmiddle = pheight>>1;
             var ll = xend - xstart;
@@ -284,10 +308,18 @@
             pline1.move(xstart,voffset+margintb);
             
             var text = draw.text(val).font(fontdef);
-            text.move(xstart+(xend-xstart)/2-text.length()/2,margintb+2+voffset);
+            // if (text.length() >= ll) {
+            //     text = draw.text("!").font(fontdef);
+            //     text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
+            // } else {
+            //     text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
+            // }
+            text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
+            
         }
 
-        function draw_std_logic_svg(draw,val,lastval,xstart,xend,voffset) {
+
+        function draw_std_logic(draw,val,lastval,xstart,xend,voffset) {
             var pheight = plotheight-margintb*2;                      
             if (val == '0') {   
                 var ppoints = [];                         
@@ -329,6 +361,8 @@
                 text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
             }
         }
+
+        
 
 
 
