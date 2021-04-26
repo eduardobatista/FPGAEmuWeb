@@ -146,9 +146,9 @@ def compilar():
 
 @main.route('/plottest') 
 def plottest():
-    hie = getghwhierarchy(getuserpath(),current_app.MAINPATH,'output.ghw')
-    print(hie)
-    for inst in hie:
-        for sig in hie[inst]:
-            print(hie[inst][sig]['idxs'])
+    # hie = getghwhierarchy(getuserpath(),current_app.MAINPATH,'output.ghw')
+    # print(hie)
+    # for inst in hie:
+    #     for sig in hie[inst]:
+    #         print(hie[inst][sig]['idxs'])
     return render_template('plottest.html',socketiofile=getsocketiofile())

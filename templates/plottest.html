@@ -113,7 +113,6 @@
         }
 
         
-
         $( document ).ready(function() {  
             window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','absolute');
             window.wdraw = window.draw.nested().addTo('#plotsvg').size(500, 200).css('position','absolute');   
@@ -129,8 +128,9 @@
                     plotselecteddata(window.zoomlimits[0],window.zoomlimits[1]);
                     // $( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
                 }
-            });           
+            });
         });
+ 
 
         $(window).resize(function() {
             plotselecteddata();
@@ -248,74 +248,87 @@
             var flagslvec = false;
             for (var j = 0; j < sinais.length; j++) {
                 ss = window.plotlist[sinais[j]];
-                if (window.typelist[sinais[j]] == 'std_logic') {flagvec = false;}
+                if (window.typelist[sinais[j]] == 'std_logic') {flagvec = false; flagslvec = false;}
                 else {
                     flagvec = true;
-                    if (window.typelist[sinais[j]] == 'std_logic_vector') { flagslvec = true; }
+                    if (window.typelist[sinais[j]].startsWith('std_logic_vector')) { 
+                        flagslvec = true; 
+                    }
                     else { flagslvec = false; }
                 }
                 vcddata = data[ss];
                 var lastval = 'U';
+                
                 for (var i = 0; i < vcddata.length-2; i = i + 2) {                    
                     var val = vcddata[i+1].replaceAll("'","");                    
-                    if (flagvec) {
+                    if (flagslvec) {
                         draw_others(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1),flagslvec);
+                    } else if (flagvec) {
+                        draw_others(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1),false);
                     } else {
                         draw_std_logic(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));    
                     }                    
                     lastval = val;
-                }
+                }                          
             }
 
         }
 
-        function plotdata(data,row) {
-
-            var sinais = Object.keys(data);
-            var vcddata = data[sinais[0]];
-            var draw = window.draw;
-            var width = 500;
-            var maxtime = vcddata[vcddata.length-2];
-            var scalex = width/maxtime;            
-
-            var flagvec = false;
-            for (var j = 0; j < sinais.length; j++) {
-                if (sinais[j].includes("-")) {flagvec = true;}
-                else {flagvec = false;}
-                vcddata = data[sinais[j]];
-                var lastval = 'U';
-                for (var i = 0; i < vcddata.length-2; i = i + 2) {                    
-                    var val = vcddata[i+1].replaceAll("'","");
-                    if (flagvec) {
-                        draw_others(draw,val,lastval,vcddata[i]*scalex,vcddata[i+2]*scalex,5+22*j);
-                    } else {
-                        draw_std_logic(draw,val,lastval,vcddata[i]*scalex,vcddata[i+2]*scalex,5+22*j);    
-                    }                    
-                    lastval = val;
-                }
+        function stdlvec2hex(slvec) {
+            while ( (slvec.length % 4) != 0 ) {
+                slvec = "0" + slvec;
             }
-
+            var ret = '';
+            for (var i = 0; i < slvec.length; i = i+4) {
+                var axx = slvec.slice(i,4+i);
+                if (axx.includes('U')) {
+                    ret = ret + 'U';
+                } else if (axx.includes('X')) {
+                    ret = ret + 'X';
+                } else {
+                    ret = ret + parseInt(axx,2).toString(16).toUpperCase();
+                }                
+            }
+            return ret + 'h';
         }
 
         var slopex = 2;
-        function draw_others(draw,val,lastval,xstart,xend,voffset,isStdLogicVec) {
+        function draw_others(draw,val,lastval,xstart,xend,voffset,isStdLogicVec,groupbin,grouphex) {
             var pheight = plotheight-margintb*2;
             var pmiddle = pheight>>1;
             var ll = xend - xstart;
+            var valhex = '';            
+            if (isStdLogicVec) { valhex = stdlvec2hex(val); }
             var pline1 = draw.polyline([[0,pmiddle],[0+slopex,0],[ll-slopex,0],[ll,pmiddle],
                                        [ll-slopex,pheight],[0+slopex,pheight],[0,pmiddle]]);
-            pline1.fill('none').stroke({ color: '#00A000', width: 2, linecap: 'round', linejoin: 'round' });
-            pline1.move(xstart,voffset+margintb);
+            if (isStdLogicVec && (valhex.includes('U') || valhex.includes('X')) ) {
+                pline1.fill('#F0000050').stroke({ color: '#FF0000', width: 2, linecap: 'round', linejoin: 'round' });
+            } else {
+                pline1.fill('none').stroke({ color: '#00A000', width: 2, linecap: 'round', linejoin: 'round' });
+            }            
+            pline1.move(xstart,voffset+margintb);            
             
             var text = draw.text(val).font(fontdef);
+            text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
+            if (isStdLogicVec) {
+                text.hide();
+                var textalt = draw.text(valhex).font(fontdef);
+                textalt.move(xstart+ll/2-textalt.length()/2,margintb+2+voffset);
+                textalt.click(function() {
+                    this.hide();
+                    text.show();
+                });
+                text.click(function() {
+                    this.hide();
+                    textalt.show();
+                });
+            }          
             // if (text.length() >= ll) {
             //     text = draw.text("!").font(fontdef);
             //     text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
             // } else {
             //     text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
-            // }
-            text.move(xstart+ll/2-text.length()/2,margintb+2+voffset);
-            
+            // }            
         }
 
 
