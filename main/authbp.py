@@ -80,7 +80,7 @@ def signup_post():
             return redirect(url_for('auth.signup'))
         
     try:
-        if User.query.count() >= 300:
+        if User.query.count() >= 500:
             flash('Too many users in the system. Please contact the administrator.')
             return redirect(url_for('auth.signup'))        
     except OperationalError as err:
