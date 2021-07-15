@@ -109,6 +109,18 @@ def downloadfile():
     zipobj.close()
     return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True)
 
+@main.route("/downloadafile/<fname>") 
+@login_required
+def downloadafile(fname):
+    if not fname.endswith("vhd"):
+        abort(404)
+    sessionpath = getuserpath()
+    tfile = sessionpath / fname
+    if not tfile.exists():
+        abort(404)
+    return send_from_directory(sessionpath, fname, as_attachment=True)
+
+
 @main.route("/downloadsimfile")
 @login_required
 def downloadsimfile():

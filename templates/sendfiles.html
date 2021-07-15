@@ -34,7 +34,8 @@
             <ul class="list-group">             
                 {% for fname in filenames %}
                     <li class="list-group-item" id="vhd{{ fname }}">{{ fname }}.vhd
-                        <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}.vhd');">Delete</button>
+                        <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}.vhd');"><i class="far fa-trash-alt"></i></button>
+                        <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="window.open('/downloadafile/{{ fname }}.vhd', '_blank');"><i class="fas fa-download"></i></button>
                         <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}.vhd');">Rename</button>
                         <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button>
                         <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2 settopbtl" onclick="settop('{{ fname }}',true);">Set top level</button>                        
