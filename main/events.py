@@ -6,6 +6,7 @@ from appp import socketio
 from pathlib import Path
 from .funcs import *
 from flask_login import login_required, current_user
+from appp import db
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -107,8 +108,10 @@ def analyze(filename):
     socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename,current_user.id)
 
 @socketio.on('Simulate', namespace='/stream')
-def simulate(stoptime):
-    socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime,current_user.id)
+def simulate(stoptime,testentity="usertest.vhd"):
+    current_user.testEntity = testentity[:-4]
+    db.session.commit()
+    socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime,current_user.id,testentity[:-4])
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):

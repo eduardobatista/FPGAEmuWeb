@@ -420,7 +420,7 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
         socketio.emit("asuccess","done",namespace="/stream",room=sid)
         logactivity(sessionpath,userid,"Successful analysis.")
 
-def simulatefile(sessionpath,sid,mainpath,stoptime,userid):
+def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
     # basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
@@ -439,7 +439,7 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid):
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
     proc = subprocess.Popen(
-                [simulatorpath,sessionpath,stoptime,"usertest"] + filenames,
+                [simulatorpath,sessionpath,stoptime,simentity] + filenames,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )

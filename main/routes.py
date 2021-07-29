@@ -75,8 +75,14 @@ def emular():
 @main.route('/simulation')
 @login_required
 def simular():
-    userpath = getuserpath()
-    return render_template('simulation.html',username=current_user.email,socketiofile=getsocketiofile())
+    sessionpath = getuserpath()
+    aux = getvhdfilelist(sessionpath)
+    filenames = [x.name for x in aux]
+    tentity = f"{current_user.testEntity}.vhd"
+    if tentity not in filenames:
+        tentity = "usertest.vhd"
+    return render_template('simulation.html',username=current_user.email,
+                    socketiofile=getsocketiofile(),filenames=filenames,selectedfile=tentity)
 
 @main.route('/editor')
 @login_required
