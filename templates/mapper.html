@@ -158,7 +158,7 @@
                 // }
             }); 
             window.socket.on('mapsavesuccess', function(msg){
-                $("#alerts").html("Map saved successfully!");
+                $("#alerts").html("Map saved successfully!<br><strong>Don't forget to recompile</strong>.");
                 $("#alerts").removeClass("alert-danger").addClass("alert-primary").delay(100).fadeIn(300);
             });
         }

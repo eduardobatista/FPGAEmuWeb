@@ -90,7 +90,7 @@ def editor():
     sessionpath = getuserpath()
     aux = getvhdfilelist(sessionpath) # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.name for x in aux]
-    return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
+    return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile(),toplevel=current_user.topLevelEntity)
 
 @main.route('/mapper')
 @login_required

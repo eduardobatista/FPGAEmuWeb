@@ -22,6 +22,8 @@
             Your <strong>id</strong> is {{ username }}.        
         </div> -->
 
+        <input type="hidden" value="{{toplevel}}" id="toplevel">
+
         {%- if filenames is defined -%}
         <div class="container mt-2">
             <select id="fileselect" class="browser-default custom-select" onchange="openfile()">
@@ -29,22 +31,23 @@
                 {% for fname in filenames %}
                     <option value="{{fname}}">{{fname}}</option>
                 {% endfor %}
-            </select>            
+            </select>
             <button class="btn btn-primary btn-sm" onclick="savefile(0);">Save</button>
             <button class="btn btn-primary btn-sm" onclick="savefileas()">Save As...</button>
             <button class="btn btn-primary btn-sm" onclick="newfile();">New</button>
+            <button class="btn btn-primary btn-sm" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>
             <div class="dropdown d-inline">
                 <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Templates
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <a class="dropdown-item" href="#" onclick="fillWithUsertop();">usertop.vhd</a>
-                    <!-- <a class="dropdown-item" href="#">usertest.vhd</a> -->
+                    <a class="dropdown-item" href="#" onclick="fillWithUsertest();">usertest.vhd</a>
                     <!-- <a class="dropdown-item" href="#">Something else here</a> -->
                 </div>
-            </div> 
+            </div>             
             <button class="btn btn-warning btn-sm" onclick="analyze()">Analyze Current File</button>
-            <button class="btn btn-danger btn-sm" onclick="fpgaCompile()">Compile</button>   
+            <button class="btn btn-danger btn-sm" onclick="fpgaCompile()">Compile</button><br>
         </div>
         
         <div class="container mt-0">
@@ -289,9 +292,12 @@
                     openSocket();
                 }
                 window.socket.emit("getfile",val);
+                checktoplevel(val);
                 // $('#editor').show();            
             } else {
                 editor.setValue("");
+                $("#toplevelbtn").text('Set Top Level');
+                $("#toplevelbtn").prop('disabled', true);
                 // $('#editor').hide();
             }           
 
@@ -383,6 +389,30 @@
             }
         }
 
+        function checktoplevel(fname) {
+            if (fname == ($("#toplevel").val() + ".vhd")) {
+                $("#toplevelbtn").prop('disabled', true);
+                $("#toplevelbtn").text("File is Top Level");
+            } else {
+                $("#toplevelbtn").prop('disabled', false);
+                $("#toplevelbtn").text("Set Top Level");
+            }
+        }
+
+        function settop() {
+            var val = $("#fileselect").children("option:selected").val();
+            if (val != 0) {
+                var tlevelname = val.slice(0,-4);
+                $.post("/settoplevel",{ toplevelfile: tlevelname } ).done(
+                    function (data) {
+                        $("#toplevel").val(tlevelname);
+                        checktoplevel(val);
+                        data = "";
+                    }
+                );
+            }
+        }
+
         var usertoptemplate = `library ieee;
 use ieee.std_logic_1164.all;
 
@@ -416,8 +446,42 @@ begin
 
 end rtl;`;
 
+        var usertesttemplate=`library ieee;
+use ieee.std_logic_1164.all;
+
+entity usertest is
+end usertest;
+
+architecture tb of usertest is
+
+    -- Signal declarations:
+    signal A,B : std_logic;
+    signal C: std_logic_vector(2 downto 0);
+    
+    -- Component declarations:
+    component mycomponent is port ( 
+      PortA,PortB: in std_logic;
+      PortC: out std_logic_vector(2 downto 0) );
+    end component;
+
+begin
+
+    -- Component instantiation and port map:
+    DUT : mycomponent port map (PortA => A, PortB => B, PortC => C);
+    
+    -- Stimuli:
+    A <= '0', '1' after 20 ns, '0' after 40 ns;
+    B <= '0', '1' after 10 ns, '0' after 20 ns, '1' after 30 ns;
+    
+end tb;`;
+
         function fillWithUsertop() {
             editor.insert(usertoptemplate);
+            editor.focus();
+        }
+
+        function fillWithUsertest() {
+            editor.insert(usertesttemplate);
             editor.focus();
         }
         

@@ -224,7 +224,7 @@ def createFpgaTest2(sessionpath,toplevelentity):
                 for pp in aux4:
                     ppp = pp.strip().upper()
                     if ppp not in validportkeys:
-                        return f"Error: {pp} is not a valid port for a top level entity. SW, LEDR, KEY and HEX should be used."
+                        return f"Error: {pp} is not a valid port for a top level entity. You have to use the Mapper or SW, LEDR, KEY and HEX as port names."
                     if validports[ppp][1] < typesize:
                         return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
                     foundports.append(ppp)
