@@ -111,7 +111,7 @@ void *updatee()
       if ((change == 1) || (forcedwrite == 1) || (timewrite == 1)) {         
          t2 = clock();
          elapsedTime = ((double)(t2 - t1))/CLOCKS_PER_SEC;
-         if (elapsedTime >= 0.1) {
+         if (elapsedTime >= 0.025) {
             write(fifoout,outmem,11);
             t1 = clock();
             forcedwrite = 0; 
