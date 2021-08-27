@@ -142,7 +142,13 @@ def upload():
             sessionpath.mkdir(parents=True,exist_ok=True)
         f = request.files.getlist("fileToUpload")
         for ff in f:
-            ff.save(Path(sessionpath, secure_filename(ff.filename)))
+            thefile = Path(sessionpath, secure_filename(ff.filename))            
+            if thefile.exists():
+                thefile.unlink()
+            themap = Path(sessionpath, secure_filename(ff.filename)+".map")
+            if themap.exists():
+                themap.unlink()
+            ff.save(thefile)
         return "Done!"
     else:
         return "Fail..."
