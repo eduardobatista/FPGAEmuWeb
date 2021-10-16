@@ -291,6 +291,7 @@ def getportlist(sessionpath,file):
             for pp in aux4:
                 ppp = {'name':pp.strip().upper(),'typesize':typesize,'direction':dirtype[0].lower().strip()}
                 myports.append(ppp)
+        print(myports)
         return myports
     except:
         #return "Error parsing usertop ports."

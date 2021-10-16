@@ -18,6 +18,8 @@ def create_app(debug=False,mainpath=""):
 
     migrate = Migrate(app, db)
 
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
     if Path(mainpath,"seckey").exists():
         # print("Skey Found!")
         f = open(Path(mainpath,"seckey"),"rb")
@@ -35,15 +37,17 @@ def create_app(debug=False,mainpath=""):
     app.MAINPATH = mainpath
     
     # Database:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'     
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/db.sqlite'     
     db.init_app(app)
 
     # Cloud Database:
+    app.config['CLOUDDBINFO'] = ''
     app.clouddb = None
-    clouddbfile = Path(mainpath) / 'clouddb.conf';
+    clouddbfile = (Path(mainpath) / 'work') / 'clouddb.conf';
     if clouddbfile.exists():
         with open(clouddbfile,'r') as cfile:
             clouddbconf = cfile.read();
+            app.config['CLOUDDBINFO'] = clouddbconf
             app.clouddb = create_engine(clouddbconf)
     
     # logging.basicConfig(filename=Path(mainpath,'activity.log'), level=logging.INFO)
@@ -59,14 +63,18 @@ def create_app(debug=False,mainpath=""):
         # since the user_id is just the primary key of our user table, use it in the query for the user
         return User.query.get(int(user_id))
     
+    app.config['EMAILINFO'] = ""
     try:
         from yagmail import SMTP
-        oauthfile = Path(mainpath,"oauth2_creds.json")
+        oauthfile = Path(mainpath,'work') / "oauth2_creds.json"
         if oauthfile.exists():
             app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)
-        else:
+            with open(oauthfile,"r") as ff:
+                app.config['EMAILINFO'] = ff.read()
+        else:            
             app.yag = None
     except ImportError as e:
+        print("YagMail module missing.")
         app.yag = None
 
     from main import main as main_blueprint

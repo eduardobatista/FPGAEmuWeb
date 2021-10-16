@@ -19,19 +19,41 @@
 
         {% if current_user.role == 'Admin' %}
 
-        <h2>Cloud Database Info</h2>
+        <h2 class="mb-2">Cloud Database Info</h2>
+
+        <div class="form-group form-inline">
+            <!-- <label for="clouddbinfo">Cloud Db Info</label> -->
+            <input type="text" class="form-control w-100" id="clouddbinfo" aria-describedby="emailHelp" placeholder="Enter email" value="{{clouddbinfo}}">
+            <button class="btn btn-primary btn-sm" onclick="saveCloudDbInfo();">Save</button>
+            <button class="btn btn-primary btn-sm" onclick="checkCloudDb();">Check Cloud DB Info</button>
+        </div> 
+
 
         <i id="running" class="fa fa-cog fa-spin fa-2x fa-fw" style="display: none;"></i>
         <div id="cloudinfo">
             
         </div>
 
-        <button class="btn btn-primary btn-sm" onclick="checkCloudDb();">Check Cloud DB Info</button>
+        <h2 class="mb-2 mt-4">Email Info and Credentials</h2>
 
+        <div class="form-group">
+            <!-- <label for="emailinfo">Example textarea</label> -->
+            <textarea class="form-control mb-0 pb-0" id="emailInfo" rows="5">{{emailinfo}}</textarea>
+        </div>
+        <button class="btn btn-primary btn-sm mt-0" onclick="saveEmailInfo();">Save</button>
+        <div id="emailresponse">
+            
+        </div>
+
+        <!-- <div class="form-group">
+            <button class="btn btn-primary btn-sm" onclick="checkCloudDb();">Check Cloud DB Info</button>
+        </div> -->
+
+       
     </div>
 
         {%- if userlist is defined -%}
-    <div class="container mt-3">
+    <div class="container mt-4">
         <h2>User List</h2>
 
         <table class="table">
@@ -139,6 +161,18 @@
                     $('#cloudinfo').html(data);
                     $("#running").css("display", "none");
                 });                                 
+            }
+
+            function saveCloudDbInfo() {
+                $.post("/saveclouddbinfo",{"info":$("#clouddbinfo").val()}).done( function (data) {
+                    $('#cloudinfo').html(data);
+                });
+            }
+
+            function saveEmailInfo() {
+                $.post("/saveemailinfo",{"info":$("textarea#emailInfo").val()}).done( function (data) {
+                    $('#emailresponse').html(data);
+                });
             }
 
             

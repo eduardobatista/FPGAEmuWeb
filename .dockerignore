@@ -1,0 +1,14 @@
+.git
+.gitignore
+Dockerfile*
+docker-compose*
+README.md
+LICENSE
+.vscode
+__pycache__
+work
+db.sqlite
+*.pyc
+seckey
+oauth2_creds.*
+clouddb.conf

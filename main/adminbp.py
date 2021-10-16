@@ -5,6 +5,8 @@ from . import adm
 from appp import db
 from flask_login import login_required, current_user
 from sqlalchemy import Table,MetaData
+from pathlib import Path
+from sqlalchemy import create_engine
 
 @adm.route('/profile')
 @login_required
@@ -32,7 +34,7 @@ def admin():
         return redirect(url_for('main.sendfiles'))
     userlist = User.query
     # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    return render_template('admin.html',userlist=userlist)
+    return render_template('admin.html',userlist=userlist,clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'])
 
 @adm.route('/clouddbinfo')
 @login_required
@@ -53,6 +55,39 @@ def cloudinfo():
             return f"Could not reach the cloud database.<br>{str(err)}"
     else:
         return "CloudDb not set for this app (clouddb.conf is probably missing)."
+
+@adm.route('/saveclouddbinfo', methods=['POST'])
+@login_required
+def savecloudinfo():
+    if current_user.role != "Admin":
+        return redirect(url_for('main.sendfiles'))
+    info = request.form.get('info')
+    workdir = Path(current_app.MAINPATH,'work')
+    with open(workdir / "clouddb.conf","w") as ff:
+        ff.write(info)
+        current_app.config['CLOUDDBINFO'] = info
+        current_app.clouddb = create_engine(info)
+    return "Done!"
+
+@adm.route('/saveemailinfo', methods=['POST'])
+@login_required
+def saveemailinfo():
+    if current_user.role != "Admin":
+        return redirect(url_for('main.sendfiles'))
+    info = request.form.get('info')
+    workdir = Path(current_app.MAINPATH,'work')
+    oauthfile = workdir / "oauth2_creds.json"
+    with open(oauthfile,"w") as ff:
+        ff.write(info)
+        current_app.config['EMAILINFO'] = info
+    try:
+        from yagmail import SMTP          
+        current_app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)
+    except ImportError as e:
+        print("YagMail module missing.")
+        current_app.yag = None
+    return "Done!"
+    
 
 @adm.route('/deleteuser', methods=['POST']) 
 @login_required
