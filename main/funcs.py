@@ -467,24 +467,47 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
     rline = 'start'
     hasError = False
     errmsgs = ""
-    while rline != b'':
-        rline = proc.stdout.readline()
-        if ":error:" in rline.decode():
+    try:
+        outs, errs = proc.communicate(timeout=15)
+        outstring = outs.decode('unicode_escape').replace('\n','\n<br>')
+        if ":error:" in outstring:
             hasError = True
-            errmsgs += rline.decode() + "\n"
+            errmsgs = outstring
         else:
-            socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
-        socketio.sleep(0.1)
-    aux = proc.stderr.read()
-    if aux != b'':
-        socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,"Simulation with errors.")
-    elif hasError:
-        socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,"Simluation with errors.")
-    else:
-        socketio.emit("success","done",namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,"Successful simulation.")
+            socketio.emit("message",outstring,namespace="/stream",room=sid)
+            socketio.sleep(0.1)
+        errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
+        if errstring != "":
+            socketio.emit("errors",errstring,namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,"Simulation with errors.")
+        elif hasError:
+            socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,"Simluation with errors.")
+        else:
+            socketio.emit("success","done",namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,"Successful simulation.")
+    except Exception as ex: # TimeoutExpired
+        socketio.emit("errors",str(ex),namespace="/stream",room=sid)
+        proc.kill()
+        outs, errs = proc.communicate()
+    # while rline != b'':
+    #     rline = proc.stdout.readline()
+    #     if ":error:" in rline.decode():
+    #         hasError = True
+    #         errmsgs += rline.decode() + "\n"
+    #     else:
+    #         socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+    #     socketio.sleep(0.1)
+    # aux = proc.stderr.read()
+    # if aux != b'':
+    #     socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,"Simulation with errors.")
+    # elif hasError:
+    #     socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,"Simluation with errors.")
+    # else:
+    #     socketio.emit("success","done",namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,"Successful simulation.")
 
 
 emulprocs = {}
