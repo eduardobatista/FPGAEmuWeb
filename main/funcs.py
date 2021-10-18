@@ -360,23 +360,12 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
 def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
     socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=sid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
-    # basepath = Path(mainpath,'work')
-    # sessionpath = Path(basepath, username)
     retcode = createFpgaTest2(sessionpath,toplevelentity)
     if retcode == "Ok!":
         pass
     else:
         socketio.emit('errors', retcode, namespace="/stream", room=sid)
-        # socketio.disconnect(namespace="/stream", room=sid)
         return
-    # elif retcode == 2:   
-    #     socketio.emit('errors', "Error finding top level entity (usertop).",namespace="/stream",room=sid)
-    #     socketio.disconnect(namespace="/stream",room=sid)
-    #     return
-    # elif retcode == 3:   
-    #     socketio.emit('errors', "Bad port names in usertop: port names do not match those from the emulator.",namespace="/stream",room=sid)
-    #     socketio.disconnect(namespace="/stream",room=sid)
-    #     return
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
@@ -386,40 +375,71 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
-    while rline != b'':
-        rline = proc.stdout.readline()
-        socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+    try:
+        outs, errs = proc.communicate(timeout=10)
+        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
         socketio.sleep(0.1)
-    aux = proc.stderr.read()
-    if aux != b'':
-        socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
-    else:
-        socketio.emit("success","done",namespace="/stream",room=sid);
-        logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
+        errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
+        if errstring != "":            
+            socketio.emit("errors",errstring,namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
+        else: 
+            socketio.emit("success","done",namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
+    except Exception as ex: # TimeoutExpired
+        print(ex)
+        proc.kill()
+        outs, errs = proc.communicate()
+
+    # while rline != b'':
+    #     rline = proc.stdout.readline()
+    #     socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+    #     socketio.sleep(0.1)
+    # aux = proc.stderr.read()
+    # if aux != b'':
+    #     socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
+    # else:
+    #     socketio.emit("success","done",namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
+
     # socketio.disconnect(namespace="/stream",room=sid)
 
 def analyzefile(sessionpath,sid,mainpath,filename,userid):
     compilerpath = Path(mainpath,'backend','analyze.sh')
     basepath = Path(mainpath,'work')
-    # sessionpath = Path(basepath, username)    
     proc = subprocess.Popen(
                 [compilerpath,sessionpath,filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
     rline = 'start'
-    while rline != b'':
-        rline = proc.stdout.readline()
-        socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+    try:
+        outs, errs = proc.communicate(timeout=10)
+        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
         socketio.sleep(0.1)
-    aux = proc.stderr.read()
-    if aux != b'':
-        socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,"Analysis with errors.")
-    else:
-        socketio.emit("asuccess","done",namespace="/stream",room=sid)
-        logactivity(sessionpath,userid,"Successful analysis.")
+        errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
+        if errstring != "":            
+            socketio.emit("errors",errstring,namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,f"Analysis with errors.")
+        else: 
+            socketio.emit("asuccess","done",namespace="/stream",room=sid)
+            logactivity(sessionpath,userid,f"Successful analysis of {filename}.")
+    except Exception as ex: # TimeoutExpired
+        socketio.emit("errors",str(ex),namespace="/stream",room=sid)
+        proc.kill()
+        outs, errs = proc.communicate()
+    # while rline != b'':
+    #     rline = proc.stdout.readline()
+    #     socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
+    #     socketio.sleep(0.1)
+    # aux = proc.stderr.read()
+    # if aux != b'':
+    #     socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,"Analysis with errors.")
+    # else:
+    #     socketio.emit("asuccess","done",namespace="/stream",room=sid)
+    #     logactivity(sessionpath,userid,"Successful analysis.")
 
 def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
