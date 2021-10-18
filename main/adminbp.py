@@ -63,10 +63,13 @@ def savecloudinfo():
         return redirect(url_for('main.sendfiles'))
     info = request.form.get('info')
     workdir = Path(current_app.MAINPATH,'work')
-    with open(workdir / "clouddb.conf","w") as ff:
-        ff.write(info)
-        current_app.config['CLOUDDBINFO'] = info
-        current_app.clouddb = create_engine(info)
+    try:
+        with open(workdir / "clouddb.conf","w") as ff:
+            ff.write(info)
+            current_app.config['CLOUDDBINFO'] = info
+            current_app.clouddb = create_engine(info)
+    except Exception as e:
+        return str(e)
     return "Done!"
 
 @adm.route('/saveemailinfo', methods=['POST'])
