@@ -2,7 +2,7 @@
 
 BASEDIR=$(dirname "$1")
 
-echo "Simulating..."
+# echo "Simulating..."
 cd $1
 rm -fr *.o
 rm -fr e~testbench.*

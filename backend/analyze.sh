@@ -2,7 +2,7 @@
 
 BASEDIR=$(dirname "$0")
 
-echo "Analyzing..."
+# echo "Analyzing..."
 cd $1
 
 if [ -x "$(command -v ghdl)" ]; then

@@ -83,12 +83,15 @@ def saveemailinfo():
     with open(oauthfile,"w") as ff:
         ff.write(info)
         current_app.config['EMAILINFO'] = info
-    try:
-        from yagmail import SMTP          
-        current_app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)
-    except ImportError as e:
-        print("YagMail module missing.")
+    try:        
+        from yagmail import SMTP  
+        data = json.loads(info)        
+        current_app.yag = SMTP(data["email_address"], oauth2_file=oauthfile)
+    except ImportError as e:       
         current_app.yag = None
+        return "YagMail module missing."
+    except Exception as e:
+        return str(e)
     return "Done!"
     
 

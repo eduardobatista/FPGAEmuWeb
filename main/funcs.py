@@ -375,8 +375,10 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
+    socketio.emit("message",'Compiling...',namespace="/stream",room=sid)
+    socketio.sleep(0.1)
     try:
-        outs, errs = proc.communicate(timeout=10)
+        outs, errs = proc.communicate(timeout=15)
         socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
         socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
@@ -390,7 +392,6 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
         print(ex)
         proc.kill()
         outs, errs = proc.communicate()
-
     # while rline != b'':
     #     rline = proc.stdout.readline()
     #     socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
@@ -414,6 +415,8 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
+    socketio.emit("message",'Analyzing...',namespace="/stream",room=sid)
+    socketio.sleep(0.1)
     try:
         outs, errs = proc.communicate(timeout=10)
         socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
@@ -465,6 +468,8 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
+    socketio.emit("message",'Running simulation...',namespace="/stream",room=sid)
+    socketio.sleep(0.1)
     hasError = False
     errmsgs = ""
     try:
