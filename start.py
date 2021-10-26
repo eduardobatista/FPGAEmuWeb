@@ -27,7 +27,7 @@ subprocess.Popen(
             )
 print('Backend compiled.\nStarting server...')
 
-app = create_app(debug=True,mainpath=MAINPATH)
+app = create_app(debug=False,mainpath=MAINPATH)
 
 with app.app_context():
     try:        
