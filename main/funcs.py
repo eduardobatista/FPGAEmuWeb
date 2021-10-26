@@ -315,15 +315,7 @@ def getexistingportmap(sessionpath,file):
                 data.append(dd)
             return data
         return ["nomap"]
-
-
-# def createnewuser(basepath):
-#     subdirs = list(basepath.glob("*"))
-#     # print(subdirs)
-#     candidate = newuserprefix + str(randrange(10000))
-#     while candidate in subdirs:
-#         candidate = newuserprefix + str(randrange(10000)) 
-#     return candidate
+        
 
 def getvhdfilelist(sessionpath, sort=True):
     if sort:
@@ -389,22 +381,10 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
             socketio.emit("success","done",namespace="/stream",room=sid)
             logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
     except Exception as ex: # TimeoutExpired
-        print(ex)
-        proc.kill()
-        outs, errs = proc.communicate()
-    # while rline != b'':
-    #     rline = proc.stdout.readline()
-    #     socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
-    #     socketio.sleep(0.1)
-    # aux = proc.stderr.read()
-    # if aux != b'':
-    #     socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
-    # else:
-    #     socketio.emit("success","done",namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
+        socketio.emit("errors",str(ex),namespace="/stream",room=sid)
+    proc.kill()
+    outs, errs = proc.communicate()
 
-    # socketio.disconnect(namespace="/stream",room=sid)
 
 def analyzefile(sessionpath,sid,mainpath,filename,userid):
     compilerpath = Path(mainpath,'backend','analyze.sh')
@@ -429,20 +409,10 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
             socketio.emit("asuccess","done",namespace="/stream",room=sid)
             logactivity(sessionpath,userid,f"Successful analysis of {filename}.")
     except Exception as ex: # TimeoutExpired
-        socketio.emit("errors",str(ex),namespace="/stream",room=sid)
-        proc.kill()
-        outs, errs = proc.communicate()
-    # while rline != b'':
-    #     rline = proc.stdout.readline()
-    #     socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
-    #     socketio.sleep(0.1)
-    # aux = proc.stderr.read()
-    # if aux != b'':
-    #     socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,"Analysis with errors.")
-    # else:
-    #     socketio.emit("asuccess","done",namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,"Successful analysis.")
+        socketio.emit("errors",str(ex),namespace="/stream",room=sid)    
+    proc.kill()    
+    outs, errs = proc.communicate()
+
 
 def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
@@ -493,26 +463,8 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
             logactivity(sessionpath,userid,"Successful simulation.")
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=sid)
-        proc.kill()
-        outs, errs = proc.communicate()
-    # while rline != b'':
-    #     rline = proc.stdout.readline()
-    #     if ":error:" in rline.decode():
-    #         hasError = True
-    #         errmsgs += rline.decode() + "\n"
-    #     else:
-    #         socketio.emit("message",rline.decode(),namespace="/stream",room=sid)
-    #     socketio.sleep(0.1)
-    # aux = proc.stderr.read()
-    # if aux != b'':
-    #     socketio.emit("errors",aux.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,"Simulation with errors.")
-    # elif hasError:
-    #     socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,"Simluation with errors.")
-    # else:
-    #     socketio.emit("success","done",namespace="/stream",room=sid)
-    #     logactivity(sessionpath,userid,"Successful simulation.")
+    proc.kill()
+    outs, errs = proc.communicate()
 
 
 emulprocs = {}
@@ -613,17 +565,22 @@ def getghwhierarchy(sessionpath,mainpath,filename):
                 stderr=subprocess.PIPE
         )
     rline = 'START\n'
-    aux = b'aa'
-    while aux != b'':
-        aux = proc.stdout.readline()
-        rline = rline + aux.decode('unicode_escape')
-    aux = proc.stderr.read()
-    if aux != b'':
-        return f"Error reading {filename}."
-    # else:
-    #     rline = rline + "END!"
-    #     return rline    
-    # print(rline)
+    try:
+        outs, errs = proc.communicate(timeout=10)
+        errstring = errs.decode('unicode_escape') #.replace('\n','\n<br>') 
+        if errstring != "":
+            proc.kill()
+            outs, errs = proc.communicate()
+            return f"Error 1 reading {filename}."
+        else:
+            rline = rline + outs.decode('unicode_escape')
+    except Exception as ex:
+        proc.kill()
+        outs, errs = proc.communicate()
+        return f"Error 2 reading {filename}."
+    proc.kill()
+    outs, errs = proc.communicate()
+
     filedata = rline.split('\n')
     # print(filedata)
     parentstring = ""
@@ -671,13 +628,21 @@ def getghwsignals(sessionpath,mainpath,filename,groups):
                 stderr=subprocess.PIPE
         )
     rline = ''
-    aux = b'aa'
-    while aux != b'':
-        aux = proc.stdout.readline()
-        rline = rline + aux.decode('unicode_escape')
-    aux = proc.stderr.read()
-    if aux != b'':
-        return f"Error reading {filename}: {aux.decode('unicode_escape')}."
+    try:
+        outs, errs = proc.communicate(timeout=10)
+        errstring = errs.decode('unicode_escape') #.replace('\n','\n<br>') 
+        if errstring != "":
+            proc.kill()
+            outs, errs = proc.communicate()
+            return f"Error 1 reading {filename}."
+        else:
+            rline = rline + outs.decode('unicode_escape')
+    except Exception as ex:
+        proc.kill()
+        outs, errs = proc.communicate()
+        return f"Error 2 reading {filename}."
+    proc.kill()
+    outs, errs = proc.communicate()
        
     filedata = rline.split('Time is ')
     # Identifying signals
