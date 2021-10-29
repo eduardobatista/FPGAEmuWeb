@@ -19,6 +19,18 @@
 
         {% if current_user.role == 'Admin' %}
 
+        <h2 class="mb-2">Server Info</h2>
+
+        <div class="form-group form-inline mb-0">            
+            <button class="btn btn-primary btn-sm" onclick="checkServerProcs();">Check Server Processes</button>
+            <button class="btn btn-primary btn-sm" onclick="checkStdOut();">Check Supervisor STDOUT</button>
+            <button class="btn btn-primary btn-sm" onclick="checkStdErr();">Check Supervisor STDERR</button>
+        </div> 
+
+        <div class="mb-2 mt-0" id="psinfo">
+            
+        </div>
+
         <h2 class="mb-2">Cloud Database Info</h2>
 
         <div class="form-group form-inline">
@@ -130,6 +142,24 @@
 
     {% block scripts %}
         <script>
+
+            function checkServerProcs() {
+                $.post("/serverprocs",{}).done( function (data) {
+                        $("#psinfo").html(data);
+                    });
+            }
+
+            function checkStdOut() {
+                $.post("/checkstdout",{}).done( function (data) {
+                        $("#psinfo").html(data);
+                    });
+            }
+
+            function checkStdErr() {
+                $.post("/checkstderr",{}).done( function (data) {
+                        $("#psinfo").html(data);
+                    });
+            }
 
             function delUser(userid) {
                 user = $("#val" + userid).val();

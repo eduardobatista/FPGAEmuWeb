@@ -20,15 +20,16 @@ def create_app(debug=False,mainpath=""):
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    if Path(mainpath,"seckey").exists():
+    seckeyfile = Path(mainpath,"work","seckey")
+    if seckeyfile.exists():
         # print("Skey Found!")
-        f = open(Path(mainpath,"seckey"),"rb")
+        f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
         f.close()
     else:
         skey = os.urandom(16)
         app.config['SECRET_KEY'] = skey
-        f = open(Path(mainpath,"seckey"),"wb")
+        f = open(seckeyfile,"wb")
         f.write(skey)
         f.close()
 
@@ -74,7 +75,7 @@ def create_app(debug=False,mainpath=""):
         else:            
             app.yag = None
     except ImportError as e:
-        print("YagMail module missing.")
+        # print("YagMail module missing.")
         app.yag = None
 
     from main import main as main_blueprint

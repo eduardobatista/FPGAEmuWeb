@@ -291,7 +291,7 @@ def getportlist(sessionpath,file):
             for pp in aux4:
                 ppp = {'name':pp.strip().upper(),'typesize':typesize,'direction':dirtype[0].lower().strip()}
                 myports.append(ppp)
-        print(myports)
+        # print(myports)
         return myports
     except:
         #return "Error parsing usertop ports."
@@ -326,7 +326,7 @@ def getvhdfilelist(sessionpath, sort=True):
 def logactivity(sessionpath,userid,message):
     with open(Path(sessionpath,'activity.log'),'a') as ff:
         timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-        print(timestamp)
+        # print(timestamp)
         ff.write(f"{userid}\t{timestamp}\t{message}\n")
         ff.close()
 
@@ -509,7 +509,7 @@ def doEmulation(username,sid,mainpath,sessionpath):
     socketio.emit('started','Ok!',namespace="/emul",room=sid)
     lasttime = time.time()    
     run = True
-    print("Running!!!!")  
+    # print("Running!!!!")  
     while run:
         events = poller.poll(50) 
         # print(events)

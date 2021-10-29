@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import Table,MetaData
 from pathlib import Path
 from sqlalchemy import create_engine
+import psutil
 
 @adm.route('/profile')
 @login_required
@@ -25,6 +26,45 @@ def setViewAs():
     current_user.viewAs = email
     db.session.commit()
     return redirect(url_for('main.sendfiles')) 
+
+
+@adm.route('/serverprocs', methods=['POST'])
+@login_required
+def serverProcs():
+    if (current_user.role == "Admin"):
+        ret = ""
+        for pp in psutil.pids():
+            ppp = psutil.Process(pp)
+            ret = ret + f"{ppp.name()} - {ppp.status()} - {ppp.cpu_percent(interval=0.1)}<br>"
+        return ret
+    else:
+        return "Only for admins." 
+
+@adm.route('/checkstdout', methods=['POST'])
+@login_required
+def checkStdOut():
+    if (current_user.role == "Admin"):
+        file = Path("/home","stdout.log")
+        if file.exists():
+            with open(file,"r") as ff:
+                return ff.read().replace('\n','\n<br>') 
+        else:
+            return "File not found."
+    else:
+        return "Only for admins." 
+
+@adm.route('/checkstderr', methods=['POST'])
+@login_required
+def checkStdErr():
+    if (current_user.role == "Admin"):
+        file = Path("/home","stderr.log")
+        if file.exists():
+            with open(file,"r") as ff:
+                return ff.read().replace('\n','\n<br>') 
+        else:
+            return "File not found."
+    else:
+        return "Only for admins." 
 
 
 @adm.route('/admin')
