@@ -327,8 +327,10 @@
 
                 adjustCanvas();
                 $("#iniciar").html("Stop Emulation");
-                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul');
-                window.socket.send("Emular");
+                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul');                
+                window.socket.on('connect', function(msg) {
+                    window.socket.send("Emular");
+                });
                 window.socket.on('bytes', function(msg) {
                     //$('#status').append('<br>'+String(msg));  
                     const view = new Int8Array(msg);
