@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from zipfile import ZipFile
 from . import main
 from .funcs import *
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, AnonymousUserMixin
 from .models import User
 from appp import db
 
@@ -28,6 +28,8 @@ def entrance():
 @main.route('/files')
 @login_required
 def sendfiles():
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login'))
     # basepath = Path(current_app.MAINPATH,'work')
     # if 'username' not in session:               
     #     session['username'] = createnewuser(basepath)

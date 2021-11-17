@@ -302,6 +302,9 @@
             window.socket.on('filerenamed',function(msg){
                 location.href = '/';
             });
+            window.socket.on('notlogged',function(msg){
+                location.href = '/login';
+            });
       
         }
 

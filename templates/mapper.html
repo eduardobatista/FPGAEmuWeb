@@ -161,6 +161,9 @@
                 $("#alerts").html("Map saved successfully!<br><strong>Don't forget to recompile</strong>.");
                 $("#alerts").removeClass("alert-danger").addClass("alert-primary").delay(100).fadeIn(300);
             });
+            window.socket.on('notlogged',function(msg){
+                location.href = '/login';
+            });
         }
 
         function checkchanged() {

@@ -367,6 +367,9 @@
                 window.socket.on('started', function(msg){
                     window.socket.emit("initstate",getInputStates());
                 });
+                window.socket.on('notlogged',function(msg){
+                    location.href = '/login';
+                });
                 window.socketOn = true;
 
             } else {
