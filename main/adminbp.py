@@ -66,6 +66,32 @@ def checkStdErr():
     else:
         return "Only for admins." 
 
+@adm.route('/checkcrashes', methods=['POST'])
+@login_required
+def checkCrashes():
+    if (current_user.role == "Admin"):
+        file = Path(current_app.MAINPATH,'work',"crashes.log")
+        if file.exists():
+            with open(file,"r") as ff:
+                return ff.read().replace('\n','\n<br>') 
+        else:
+            return "File not found."
+    else:
+        return "Only for admins." 
+
+@adm.route('/deletecrashlogs', methods=['POST'])
+@login_required
+def deleteCrashLogs():
+    if (current_user.role == "Admin"):
+        file = Path(current_app.MAINPATH,'work',"crashes.log")
+        if file.exists():
+            file.unlink()
+            return "File deleted." 
+        else:
+            return "File not found."
+    else:
+        return "Only for admins."
+
 
 @adm.route('/admin')
 @login_required

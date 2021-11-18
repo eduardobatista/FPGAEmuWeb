@@ -6,6 +6,25 @@ from main.models import User
 import logging
 from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash
+from datetime import datetime
+import signal
+import sys
+
+
+def sigterm_handler(_signo, _stack_frame):
+    try:
+        crashfile = Path(MAINPATH,'work') / "crashes.log"
+        with open(crashfile,"a") as cfile:
+            cfile.write(f'Crashed at {datetime.now().strftime("%m/%d/%Y, %H:%M:%S")}.\n')
+            stderrf = Path("/home","stderr.log")
+            if stderrf.exists():
+                with open(stderrf,"r") as ff:
+                    cfile.write(ff.read())
+            cfile.write("\n")
+    except Exception as es:
+        print(es)
+    sys.exit(0)
+
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
@@ -45,4 +64,9 @@ with app.app_context():
 # log.setLevel(logging.ERROR)
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    signal.signal(signal.SIGABRT, sigterm_handler)
+    signal.signal(signal.SIGINT, sigterm_handler)
+    signal.signal(signal.SIGQUIT, sigterm_handler)
     socketio.run(app,host='0.0.0.0',port=5000)
+    sigterm_handler(None, None)

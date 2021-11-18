@@ -25,6 +25,8 @@
             <button class="btn btn-primary btn-sm" onclick="checkServerProcs();">Check Server Processes</button>
             <button class="btn btn-primary btn-sm" onclick="checkStdOut();">Check Supervisor STDOUT</button>
             <button class="btn btn-primary btn-sm" onclick="checkStdErr();">Check Supervisor STDERR</button>
+            <button class="btn btn-primary btn-sm" onclick="checkCrashes();">Check Crash Logs</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCrashLogs();">Delete Crash Logs</button>
         </div> 
 
         <div class="mb-2 mt-0" id="psinfo">
@@ -157,6 +159,18 @@
 
             function checkStdErr() {
                 $.post("/checkstderr",{}).done( function (data) {
+                        $("#psinfo").html(data);
+                    });
+            }
+
+            function checkCrashes() {
+                $.post("/checkcrashes",{}).done( function (data) {
+                        $("#psinfo").html(data);
+                    });
+            }
+
+            function deleteCrashLogs() {
+                $.post("/deletecrashlogs",{}).done( function (data) {
                         $("#psinfo").html(data);
                     });
             }

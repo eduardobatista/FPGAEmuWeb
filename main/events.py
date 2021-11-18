@@ -26,10 +26,17 @@ def checklogged():
 @socketio.on('getfile', namespace='/stream') 
 def getfile(filename):
     if checklogged():
-        sessionpath = getuserpath()
-        fname = Path(sessionpath,filename)
-        data = open(fname,'r').read()
-        emit("filecontent",data)
+        try:
+            sessionpath = getuserpath()
+            fname = Path(sessionpath,filename)
+            data = open(fname,'r').read()
+            emit("filecontent",data)
+        except TypeError as terror:
+            emit("error",str(terror))
+        except FileNotFoundError as fnf:
+            emit("error",f'File not found: {filename}.<br>Refresh page and try again.')
+        except Exception as ex:
+            emit("error",str(ex))
 
 @socketio.on('getmap', namespace='/stream') 
 def getmap(filename):
@@ -87,15 +94,20 @@ def deletefile(filename):
             emit("error","Not allowed while viewing as a different user.")
             return
         if (str(filename).endswith('.vhd') or str(filename).endswith('.vhdl')):
-            sessionpath = getuserpath()
-            fname = Path(sessionpath,filename)
-            fname.unlink()
-            fmap = Path(sessionpath,filename+".map")
-            if fmap.exists():
-                fmap.unlink()
-            emit("filedeleted",filename)
+            try:
+                sessionpath = getuserpath()
+                fname = Path(sessionpath,filename)
+                fname.unlink()
+                fmap = Path(sessionpath,filename+".map")
+                if fmap.exists():
+                    fmap.unlink()
+                emit("filedeleted",filename)
+            except FileNotFoundError as fnf:
+                emit("error",f"Could not delete: file {filename} not found.<br>Refresh page to update file list.")
+            except Exception as ex:
+                emit("error",str(ex))
         else:
-            emit("deleteerror","Only .vhd and .vhdl files allowed.")
+            emit("error","Only .vhd and .vhdl files allowed.")
 
 @socketio.on('deleteallfiles', namespace='/stream') 
 def deleteallfiles(fname):
@@ -113,7 +125,7 @@ def deleteallfiles(fname):
                 ff2.unlink 
             emit("filedeleted","*")
         except:
-            emit("deleteerror","Error deleting all files.")
+            emit("error","Error deleting all files.")
     
 
 @socketio.on('Analyze', namespace='/stream')
@@ -132,34 +144,8 @@ def simulate(stoptime,testentity="usertest.vhd"):
 def stream(cmd):
     if checklogged():
         if cmd == "Compile":
-            # compthread = threading.Thread(target=compilefile,args=(current_user.email,request.sid,current_app))
-            # compthread.start()
             socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH,
                                         current_user.id,current_user.topLevelEntity)
-        #     compilerpath = Path(current_app.MAINPATH,'backend','fpgacompileweb')
-        #     basepath = Path(current_app.MAINPATH,'work')
-        #     sessionpath = Path(basepath, current_user.email)
-        #     if not createFpgaTest(sessionpath,'usertop.vhd'):
-        #         emit('errors', "Could not find usertop.vhd, its ports or usertop entity.")
-        #         disconnect()
-        #         return
-        #     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-        #     filenames = [x.name for x in aux]
-        #     proc = subprocess.Popen(
-        #                 [compilerpath,sessionpath] + filenames + ['fpgatest.aux'],
-        #                 stdout=subprocess.PIPE,
-        #                 stderr=subprocess.PIPE
-        #         )
-        #     rline = 'start'
-        #     while rline != b'':
-        #         rline = proc.stdout.readline()
-        #         emit("message",rline.decode())
-        #         time.sleep(0.5)
-        #     aux = proc.stderr.read()
-        #     if aux != b'':
-        #         emit("errors",aux.decode().replace('\n','\n<br>'))
-        #     else:
-        #         emit("success","done");
         else: 
             disconnect()
 
@@ -169,72 +155,9 @@ def stream2(cmd):
         if cmd == "Parar":
             current_app.logger.info(f"Stoping emulation for {current_user.email}.")
             stopEmulation(current_user.email,request.sid)
-            # if current_user.email not in current_app.procs.keys():
-            #     emit('error',f'Emulation not running for {session["username"]}.')
-            #     return
-            # else:
-            #     closeEmul(current_app,current_user.email)
-            #     emit('status',"Parado")
         elif cmd == "Emular":
             current_app.logger.info(f"Starting emulation for {current_user.email}.")
             socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH,getuserpath())
-            # keysprocs = current_app.procs.keys()
-            # if len(keysprocs) >= 25:
-            #     emit('error',f'Too many emulations running, please try again in a minute or two.')
-            #     return
-            # elif current_user.email in keysprocs:
-            #     emit('error',f'Emulation already running for {session["username"]}.')
-            #     return
-            # else:
-            #     emit('message','Starting emulation...')
-            # basepath = Path(current_app.MAINPATH,'work')
-            # sessionpath = Path(basepath, current_user.email)
-            # try: 
-            #     for k in sessionpath.rglob("myfifo*"):
-            #         k.unlink();
-            # except:
-            #     pass
-            # fpgatestpath = Path(sessionpath, 'fpgatest')
-            # if not fpgatestpath.exists():
-            #     emit('error',f'Compilation required before emulation.')
-            #     return
-            # proc = subprocess.Popen(
-            #             [fpgatestpath],
-            #             stdout=subprocess.PIPE,
-            #             stderr=subprocess.PIPE,
-            #             cwd=sessionpath 
-            #     )
-            # current_app.procs[current_user.email] = proc
-            # time.sleep(0.3)      
-            # # print("Opening FIFO...")
-            # fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
-            # select.select([fiforead], [], [fiforead]) # Blocks until ready to read
-            # # print("FIFO opened")
-            # print(os.read(fiforead,3).decode())
-            # time.sleep(0.3)
-            # current_app.fifowrite[current_user.email] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
-            # emit('started','Ok!')
-            # lasttime = time.time()       
-            # while True:
-            #     aux,aux1,aux2 = select.select([fiforead], [current_app.fifowrite[current_user.email]], [fiforead]) # Blocks until ready to read
-            #     if len(aux) > 0:
-            #         data = os.read(fiforead,11)
-            #         # print(data)                
-            #         if len(data) == 0:
-            #             # print("Writer closed.")
-            #             break
-            #         emit('bytes', data)
-            #         lasttime = time.time()
-            #     else:
-            #         if ((time.time()-lasttime) >= 120 ):
-            #             emit('error','Inactivity timeout...')
-            #             closeEmul(current_app,current_user.email)
-            #             emit('status','Parado')
-            #     time.sleep(0.2)
-            # # print("Saiu!")
-            # os.close(current_app.fifowrite[current_user.email])
-            # os.close(fiforead)
-            # del current_app.fifowrite[current_user.email]
         else:
             disconnect()
 
@@ -289,6 +212,7 @@ def requestghwsignals():
         sessionpath = getuserpath()
         data = getghwsignals(sessionpath,current_app.MAINPATH,'output.ghw',['#5-#6','#1-#3'])
         emit("ghwsignals",data)
+        
 
 @socketio.on('requestghwdata', namespace='/stream') 
 def requestghwdata():
