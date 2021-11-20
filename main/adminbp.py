@@ -8,6 +8,7 @@ from sqlalchemy import Table,MetaData
 from pathlib import Path
 from sqlalchemy import create_engine
 import psutil
+import json
 
 @adm.route('/profile')
 @login_required
@@ -109,7 +110,9 @@ def cloudinfo():
         return redirect(url_for('main.sendfiles'))
     if current_app.clouddb:
         try: 
-            with current_app.clouddb.connect() as conncloud:      
+            print("Chegou Aqui!!!")
+            with current_app.clouddb.connect() as conncloud:
+                print("Chegou Aqui!")   
                 table1 = Table('user', MetaData() , autoload=True, autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select())
                 userscloud = [row['email'] for row in clouddata]
@@ -117,6 +120,7 @@ def cloudinfo():
                 ret += f"User list is: {userscloud}"
                 conncloud.close()
                 return ret
+            print("Chegou Aqui?")
         except BaseException as err:
             return f"Could not reach the cloud database.<br>{str(err)}"
     else:
@@ -133,9 +137,11 @@ def savecloudinfo():
         with open(workdir / "clouddb.conf","w") as ff:
             ff.write(info)
             current_app.config['CLOUDDBINFO'] = info
-            current_app.clouddb = create_engine(info)
+            current_app.clouddb = create_engine(info, connect_args={'connect_timeout': 5})
     except Exception as e:
         return str(e)
+        current_app.config['CLOUDDBINFO'] = ''
+        current_app.clouddb = None
     return "Done!"
 
 @adm.route('/saveemailinfo', methods=['POST'])

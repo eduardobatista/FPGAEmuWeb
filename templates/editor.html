@@ -25,32 +25,54 @@
         <input type="hidden" value="{{toplevel}}" id="toplevel">
 
         {%- if filenames is defined -%}
-        <div class="container mt-2">
-            <select id="fileselect" class="browser-default custom-select" onchange="openfile()">
-                <option selected value="0">Choose file...</option>
-                {% for fname in filenames %}
-                    <option value="{{fname}}">{{fname}}</option>
-                {% endfor %}
-            </select>
-            <button class="btn btn-primary btn-sm" onclick="savefile(0);">Save</button>
-            <button class="btn btn-primary btn-sm" onclick="savefileas()">Save As...</button>
-            <button class="btn btn-primary btn-sm" onclick="newfile();">New</button>
-            <button class="btn btn-primary btn-sm" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>
-            <div class="dropdown d-inline">
+        <div class="container is-max-desktop mt-3">
+            <div class="select is-small">
+                <select id="fileselect" onchange="openfile()" style="min-width: 180px;">
+                    <option selected value="0">Choose file...</option>
+                    {% for fname in filenames %}
+                        <option value="{{fname}}">{{fname}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="button is-info is-small" onclick="savefile(0);">Save</button>
+            <button class="button is-info is-small" onclick="savefileas()">Save As...</button>
+            <button class="button is-info is-small" onclick="newfile();">New</button>
+            <button class="button is-info is-small" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>
+            <div class="dropdown" id="tdropdown">
+                <div class="dropdown-trigger">
+                  <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
+                    <span>Templates</span>
+                    <span class="icon is-small">
+                      <i class="fas fa-angle-down" aria-hidden="true"></i>
+                    </span>
+                  </button>
+                </div>
+                <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                  <div class="dropdown-content">
+                    <a href="#" class="dropdown-item" onclick="fillWithUsertop();">
+                        usertop.vhd
+                    </a>
+                    <a class="dropdown-item" onclick="fillWithUsertest();">
+                        usertest.vhd
+                    </a>                    
+                  </div>
+                </div>
+            </div>
+
+            <!-- <div class="dropdown d-inline">
                 <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Templates
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <a class="dropdown-item" href="#" onclick="fillWithUsertop();">usertop.vhd</a>
                     <a class="dropdown-item" href="#" onclick="fillWithUsertest();">usertest.vhd</a>
-                    <!-- <a class="dropdown-item" href="#">Something else here</a> -->
                 </div>
-            </div>             
-            <button class="btn btn-warning btn-sm" onclick="analyze()">Analyze Current File</button>
-            <button class="btn btn-danger btn-sm" onclick="fpgaCompile()">Compile</button><br>
+            </div>              -->
+            <button class="button is-warning is-small" onclick="analyze()">Analyze Current File</button>
+            <button class="button is-danger is-small" onclick="fpgaCompile()">Compile</button><br>
         </div>
         
-        <div class="container mt-0">
+        <div class="container is-max-desktop mt-1">
             <div id="editor"></div>
         </div>
         {% endif %}
@@ -59,102 +81,82 @@
         <!-- <button type="button" class="btn btn-primary">
             Launch demo modal
         </button> -->
-        
-        <!-- Full Height Modal Right -->
-        <div class="modal fade bottom" id="fullHeightModalRight" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-            aria-hidden="true">
-        
-            <!-- Add class .modal-full-height and then add class .modal-right (or other classes from list above) to set a position to the modal -->
-            <div class="modal-dialog modal-full-height modal-dialog-scrollable modal-bottom" role="document">
-        
-        
-            <div class="modal-content">
-                <div class="modal-header">
-                <h4 class="modal-title w-100" id="myModalLabel">Compilation Process</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                </div>
-                <div class="modal-body">
-                    <div id="myspinner" class="spinner-border spinner-border-sm" role="status">
-                        <span class="sr-only">Loading...</span>
-                    </div>
-                    <div id="status">    
-                    </div>                    
-                </div>
-                <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
-                <button id="gotoemul" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/emulation'">Go to Emulation...</button>
-                </div>
-            </div>
-            </div>
-        </div>
-        <!-- Full Height Modal Right -->
 
-        <div class="modal fade" id="centralModalSm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"  aria-hidden="true">
-            <!-- Change class .modal-sm to change the size of the modal -->
-            <div class="modal-dialog modal-sm" role="document">
-                <div class="modal-content">
-                <!-- <div class="modal-header">
-                    <h4 class="modal-title w-100" id="myModalLabel">Modal title</h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                    </button>
-                </div> -->
+        <div class="modal is-clipped" id="compilationmodal">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Compilation</p>
+                <button class="delete" aria-label="close" onclick="$('#compilationmodal').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <div id="myspinner" class="loader is-loading"></div>
+                <div id="status">    
+                </div> 
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-danger is-small" onclick="$('#compilationmodal').removeClass('is-active');">Close</button>
+                <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
+              </footer>
+            </div>
+          </div>
+
+
+          <div class="modal is-clipped" id="centralModalSm">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title"> </p>
+                <button class="delete" aria-label="close" onclick="$('#centralModalSm').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
                 <div id="filesavedmsg" class="modal-body">
                     File saved successfully!
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
-                </div>
-                </div>
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-link is-small" id="filesavedbutton" onclick="$('#centralModalSm').removeClass('is-active');">Close</button>
+              </footer>
             </div>
-        </div>
+          </div>
 
-        <div class="modal fade" id="modalSaveAs" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                <div class="modal-header text-center">
-                    <h4 class="modal-title w-100 font-weight-bold">Save As...</h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+
+          <div class="modal is-clipped" id="modalSaveAs">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Save As...</p>
+                <button class="delete" aria-label="close" onclick="$('#modalSaveAs').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <input type="text" id="filenameas" class="input" placeholder="File Name">
+                <div id="saveasalert" class="notification is-warning py-1 mt-1">
+                    File extension must be ".vhd".                  
                 </div>
-                <div class="modal-body mx-3">
-                    <div class="md-form mb-5">
-                    <input type="text" id="filenameas" class="form-control validate">
-                    <label data-error="wrong" data-success="right" for="filenameas">File Name</label>
-                    </div>
-                </div>
-                    <div class="modal-footer d-flex justify-content-center">
-                        <button class="btn btn-secondary btn-sm" onclick="saveAsOrNew()">Save<i class="fas fa-paper-plane-o ml-1"></i></button>
-                    </div>
-                    <div id="saveasalert" data-dismiss="alert" class="alert alert-danger hide" role="alert">
-                        File extension must be ".vhd".                  
-                    </div>
-                </div>
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-danger is-small" onclick="saveAsOrNew()">Save<i class="fas fa-paper-plane-o ml-1"></i></button>
+                <button class="button is-link is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
+              </footer>
             </div>
-        </div>
+          </div>
         
-        <div class="modal fade" id="modalError" tabindex="-1" role="dialog" aria-labelledby="modalErrorLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                <h5 class="modal-title" id="modalErrorLabel">Error</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                </div>
-                <div class="modal-body">
-                    <p id="errorMessage">Modal body text goes here.</p>
-                </div>
-                <div class="modal-footer">
-                <button type="button" id="bcloseerr" class="btn btn-danger btn-sm" data-dismiss="modal">Close</button>
-                <!-- <button type="button" class="btn btn-primary">Save changes</button> -->
-                </div>
+          <div class="modal is-clipped" id="modalError">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Error</p>
+                <button class="delete" aria-label="close" onclick="$('#modalError').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <p id="errorMessage">Modal body text goes here.</p>
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-primary is-small" onclick="$('#modalError').removeClass('is-active');">Close</button>
+              </footer>
             </div>
-            </div>
-        </div>
+          </div> 
+        
 
         
 {% endblock %}
@@ -193,17 +195,12 @@
                     saveAsOrNew();
                 }
             });
-            $('#modalSaveAs').on('shown.bs.modal', function () {
-                $('#filenameas').focus();
-            });
-            $('#modalError').on('shown.bs.modal', function () {
-                $('#bcloseerr').focus();
-            })  
         });
 
         function errorMessage(msg) {
             $("#errorMessage").html(msg);
             $("#modalError").modal();
+            $('#bcloseerr').focus();
         }
 
         window.filechanged = false;
@@ -237,11 +234,13 @@
             window.socket.on('filesaved', function(msg){
                 // alert('File saved successfully!');
                 $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
-                $("#centralModalSm").modal();
+                $("#centralModalSm").addClass("is-active");   
+                $("#filesavedbutton").focus();             
                 window.filechanged = false;
                 if (window.lastfilesaveopt >= 1) {
                     location.href = "/editor?file=" + String(msg);
                 }
+                
             }); 
             window.socket.on('filecontent', function(msg){
                 editor.setValue(msg);
@@ -324,7 +323,7 @@
             if (val != 0) {
                 if ( val.endsWith(".vhd") ) {
                     if (!window.socketOn) { openSocket(); }
-                    $("#modalSaveAs").modal('hide');
+                    $("#modalSaveAs").removeClass('is-active');
                     if (opt == 2) {
                         window.socket.emit("savefile",{filename: val, data:""});                         
                     } else {
@@ -347,12 +346,14 @@
 
         function savefileas() {
             window.isnewfile = false;
-            $("#modalSaveAs").modal();   
+            $("#modalSaveAs").addClass("is-active");   
+            $('#filenameas').focus();
         }
 
         function newfile() {
             window.isnewfile = true;
-            $("#modalSaveAs").modal();
+            $("#modalSaveAs").addClass("is-active");
+            $('#filenameas').focus();
         }
 
         function fpgaCompile() {
@@ -365,7 +366,8 @@
             $("#status").html("");
             $("#myspinner").show();
             $("#gotoemul").attr('disabled', true);
-            $("#fullHeightModalRight").modal();
+            // $("#fullHeightModalRight").modal();
+            $("#compilationmodal").addClass("is-active");
             if (!window.socketOn) {
                 openSocket();
             }
@@ -384,7 +386,7 @@
                 $("#status").html("");
                 $("#myspinner").show();
                 $("#gotoemul").attr('disabled', true);
-                $("#fullHeightModalRight").modal();
+                $("#compilationmodal").addClass("is-active");
                 if (!window.socketOn) {
                     openSocket();
                 }
@@ -481,11 +483,21 @@ end tb;`;
         function fillWithUsertop() {
             editor.insert(usertoptemplate);
             editor.focus();
+            $('#tdropdown').removeClass('is-active');
         }
 
         function fillWithUsertest() {
             editor.insert(usertesttemplate);
             editor.focus();
+            $('#tdropdown').removeClass('is-active');
+        }
+
+        function toggleTemplateList() {
+            if ($('#tdropdown').hasClass("is-active")) {
+                $('#tdropdown').removeClass('is-active');
+            } else {
+                $('#tdropdown').addClass('is-active');
+            }
         }
         
     </script>

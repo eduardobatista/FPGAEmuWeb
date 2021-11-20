@@ -7,56 +7,72 @@
 
     {% block content %}
 
-    <div class="container mt-3">
+    <div class="container mt-3 mx-4">
 
         {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class="alert alert-danger">
-                {{ messages[0] }}
-            </div>
-        {% endif %}
+            {% if messages %}
+            <!-- <article class="message is-danger is-light my-1">
+                <div class="message-body py-1 px-1"> -->
+                <div class="notification is-danger is-light py-1 px-2">
+                    {{ messages[0] }}
+                </div>
+                <!-- </div>
+            </article> -->
+            {% endif %}
         {% endwith %}  
 
         {% if current_user.role == 'Admin' %}
 
-        <h2 class="mb-2">Server Info</h2>
+        <div class="box">
 
-        <div class="form-group form-inline mb-0">            
-            <button class="btn btn-primary btn-sm" onclick="checkServerProcs();">Check Server Processes</button>
-            <button class="btn btn-primary btn-sm" onclick="checkStdOut();">Check Supervisor STDOUT</button>
-            <button class="btn btn-primary btn-sm" onclick="checkStdErr();">Check Supervisor STDERR</button>
-            <button class="btn btn-primary btn-sm" onclick="checkCrashes();">Check Crash Logs</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteCrashLogs();">Delete Crash Logs</button>
-        </div> 
+            <h2 class="title is-4">Server Info</h2>
 
-        <div class="mb-2 mt-0" id="psinfo">
-            
+            <div class="form-group form-inline mb-0">            
+                <button class="button is-info is-small" onclick="checkServerProcs();">Check Server Processes</button>
+                <button class="button is-info is-small" onclick="checkStdOut();">Check Supervisor STDOUT</button>
+                <button class="button is-info is-small" onclick="checkStdErr();">Check Supervisor STDERR</button>
+                <button class="button is-info is-small" onclick="checkCrashes();">Check Crash Logs</button>
+                <button class="button is-danger is-small" onclick="deleteCrashLogs();">Delete Crash Logs</button>
+            </div> 
+
+            <div class="mb-2 mt-1 mx-2 is-size-7" id="psinfo">
+                
+            </div>
+
         </div>
 
-        <h2 class="mb-2">Cloud Database Info</h2>
+        <div class="box">
 
-        <div class="form-group form-inline">
-            <!-- <label for="clouddbinfo">Cloud Db Info</label> -->
-            <input type="text" class="form-control w-100" id="clouddbinfo" aria-describedby="emailHelp" placeholder="Cloud DB Info" value="{{clouddbinfo}}">
-            <button class="btn btn-primary btn-sm" onclick="saveCloudDbInfo();">Save</button>
-            <button class="btn btn-primary btn-sm" onclick="checkCloudDb();">Check Cloud DB Info</button>
-        </div> 
+            <h2 class="title is-4">Cloud Database Info</h2>
+
+            <div class=" container is-flex mb-2" >
+                <!-- <label for="clouddbinfo">Cloud Db Info</label> -->
+                <input type="text" class="input is-small is-inline is-flex-grow-1 mx-2" id="clouddbinfo" aria-describedby="emailHelp" placeholder="Cloud DB Info" value="{{clouddbinfo}}">
+                <button class="button is-info is-small mx-1" onclick="saveCloudDbInfo();">Save</button>
+                <button class="button is-info is-small mx-1" onclick="checkCloudDb();">Check Cloud DB Info</button>
+            </div> 
 
 
-        <i id="running" class="fa fa-cog fa-spin fa-2x fa-fw" style="display: none;"></i>
-        <div id="cloudinfo">
-            
+            <i id="running" class="fa fa-cog fa-spin fa-2x fa-fw" style="display: none;"></i>
+            <div class="block is-size-7 mx-2" id="cloudinfo">
+                
+            </div>
+
         </div>
 
-        <h2 class="mb-2 mt-4">Email Info and Credentials</h2>
+        <div class="box">
 
-        <div class="form-group">
-            <!-- <label for="emailinfo">Example textarea</label> -->
-            <textarea class="form-control mb-0 pb-0" id="emailInfo" rows="5">{{emailinfo}}</textarea>
-        </div>
-        <button class="btn btn-primary btn-sm mt-0" onclick="saveEmailInfo();">Save</button>
-        <div id="emailresponse">
-            
+            <h2 class="title is-4">Email Info and Credentials</h2>
+
+            <div class="form-group">
+                <!-- <label for="emailinfo">Example textarea</label> -->
+                <textarea class="textarea is-small" id="emailInfo" rows="5">{{emailinfo}}</textarea>
+            </div>
+
+            <button class="button is-info is-small mt-1" onclick="saveEmailInfo();">Save</button>
+            <div class="block is-size-7 mx-2 mt-1" id="emailresponse">                
+            </div>
+
         </div>
 
         <!-- <div class="form-group">
@@ -64,13 +80,12 @@
         </div> -->
 
        
-    </div>
-
+    
         {%- if userlist is defined -%}
-    <div class="container mt-4">
-        <h2>User List</h2>
+        <div class="box mt-2">
+        <h2 class="title is-4">User List</h2>
 
-        <table class="table">
+        <table class="table mx-auto is-striped">
             <thead>
               <tr>
                 <th scope="col">Name</th>
@@ -88,9 +103,11 @@
                     <td>{{ uu.email }}</td>
                     <td>
                         {% if uu.email == current_user.email %}
+                            <div class="select is-small">
                             <select class="custom-select" disabled>
                         {% else %}
                             <input type="hidden" id="val{{loop.index}}" value="{{uu.email}}">
+                            <div class="select is-small">
                             <select class="custom-select" id="sel{{loop.index}}" onchange="changerole({{loop.index}});">
                         {% endif %}
                             {% if uu.role == 'Student' %}
@@ -106,13 +123,13 @@
                                 <option value="Professor" selected>Professor</option>
                                 <option value="Admin">Admin</option>
                             {% endif %}
-                          </select>
+                          </select></div>
                     </td>
                     <td>
                         {% if uu.email == current_user.email %}
-                            <button class="btn btn-danger btn-sm m-0 ml-1 p-2" disabled>Delete</button>
+                            <button class="button is-danger is-small" disabled>Delete</button>
                         {% else %}
-                            <button class="btn btn-danger btn-sm m-0 ml-1 p-2" onclick="delUser({{loop.index}});">Delete</button>
+                            <button class="button is-danger is-small" onclick="delUser({{loop.index}});">Delete</button>
                         {% endif %}
                         
                     </td>
@@ -132,7 +149,11 @@
 
         {% endif %}
 
-        {% endif %}
+    </div>
+
+    {% endif %}
+
+ 
         
     </div>
 

@@ -46,10 +46,15 @@ def create_app(debug=False,mainpath=""):
     app.clouddb = None
     clouddbfile = (Path(mainpath) / 'work') / 'clouddb.conf';
     if clouddbfile.exists():
-        with open(clouddbfile,'r') as cfile:
-            clouddbconf = cfile.read();
-            app.config['CLOUDDBINFO'] = clouddbconf
-            app.clouddb = create_engine(clouddbconf)
+        try:
+            with open(clouddbfile,'r') as cfile:
+                clouddbconf = cfile.read();
+                app.config['CLOUDDBINFO'] = clouddbconf
+                app.clouddb = create_engine(clouddbconf,connect_args={'connect_timeout': 5})
+        except Exception as ex:
+            print(str(ex))
+            app.config['CLOUDDBINFO'] = ''
+            app.clouddb = None
     
     # logging.basicConfig(filename=Path(mainpath,'activity.log'), level=logging.INFO)
 
@@ -69,9 +74,13 @@ def create_app(debug=False,mainpath=""):
         from yagmail import SMTP
         oauthfile = Path(mainpath,'work') / "oauth2_creds.json"
         if oauthfile.exists():
-            app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)
-            with open(oauthfile,"r") as ff:
-                app.config['EMAILINFO'] = ff.read()
+            try:
+                app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)
+                with open(oauthfile,"r") as ff:
+                    app.config['EMAILINFO'] = ff.read()
+            except Exception as ex:
+                print(str(ex))
+                app.yag = None
         else:            
             app.yag = None
     except ImportError as e:

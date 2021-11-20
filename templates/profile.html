@@ -7,49 +7,80 @@
 
     {% block content %}
 
-    <div class="container mt-3">
+    <div class="container mt-3 is-max-desktop" style="max-width: 600px;">
 
-        <h5 class="mb-3 mt-3">Current user is <strong><em>{{current_user.name}}</em></strong> (<strong>{{current_user.email}}</strong>).</h5>
+        <article class="message is-info ">
+            <div class="message-body py-2">
+                Current user is <strong><em>{{current_user.name}}</em></strong> (<strong>{{current_user.email}}</strong>).
+            </div>
+        </article>
+
 
         {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class="alert alert-danger">
-                {{ messages[0] }}
-            </div>
-        {% endif %}
-        {% endwith %}        
+              {% if messages %}
+                <!-- <article class="message is-danger is-light my-1">
+                  <div class="message-body py-1 px-1"> -->
+                  <div class="notification is-warning is-light py-1 px-2">
+                    {{ messages[0] }}
+                  </div>
+                  <!-- </div>
+                </article> -->
+            {% endif %}
+        {% endwith %}       
 
         {% if current_user.role == 'Professor' or current_user.role == 'Admin' %}
-            <form class="md-form border border-light p-4 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="setViewAs" method="POST">
-                <h3>View As</h3>
-
-                <select class="custom-select mb-2" id="viewAsSelect" name="viewAsSelect">
-                    {% for uu in userlist %} 
-                        {% if uu == current_user.viewAs %}                       
-                            <option value="{{uu}}" selected>{{uu}}</option>
-                        {% elif (current_user.viewAs == '') and (uu == current_user.email) %}   
-                            <option value="{{uu}}" selected>{{uu}}</option>
-                        {% else %}
-                            <option value="{{uu}}">{{uu}}</option> 
-                        {% endif %}
-                    {% endfor %}
-                </select>
-                <button type="submit" class="btn btn-primary mt-0 ml-0">Change View</button>
+            <form class="box" action="setViewAs" method="POST">
+                <h3 class="title is-4">View As</h3>
+                <div class="select is-small">
+                    <select class="custom-select mb-2" id="viewAsSelect" name="viewAsSelect">
+                        {% for uu in userlist %} 
+                            {% if uu == current_user.viewAs %}                       
+                                <option value="{{uu}}" selected>{{uu}}</option>
+                            {% elif (current_user.viewAs == '') and (uu == current_user.email) %}   
+                                <option value="{{uu}}" selected>{{uu}}</option>
+                            {% else %}
+                                <option value="{{uu}}">{{uu}}</option> 
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="button is-info is-small">Change View</button>
 
             </form>
         {% endif %}
 
-        <form class="md-form border border-light p-4 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" action="changepass" method="POST">
-            <h3>Change Password</h3>
-            <div class="form-group mt-3">
+        <form class="box" action="changepass" method="POST">
+            <h3 class="title is-4">Change Password</h3>
+            <div class= "mt-3">
                 <!-- <label for="exampleInputPassword1">Change Password</label> -->
-                <input type="password" class="form-control mb-2" id="oldpass" name="oldpass" placeholder="Old Password" required>
-                <input type="password" class="form-control mb-2" id="newpass" name="newpass" placeholder="New Password" required>
-                <input type="password" class="form-control mb-2" id="repeatnew" name="repeatnew" placeholder="Repeat New" required>
+                <div class="field">
+                    <p class="control has-icons-left">                
+                      <input class="input is-small" type="password" id="oldpass" name="oldpass" placeholder="Old Password" required>
+                      <span class="icon is-small is-left">
+                        <i class="fas fa-lock"></i>
+                      </span>
+                    </p>
+                </div>
+                <div class="field">
+                    <p class="control has-icons-left">                
+                      <input class="input is-small" type="password" id="newpass" name="newpass" placeholder="New Password" required>
+                      <span class="icon is-small is-left">
+                        <i class="fas fa-lock"></i>
+                      </span>
+                    </p>
+                </div>
+                <div class="field">
+                    <p class="control has-icons-left">                
+                      <input class="input is-small" type="password" id="repeatnew" name="repeatnew" placeholder="Repeat New Password" required>
+                      <span class="icon is-small is-left">
+                        <i class="fas fa-lock"></i>
+                      </span>
+                    </p>
+                </div>
                 <input type="hidden" name="email" value="{{current_user.email}}">
             </div>
 
-            <button type="submit" class="btn btn-primary mt-0 ml-0">Change Pass</button>
+            <button type="submit" class="button is-info is-small">Change Pass</button>
 
         </form>
     </div>

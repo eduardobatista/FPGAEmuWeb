@@ -3,50 +3,57 @@
 {% block styles %}
     <link rel="stylesheet" href="static/css/jquery-ui.structure.min.css">  
     <link rel="stylesheet" href="static/css/jquery-ui.theme.min.css">   
+
+    <style>
+
+        /* Hide the nested list */
+        .nesteditem {
+            display: none;
+        }
+
+        /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
+        .activeitem {
+            display: block;
+        }
+
+    </style>
 {% endblock %} 
 
 {% block content %}
 
-    <div class="container w-100 pl-0 pt-3 mb-0 pb-0">
-        <button id="gotoemul" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
-    </div>
 
-    <div class="container w-100 mt-0 pt-0">
+    <div class="container is-fullwidth px-4 py-1 mt-3">
 
-        <div class="row">
+        <button id="gotoemul" type="button" class="button is-info m-0 is-small" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
 
-            <div class="col-sm-12 col-md-4 col-lg-3 mt-2 p-0">
-                <div id="maintree" class="treeview w-100 border">
-                    <h6 class="pt-3 pl-3">Instances & Signals</h6>
+        <div class="columns mt-1 is-1">
+
+            <div class="column is-narrow" style="border: 1px solid lightgray;">
+                <div id="maintree" class="">
+                    <h6 class="pt-3 pl-1 is-6">Instances & Signals</h6>
                     <hr>
                     <ul class="mb-1 pl-3 pb-2" id="instancelist">
                     </ul>
                   </div>
             </div>
 
-            <div class="col-sm-12 col-md-8 col-lg-9 mt-2 ml-0 mr-0 p-0" style="border: 1px solid lightgray;">
+            <div class="column" style="border: 1px solid lightgray;">
                 
                 <div class="m-3">
                     <div id="slider-range"></div>
                 </div>
 
-                <div id="plotsvg" class="w-100 m-0 p-0">
-
-                </div>
+                <div class="container is-block m-0 p-0">
+                    <div id="plotsvg" class="m-0 p-0" >                        
+                    </div>
+                </div>                
 
             </div>
 
-            
+
 
         </div>
 
-        
-
-       
-
-        <!-- <canvas id="plotcanvas" width="300px" height="18px", style="border: 1px dotted gray; padding: 0px; margin: 0px">
-
-        </canvas> -->
 
         
 
@@ -84,7 +91,7 @@
                 window.hie = data[0];
                 window.data = data[1];
                 populateinstlist(window.hie);
-                $('#maintree').mdbTreeview();
+                // $('#maintree').mdbTreeview();
                 var tempdata = data[1][Object.keys(data[1])[0]];
                 var maxtime = tempdata[tempdata.length-2]/1000000;
                 // console.log(maxtime);
@@ -114,7 +121,7 @@
 
         
         $( document ).ready(function() {  
-            window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','absolute');
+            window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','relative');
             window.wdraw = window.draw.nested().addTo('#plotsvg').size(500, 200).css('position','absolute');   
             requestghwdata();
             $("#slider-range").slider({
@@ -141,9 +148,9 @@
             var insts = Object.keys(hie);
             insts.forEach(inst => {
                 var activeornot = (inst == insts[0]) ? "active" : "";
-                htmldata = htmldata + `<li><i class="fas fa-angle-right rotate"></i> 
+                htmldata = htmldata + `<li><i class="fas fa-angle-right toggler"></i> 
                               <span><i class="fas fa-cube ic-w mx-1"></i>${inst}</span>
-                              <ul class="nested ${activeornot}">`;
+                              <ul class="nesteditem ${activeornot}">`;
                 var sigs = Object.keys(hie[inst]);
                 sigs.forEach(sig => {
                     var symboltext = "fas fa-wave-square";
@@ -160,7 +167,21 @@
                                      </li>`;
             });
             $('#instancelist').html(htmldata);
+
+            var toggler = document.getElementsByClassName("toggler");
+            var i;
+            for (i = 0; i < toggler.length; i++) {
+                console.log(i);
+                toggler[i].addEventListener("click", function() {
+                    // alert("clicked!");
+                    this.parentElement.querySelector(".nesteditem").classList.toggle("activeitem");
+                    this.classList.toggle("fa-rotate-90");
+                });
+            }
+
         }
+
+
 
         function changecheck(inst,sig,ischecked) {
             keyy = inst + "." + sig;

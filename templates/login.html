@@ -4,130 +4,151 @@
 <style>
       
       #maincard{
-      height: 370px;
-      margin-top: auto;
-      margin-bottom: auto;
-      width: 400px;
+        /* height: 370px; */
+        margin-top: auto;
+        margin-bottom: auto;
+        width: 400px;
       }
       
-      .card-header h3{
-      color: white;
-      } 
     
   </style>
 {% endblock %}   
 
 {% block content %}
 
-<div class="container w-100">
-    
-    <div class="d-flex justify-content-center" style="height: 500px;">
+<div class="container is-fullwidth">
+                         
+      <div class="card mx-auto my-4" id="maincard">
                         
-		<div class="card bg-primary" id="maincard">
-                       
-			<div class="card-header">
-				<h3>FPGAEmu Web Sign In</h3>
-				<!-- <div class="d-flex justify-content-end social_icon">
-					<span><i class="fab fa-facebook-square"></i></span>
-					<span><i class="fab fa-google-plus-square"></i></span>
-					<span><i class="fab fa-twitter-square"></i></span>
-				</div> -->
-			</div>
-			<div class="card-body">
-				<form method="POST" action="login">
-					<div class="input-group form-group">
-						<div class="input-group-prepend">
-							<span class="input-group-text"><i class="fas fa-envelope"></i></span>
-						</div>
-						<input type="email" name="email" class="form-control" placeholder="email">						
-					</div>
-					<div class="input-group form-group">
-						<div class="input-group-prepend">
-							<span class="input-group-text"><i class="fas fa-key"></i></span>
-						</div>
-						<input type="password" name="password" class="form-control" placeholder="password">
-					</div>
-					<!-- <div class="row align-items-center remember">
-						<input type="checkbox">Remember Me
-					</div> -->
-					<div class="form-group">
-						<input type="submit" value="Login" class="btn float-right login_btn bg-light" >
-					</div>
-                </form>                
-			</div>
-			<div class="card-footer">
-				<div class="d-flex justify-content-center text-light">
-					Don't have an account? <a href="signup" class="text-white font-weight-bold ml-1">Sign Up</a>
-				</div>
-				<div class="d-flex justify-content-center">
-					<a href="#" class="text-white font-weight-bold" onclick="passRecovery();">Forgot your password?</a>
-				</div>
+        <div class="card-header">
+          <p class="card-header-title has-background-info has-text-white">
+            FPGAEmuWeb Sign In
+          </p>
+        </div>
+        <div class="card-content">
+          <form method="POST" action="login">
+
+            <div class="field">
+              <label class="label">Email</label>
+              <div class="control has-icons-left">
+                <input class="input" type="email" name="email" placeholder="your@email">
+                <span class="icon is-small is-left">
+                  <i class="fas fa-envelope"></i>
+                </span>
+                <!-- <span class="icon is-small is-right">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </span> -->
+              </div>
+              <!-- <p class="help is-danger">This email is invalid</p> -->
             </div>
+
+            <div class="field">
+              <label class="label">Password</label>
+              <p class="control has-icons-left">                
+                <input class="input" type="password" name="password" placeholder="Password">
+                <span class="icon is-small is-left">
+                  <i class="fas fa-lock"></i>
+                </span>
+              </p>
+            </div>
+
             {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-danger pb-1 pt-1 mb-0">
+              {% if messages %}
+                <!-- <article class="message is-danger is-light my-1">
+                  <div class="message-body py-1 px-1"> -->
+                  <div class="notification is-danger is-light py-1 px-2">
                     {{ messages[0] }}
-                </div>
-            {% endif %}
-            {% endwith %} 
+                  </div>
+                  <!-- </div>
+                </article> -->
+              {% endif %}
+              {% endwith %} 
 
-            <div class="alert alert-success pb-1 pt-1 mb-0" id="msg2" style="visibility: hidden;" id="msg2">
-            </div>
+              <div class="notification is-warning is-light py-1 px-2 my-1" style="display: none;" id="msg2">
+              </div>
+           
+            <input type="submit" value="Login" class="button is-info mt-1 mb-2" >
 
-		</div>
-	</div>
+            </form> 
+
+            <article class="message is-info m-0 is-small">
+              <div class="message-body p-2 mt-2 mb-0">
+                Don't have an account? <a href="signup" class="text-white font-weight-bold ml-1">Sign Up!</a><br>
+              </div>
+            </article>
+
+            <article class="message is-info is-small">
+              <div class="message-body p-2 mt-1">
+                <a href="#" class="text-white font-weight-bold" onclick="passRecovery();">Forgot your password?</a>
+              </div>
+            </article>
+            
+                             
+        </div>
+              
+
+      </div>
+
 </div>
 
-
-
-<div class="modal fade" tabindex="-1" role="dialog" id="modalPassRecovery">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Password Recovery</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+<div class="modal is-clipped" id="modalPassRecovery">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">Password Recovery</p>
+      <button class="delete" aria-label="close" onclick="$('#modalPassRecovery').removeClass('is-active');"></button>
+    </header>
+    <section class="modal-card-body">
+      <p>Enter the e-mail address of the account to be recovered:</p>
+      <div class="field">
+        <!-- <label class="label">Email</label> -->
+        <div class="control has-icons-left">
+          <input class="input" type="email" name="email" id="recoveryemail" placeholder="email">
+          <span class="icon is-small is-left">
+            <i class="fas fa-envelope"></i>
+          </span>
+          <!-- <span class="icon is-small is-right">
+            <i class="fas fa-exclamation-triangle"></i>
+          </span> -->
         </div>
-        <div class="modal-body">
-            <p>Enter the e-mail address of the account to be recovered:</p>
-            <div class="input-group form-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                </div>
-                <input type="email" name="email" class="form-control" placeholder="email" id="recoveryemail">                
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-primary" id="confirmDeleteBtn" onclick="recovery();">Recovery</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
-        </div>
+        <!-- <p class="help is-danger">This email is invalid</p> -->
       </div>
-    </div>
+    </section>
+    <footer class="modal-card-foot">
+      <button type="button" class="button is-info is-small" onclick="recovery();">Recovery</button>
+      <button class="button is-danger is-success is-small" onclick="$('#modalPassRecovery').removeClass('is-active');">Close</button>
+      
+    </footer>
   </div>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
 
+        // $( document ).ready(function() {  
+        //   $("#msg2").css("visibility", "visible");
+        //   $("#msg2").css("display", "block");
+        //   $("#msg2").html("Testeeee!");
+        // });
+
     function passRecovery() {
-        $("#modalPassRecovery").modal();
+        $("#modalPassRecovery").addClass("is-active");
+        $("#recoveryemail").focus();
     }
 
     function recovery() {
-        $("#modalPassRecovery").modal('hide');
+        $("#modalPassRecovery").removeClass("is-active");
         emailadd = $("#recoveryemail").val();
         
         $("#msg2").css("visibility", "visible");
-        // $("#msg2").html("Password recovery request sent.");
-
+        $("#msg2").css("display", "block");
         $.post("/passrecovery",{ email: emailadd } ).done(
                     function (data) {
                         $("#msg2").html(data);                        
                     }
                 );
-
     }
 
 

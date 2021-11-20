@@ -6,104 +6,84 @@
             <h5>Your <strong>id</strong> is {{ username }}.</h5>     
         </div> -->
 
-        <div class="container mt-3 w-75">
+        <div class="container is-max-desktop px-4">
 
-            <p class="text">The <strong>.ghw</strong> file resulting from your simulation can be opened
-            using the <a href="http://gtkwave.sourceforge.net/" target="_BLANK">GTKWave</a> software.</p>
+            <article class="message is-info mt-2 mb-2">
+                <div class="message-body py-3">
+                    <p class="text">The <strong>.ghw</strong> file resulting from your simulation can be opened
+                        using the <a href="http://gtkwave.sourceforge.net/" target="_BLANK">GTKWave</a> software.</p>
+                </div>
+            </article>
+
+            <div class="box mx-auto" style="max-width: 450px;">
+
+                <form class="" id="meuform" enctype="multipart/form-data" style="min-width: 250px;">
+
+                    <h4 class="title is-4 mb-4 has-text-centered">Simulation Options</h4>
+
+                    <div class="">
+
+                        <h6 class="title is-6 is-inline">Testbench file:</h6>
+                        <div class="select is-info is-fullwidth is-small">
+                            <select id="fileselect" class="" onchange="">
+                                {% for fname in filenames %}
+                                    <option value="{{fname}}" {{'selected' if selectedfile==fname else ''}}>{{fname}}</option>
+                                {% endfor %}
+                            </select> 
+                        </div>
+
+                        <article class="message is-danger is-light my-1 pr-1">
+                            <div class="message-body p-1 is-size-7">
+                                If selected file is not a <strong>testbench</strong>,
+                                    simulation will return empty.
+                            </div>
+                        </article>
+
+                    </div>
+    
+
+                    <div class="block mt-2 mb-0">
+                        <h6 class="title is-6 is-inline">Stop time:</h6>
+                        <input type="text" id="stoptime" class="input is-small" value="200 ns">                        
+                    </div>
+    
+                    <div class="block mt-2">
+                        <h6 class="title is-6 is-inline">Output file:</h6>
+                        <input type="text" id="outputfile" class="input is-small" value="output.ghw" disabled>
+                    </div>
+                    
+                    </div>
+                </form>
+
+            </div>
             
-            <form class="md-form border border-light p-5 w-50 col-lg-6 offset-lg-3 col-sm-6 offset-sm-3" id="meuform" enctype="multipart/form-data" style="min-width: 250px;">
 
-                <p class="h4 mb-4 text-center">Simulation Options</p>
-
-                <!-- <div class="md-form">
-                    <input type="text" id="testbenchfile" class="form-control" value="usertest.vhd">
-                    <label for="inputMDEx">Testbench file</label>
-                </div> -->
-
-                <div class="md-form">
-                    <p class="m-0">Testbench file:</p>
-                    <select id="fileselect" class="browser-default custom-select" onchange="">
-                        {% for fname in filenames %}
-                            <option value="{{fname}}" {{'selected' if selectedfile==fname else ''}}>{{fname}}</option>
-                        {% endfor %}
-                    </select> 
-                    <div class="alert alert-danger pt-1 pb-1 pl-2 pr-2 mt-1">
-                        If selected file is not a <strong>testbench</strong>,
-                        simulation will return empty.
-                    </div>
-                </div>
-
-                <div class="md-form">
-                    <input type="text" id="stoptime" class="form-control" value="200 ns">
-                    <label for="inputMDEx">Stop time</label>
-                </div>
-
-                <div class="md-form">
-                    <input type="text" id="outputfile" class="form-control" value="output.ghw" disabled>
-                    <label for="inputMDEx">Output file</label>
-                </div>
-                
-                </div>
-            </form> 
- 
-            <!-- <form class="md-form" id="meuform" enctype="multipart/form-data">
-                <div class="file-field">
-                  <div class="btn btn-primary btn-sm float-left">
-                    <span>Choose file(s)</span>
-                    <input type="file" name="fileToUpload" id="fileToUpload" accept=".vhd,.vhdl" multiple>
-                  </div> -->
-                  <!-- <div class="file-path-wrapper">
-                    <input class="file-path validate" type="text" placeholder="Upload your file">
-                  </div> -->
-                <!-- </div>
-                <button type="button" class="btn btn-primary p-2" onclick="uploadfile();">Upload</button>
-            </form> -->
-
-            <div class="container text-center">
-                <button type="button" class="btn btn-danger mt-3" onclick="runSimulation();">Run simulation...</button>
+            <div class="container has-text-centered">
+                <button type="button" class="button is-danger mt-3" onclick="runSimulation();">Run simulation...</button>
             </div>
 
         </div>
 
-        <!-- <div class="container mt-3 text-center">
+        <div class="modal is-clipped" id="simulationmodal">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Compilation</p>
+                <button class="delete" aria-label="close" onclick="$('#simulationmodal').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <div id="myspinner" class="loader is-loading"></div>
+                <div id="status">    
+                </div>   
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-danger is-small" onclick="$('#simulationmodal').removeClass('is-active');">Close</button>
+                <button id="gotoemul" type="button" class="button is-info is-small" onclick="location.href = '/downloadsimfile'">Download file</button>
+                <button id="gotoplot" type="button" class="button is-info is-small" onclick="location.href = '/plottest'">View Online</button>                
+              </footer>
+            </div>
+          </div>
 
-            <div id="status">
-    
-            </div>
-    
-        </div> -->
-
-        <!-- Full Height Modal Right -->
-        <div class="modal fade bottom" id="fullHeightModalRight" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-            aria-hidden="true">
-        
-            <!-- Add class .modal-full-height and then add class .modal-right (or other classes from list above) to set a position to the modal -->
-            <div class="modal-dialog modal-full-height modal-dialog-scrollable modal-bottom" role="document">
-        
-        
-            <div class="modal-content">
-                <div class="modal-header">
-                <h4 class="modal-title w-100" id="myModalLabel">Simulation Process</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                </div>
-                <div class="modal-body">
-                    <div id="myspinner" class="spinner-border spinner-border-sm" role="status">
-                        <span class="sr-only">Loading...</span>
-                    </div>
-                    <div id="status">    
-                    </div>                    
-                </div>
-                <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
-                <button id="gotoemul" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/downloadsimfile'">Download file</button>
-                <button id="gotoplot" type="button" class="btn btn-primary btn-sm" onclick="location.href = '/plottest'">View Online <span class="badge badge-light">beta</span></button>
-                </div>
-            </div>
-            </div>
-        </div>
-        <!-- Full Height Modal Right -->
 
 {% endblock %}
 
@@ -160,7 +140,7 @@
             $("#myspinner").show();
             $("#gotoemul").attr('disabled', true);
             $("#gotoplot").attr('disabled', true);
-            $("#fullHeightModalRight").modal();
+            $("#simulationmodal").addClass("is-active");
             if (!window.socketOn) { openSocket(); }
             var selectedfile = $("#fileselect").children("option:selected").val();
             // alert($("#stoptime").val());
