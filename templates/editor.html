@@ -25,7 +25,7 @@
         <input type="hidden" value="{{toplevel}}" id="toplevel">
 
         {%- if filenames is defined -%}
-        <div class="container is-max-desktop mt-3">
+        <div class="container is-max-desktop mt-3 px-3">
             <div class="select is-small">
                 <select id="fileselect" onchange="openfile()" style="min-width: 180px;">
                     <option selected value="0">Choose file...</option>
@@ -72,7 +72,7 @@
             <button class="button is-danger is-small" onclick="fpgaCompile()">Compile</button><br>
         </div>
         
-        <div class="container is-max-desktop mt-1">
+        <div class="container is-max-desktop mt-1 px-4">
             <div id="editor"></div>
         </div>
         {% endif %}
@@ -115,7 +115,7 @@
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-link is-small" id="filesavedbutton" onclick="$('#centralModalSm').removeClass('is-active');">Close</button>
+                <button class="button is-link is-small" id="filesavedbutton" onclick="$('#centralModalSm').removeClass('is-active');editor.focus();">Close</button>
               </footer>
             </div>
           </div>
@@ -195,6 +195,7 @@
                     saveAsOrNew();
                 }
             });
+            editor.focus();
         });
 
         function errorMessage(msg) {
@@ -243,8 +244,10 @@
                 
             }); 
             window.socket.on('filecontent', function(msg){
-                editor.setValue(msg);
+                editor.setValue(msg);                
                 window.filechanged = false;
+                editor.moveCursorTo(0,0);
+                editor.focus();
             });
             window.socket.on('message', function(msg){     
                 if ($('#status').html() == "") {

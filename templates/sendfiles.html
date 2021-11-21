@@ -81,7 +81,7 @@
                         ...
                       </span>
                     </label>
-                    <button class="button is-info is-small" onclick="uploadfile();">Upload</button>
+                    <button type="button" class="button is-info is-small" onclick="uploadfile();">Upload</button>
                   </div>
 
             </form> 
@@ -107,8 +107,8 @@
                 </div> 
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-success" onclick="$('#compilationmodal').removeClass('is-active');">Close</button>
-                <button class="button is-info" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
+                <button class="button is-danger is-small" onclick="$('#compilationmodal').removeClass('is-active');">Close</button>
+                <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
               </footer>
             </div>
           </div>
@@ -128,8 +128,8 @@
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button type="button" class="button is-info" onclick="renameTo()">Rename</button>
-                <button class="button is-danger" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
+                <button type="button" class="button is-info is-small" onclick="renameTo()">Rename</button>
+                <button type="button" class="button is-danger is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
               </footer>
                 
             </div>
@@ -147,8 +147,8 @@
                 <p id="confirmDialogMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button type="button" class="button is-danger" id="confirmDeleteBtn">Delete!</button>
-                <button class="button is-primary is-success" onclick="$('#confirmDialog').removeClass('is-active');">Close</button>
+                <button type="button" class="button is-danger is-small" id="confirmDeleteBtn">Delete!</button>
+                <button class="button is-info is-small" onclick="$('#confirmDialog').removeClass('is-active');">Close</button>
               </footer>
             </div>
         </div>
@@ -164,7 +164,7 @@
                 <p id="errorMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-primary is-success" onclick="$('#modalError').removeClass('is-active');">Close</button>
+                <button class="button is-danger is-small" onclick="$('#modalError').removeClass('is-active');">Close</button>
               </footer>
             </div>
           </div>        
@@ -241,8 +241,8 @@
                 processData : false
             }).done(function(response,statusText, xhr){
                 if (response == "Done!") {
-                    // $("#status").html("<br>File(s) sent.");
-                    location.href = "/";
+                    // $("#status").html("<br>File(s) sent.");                    
+                    location.href = "/files";
                     // fpgaCompile();
                 }                
                 // In this callback you get the AJAX response to check
@@ -253,6 +253,7 @@
                 errorMessage(String(xhr));
                 // alert(String(xhr));
             }).always(function(){
+                // alert("Chegou!");
                 // alert("AJAX request finished!");
             });
 

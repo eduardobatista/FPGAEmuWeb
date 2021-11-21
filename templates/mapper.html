@@ -18,7 +18,7 @@
         </div> -->
 
         {%- if filenames is defined -%}
-        <div class="container mt-4 is-max-desktop">
+        <div class="container mt-4 px-4 is-max-desktop">
             <div class="select">
                 <select id="fileselect" class="" onchange="openmap()" style="min-width: 250px;">
                     <option selected value="0">Choose file...</option>
@@ -37,14 +37,14 @@
             </label>
 
             <div id="portmap" class="container" style="text-size-adjust: 70%;"></div>
-            
+
             <article class="message is-danger p-2 mt-2 mb-0" id="alerts" style="display: none;">
                 <div class="message-body has-text-weight-bold">
                     Mapping has errors.
                 </div>
             </article>
 
-            <button id="bSave" class='mt-2 button  is-info' onclick="buildmap()">Save</button>
+            <button id="bSave" class='mt-2 button is-small is-info' onclick="buildmap()">Save</button>
 
         </div>  
         {% endif %}
@@ -117,15 +117,15 @@
                 msg2 = dataa[1];
                 var plist = new Array(); 
                 window.lastportdata = msg;
-                aux = '<ul class="">';
+                aux = '<table class="table is-striped mt-3 mb-3"><thead><tr><th>Instance Port</th><th>Emulator Element</th></tr></thead><tbody>';
                 for (var ii = 0; ii < msg.length; ii++) {
                     plist.push(msg[ii].name);
-                    aux = aux + '<li class="mt-1" id="item' + ii + '"><span class="portname">';
-                    aux = aux + msg[ii].name + "</span> " + gettypetext(msg[ii].typesize) + " => ";                   
+                    aux = aux + '<tr><td class="mt-1 item' + ii + '"><span class="portname">';
+                    aux = aux + msg[ii].name + "</span> " + gettypetext(msg[ii].typesize) + ' </td><td class="item' + ii + '">  '; // <i class="fas fa-grip-lines fa-sm"></i><i class="fas fa-chevron-right fa-sm"></i>                  
                     aux = aux +  getform(ii,msg[ii].typesize,msg[ii].direction);
-                    aux = aux + ' </li>\n';
+                    aux = aux + ' </td>\n';
                 }
-                aux = aux + '</ul>';
+                aux = aux + '</tbody></table>';
                 $("#portmap").html(aux);
                 for (var ii = 1; ii < msg2.length; ii++) {
                     var idx = plist.indexOf(String(msg2[ii][0]));
@@ -206,20 +206,20 @@
                         else { axx = axx + "), "; }
                         ax2 = ax2 + name + "," + rangeA + "\n"
                         if (!portok(1,name,rangeA,0)) {
-                            $("#item" + jj).addClass("list-group-item-danger");
+                            $(".item" + jj).addClass("has-background-danger-light");
                             errorflag = true;
                         } else {
-                            $("#item" + jj).removeClass("list-group-item-danger");
+                            $(".item" + jj).removeClass("has-background-danger-light");
                         }
                     } else {
                         rangeB = $( "#rangeB" + jj).val();
                         axx = axx + " downto " +  rangeB + "), ";
                         ax2 = ax2 + name + "," + rangeA + "," + rangeB + "\n";
                         if (!portok(window.lastportdata[jj].typesize,name,rangeA,rangeB)) {
-                            $("#item" + jj).addClass("list-group-item-danger");
+                            $(".item" + jj).addClass("has-background-danger-light");
                             errorflag = true;
                         } else {
-                            $("#item" + jj).removeClass("list-group-item-danger");
+                            $(".item" + jj).removeClass("has-background-danger-light");
                         }
                     }
                 }
@@ -258,7 +258,7 @@
         }
 
         function maperror(idx) {
-            $("#item" + idx).addClass("list-group-item-danger");
+            $(".item" + idx).addClass("is-danger");
         }
 
 
