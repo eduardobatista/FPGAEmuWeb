@@ -8,7 +8,7 @@ from flask_migrate import Migrate
 from sqlalchemy import create_engine
 
 
-socketio = SocketIO()
+socketio = SocketIO(async_mode="gevent")
 db = SQLAlchemy()  # Database
 
 def create_app(debug=False,mainpath=""):
