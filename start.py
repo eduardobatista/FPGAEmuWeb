@@ -10,6 +10,24 @@ from datetime import datetime
 import signal
 import sys
 
+'''
+    TODO:
+        - Melhorar Logging
+        - Templates.
+
+        - Compilar só arquivos que importam (i.e., pegar usertop e components lá declarados)
+        - Melhorar Timeouts: fazer inactivity para entrada e saída diferentes.
+        nn Matar outro processo do usuário na criação de um novo.
+        nn Controlar melhor processos de emulação.
+        - Implementar escolha para compilação.
+        - Limpar todos os "fpgatest" após compilação inicial?
+        - Limpeza periódica dos diretórios de trabalho...
+        nn Desabilitar botões e chaves quando simulação não estiver rodando?
+        - Disponibilizar template de usertop?
+        - Melhorar gerenciamento de usuários.
+        - Manutenção de subdiretórios: apagar com certo tempo sem uso.
+'''
+
 
 def sigterm_handler(_signo, _stack_frame):
     try:
@@ -59,9 +77,14 @@ with app.app_context():
         db.session.add(new_user)
         db.session.commit()
         
-
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)
+# gunicorn_error_logger = logging.getLogger('gunicorn.error')
+# app.logger.handlers.extend(gunicorn_error_logger.handlers)
+app.logger.setLevel(logging.INFO)
+# app.logger.debug('this will show in the log')
+# app.logger.info('Teeste!')
+# app.logger.error('teste')
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)

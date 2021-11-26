@@ -473,12 +473,12 @@ def doEmulation(username,sid,mainpath,sessionpath):
     keysprocs = emulprocs.keys()
     if len(keysprocs) >= 25:
         socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=sid)
+        socketio.emit('status','Parado',namespace="/emul", room=sid)
         return
     elif username in keysprocs:
         socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=sid)
-        return
-    else:
-        socketio.emit('message','Emulation started.',namespace="/emul",room=sid)
+        socketio.emit('status','Parado',namespace="/emul", room=sid)
+        return        
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
     try: 
@@ -486,66 +486,56 @@ def doEmulation(username,sid,mainpath,sessionpath):
             k.unlink();
     except:
         pass
-    fpgatestpath = Path(sessionpath, 'fpgatest')
+    fpgatestpath = Path(sessionpath,'fpgatest')
     if not fpgatestpath.exists():
         socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=sid)
+        socketio.emit('status','Parado',namespace="/emul", room=sid)
         return
-    proc = subprocess.Popen(
-                [fpgatestpath],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=sessionpath 
-        )
-    emulprocs[username] = proc
-    socketio.sleep(0.2)      
-    fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
-    # poller = select.epoll()
-    poller = select.poll()
-    poller.register(fiforead)
-    poller.poll()
-    os.read(fiforead,3).decode()
-    socketio.sleep(0.2)
-    fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY)  
-    socketio.emit('started','Ok!',namespace="/emul",room=sid)
-    lasttime = time.time()    
-    run = True
-    # print("Running!!!!")  
-    while run:
-        events = poller.poll(50) 
-        # print(events)
-        if (len(events) > 0):
-            if (events[0][1] & select.POLLHUP) != 0:                
-                run = False
-            elif (events[0][1] & select.POLLIN) != 0:
-                data = os.read(fiforead,11)
-                socketio.emit('bytes', data, namespace="/emul", room=sid)
-                lasttime = time.time()
-        else:
-            if ((time.time()-lasttime) >= 120 ):
-                socketio.emit('error','Inactivity timeout...',namespace="/emul", room=sid)                
-                run = False
-        socketio.sleep(0.1)
+    try:
+        proc = subprocess.Popen(
+                    [fpgatestpath],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=sessionpath 
+            )
+        emulprocs[username] = proc
+        socketio.sleep(0.2)     
+     
+        fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
+        # poller = select.epoll()
+        poller = select.poll()
+        poller.register(fiforead)
+        poller.poll()
+        os.read(fiforead,3).decode()
+        socketio.sleep(0.2)
+        fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY) 
+        lasttime = time.time()    
+        run = True
+        socketio.emit('message','Emulation started.',namespace="/emul",room=sid)
+        socketio.emit('started','Ok!',namespace="/emul",room=sid)
+        # print("Running!!!!") 
+        while run:
+            events = poller.poll(50) 
+            # print(events)
+            if (len(events) > 0):
+                if (events[0][1] & select.POLLHUP) != 0:                
+                    run = False
+                elif (events[0][1] & select.POLLIN) != 0:
+                    data = os.read(fiforead,11)
+                    socketio.emit('bytes', data, namespace="/emul", room=sid)
+                    lasttime = time.time()
+            else:
+                if ((time.time()-lasttime) >= 120 ):
+                    socketio.emit('error','Inactivity timeout...',namespace="/emul", room=sid)                
+                    run = False
+            socketio.sleep(0.1)
+    except FileNotFoundError as err:
+        socketio.emit('error','Error opening pipe.',namespace="/emul", room=sid)  
+    except Exception as ex:
+        socketio.emit('error',str(ex),namespace="/emul", room=sid)     
     closeEmul(username)
     socketio.emit('status','Parado',namespace="/emul", room=sid)
     poller.unregister(fiforead)
-    # run = True  
-    # while run:
-    #     events = poller.poll(4,maxevents=1) 
-    #     print(events)
-    #     if (len(events) > 0):
-    #         if (events[0][1] & select.EPOLLHUP) != 0:                
-    #             run = False
-    #         elif (events[0][1] & select.EPOLLIN) != 0:
-    #             data = os.read(fiforead,11)
-    #             socketio.emit('bytes', data, namespace="/emul", room=sid)
-    #             lasttime = time.time()
-    #     else:
-    #         if ((time.time()-lasttime) >= 120 ):
-    #             socketio.emit('error','Inactivity timeout...',namespace="/emul", room=sid)
-    #             closeEmul(username)
-    #             socketio.emit('status','Parado',namespace="/emul", room=sid)
-    #     socketio.sleep(0.2)
-    # poller.close()
     os.close(fifowrite[username])
     os.close(fiforead)
     del fifowrite[username]
@@ -561,7 +551,8 @@ def stopEmulation(username,sid):
 
 def closeEmul(username):
     if username in emulprocs.keys():
-        emulprocs[username].kill()
+        # emulprocs[username].kill()
+        emulprocs[username].terminate()
         del emulprocs[username]
 
 def getsocketiofile():

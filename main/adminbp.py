@@ -110,9 +110,7 @@ def cloudinfo():
         return redirect(url_for('main.sendfiles'))
     if current_app.clouddb:
         try: 
-            print("Chegou Aqui!!!")
-            with current_app.clouddb.connect() as conncloud:
-                print("Chegou Aqui!")   
+            with current_app.clouddb.connect() as conncloud:  
                 table1 = Table('user', MetaData() , autoload=True, autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select())
                 userscloud = [row['email'] for row in clouddata]
@@ -120,7 +118,6 @@ def cloudinfo():
                 ret += f"User list is: {userscloud}"
                 conncloud.close()
                 return ret
-            print("Chegou Aqui?")
         except BaseException as err:
             return f"Could not reach the cloud database.<br>{str(err)}"
     else:

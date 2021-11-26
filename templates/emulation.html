@@ -138,7 +138,7 @@
         </div>
 
         <div class="container has-text-centered mt-3">
-            <button id="iniciar" type="button" class="button is-danger" onclick="Emular();">Start Emulation</button>
+            <button id="iniciar" type="button" class="button is-danger" onclick="$('#iniciar').prop('disabled',true); Emular();">Start Emulation</button>
         </div>
 
         
@@ -159,6 +159,7 @@
         window.socket = 0;
         window.socketOn = false;
         window.scl = 1;
+        window.blockactions = true;
 
         function adjustCanvas() {
             // console.log("!!!");
@@ -287,16 +288,19 @@
         });   
         
         function mousedown(element) {
+            if (window.blockactions) { return; }
             if (window.socketOn) {
                 window.socket.emit("action","k" + element + "p");
             }
         }
         function mouseup(element) {
+            if (window.blockactions) { return; }
             if (window.socketOn) {
                 window.socket.emit('action',"k" + element + "r");
             }
         }
         function swchanged(idx) {
+            if (window.blockactions) { return; }
             if (window.socketOn) {
                 var elid = "SW" + idx;
                 var value = $("#"+elid).is(":checked") ? 1 : 0;
@@ -343,6 +347,10 @@
                         $('#status').append('<br>Emulation has stopped.');
                         window.socket.disconnect();
                         window.socketOn = false;
+                        window.blockactions = true;
+                        setTimeout(function (){
+                            $('#iniciar').prop('disabled',false);
+                        }, 1000);                        
                     }
                 });
                 window.socket.on('disconnect', function(msg){
@@ -350,6 +358,10 @@
                 });
                 window.socket.on('started', function(msg){
                     window.socket.emit("initstate",getInputStates());
+                    window.blockactions = false;
+                    setTimeout(function (){
+                        $('#iniciar').prop('disabled',false);
+                    }, 1000);
                 });
                 window.socket.on('notlogged',function(msg){
                     location.href = '/login';
@@ -358,11 +370,12 @@
 
             } else {
                 
+                window.blockactions = true;
                 window.socket.send("Parar");                
 
             }
             
-            
+                    
             
         }
         

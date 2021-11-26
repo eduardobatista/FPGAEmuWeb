@@ -30,13 +30,6 @@ def entrance():
 def sendfiles():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
-    # basepath = Path(current_app.MAINPATH,'work')
-    # if 'username' not in session:               
-    #     session['username'] = createnewuser(basepath)
-    # basepath = Path(current_app.MAINPATH,'work')
-    # userlist = None
-    # if (current_user.role == 'Professor') or (current_user.role == 'Admin'):
-    #     userlist = User.query
     sessionpath = getuserpath()
     aux = getvhdfilelist(sessionpath) #list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.stem for x in aux]    
@@ -46,15 +39,18 @@ def sendfiles():
         else:    
             current_user.topLevelEntity = "usertop"
         db.session.commit()
-    # print(getsocketiofile())
     return render_template('sendfiles.html',username=current_user.email,toplevel=current_user.topLevelEntity,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')        
 
 @main.route('/settoplevel',methods=['POST'])
 @login_required
 def settoplevel():
     toplevelfile = request.form.get('toplevelfile')
-    current_user.topLevelEntity = toplevelfile
-    db.session.commit()
+    if current_user.topLevelEntity != toplevelfile:
+        current_user.topLevelEntity = toplevelfile        
+        db.session.commit()
+        fpgatestpath = Path(getuserpath(),'fpgatest')
+        if fpgatestpath.exists():
+            fpgatestpath.unlink()
     return toplevelfile
 
     
@@ -161,7 +157,7 @@ def compilar():
     if request.headers.get('accept') == 'text/event-stream':
         if proc is not None:
             # print("Rodando!")
-            proc = Popen("date", stdout=PIPE)        
+            proc = Popen("date", stdout=PIPE) 
         def events():
             rline = proc.stdout.readline()
             while rline != b'':
@@ -172,9 +168,4 @@ def compilar():
 
 @main.route('/plottest') 
 def plottest():
-    # hie = getghwhierarchy(getuserpath(),current_app.MAINPATH,'output.ghw')
-    # print(hie)
-    # for inst in hie:
-    #     for sig in hie[inst]:
-    #         print(hie[inst][sig]['idxs'])
     return render_template('plottest.html',socketiofile=getsocketiofile())

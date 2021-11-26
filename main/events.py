@@ -164,9 +164,8 @@ def stream2(cmd):
 @socketio.on('initstate', namespace='/emul')
 def writeinitstate(msg):
     if checklogged():
-        # return
-        # if current_user.email not in current_app.fifowrite.keys():
         if current_user.email not in fifowrite.keys():
+            emit("error","Emulation not running.");
             return
         aux = []
         for k in range(3):
@@ -176,11 +175,13 @@ def writeinitstate(msg):
             aux.append(2) # Has more bytes
         aux[-1] = 1 
         try:
-            select.select([], [fifowrite[current_user.email]], [fifowrite[current_user.email]])
+            # select.select([], [fifowrite[current_user.email]], [fifowrite[current_user.email]],2.0)
             os.write(fifowrite[current_user.email],bytes(aux))            
         except BrokenPipeError as e:
             emit("error","Broken pipe.")
             emit('status','Parado')
+        except Exception as ex:
+            emit('error',str(ex))
 
     
 
@@ -188,7 +189,7 @@ def writeinitstate(msg):
 def action(msg):
     if checklogged():
         if current_user.email not in fifowrite.keys():
-            # emit('error',"Emulation not running.")
+            emit("error","Emulation not running.");
             return
         aux = list(msg.encode('utf-8'))
         aux[1] = aux[1] - 0x30
@@ -196,11 +197,13 @@ def action(msg):
             aux[2] = aux[2] - 0x30
         aux.append(1)
         try:
-            select.select([], [fifowrite[current_user.email]], [fifowrite[current_user.email]])
+            # select.select([], [fifowrite[current_user.email]], [fifowrite[current_user.email]],2.0)
             os.write(fifowrite[current_user.email],bytes(aux))
         except BrokenPipeError as e:
             emit("error","Broken pipe.")
             emit('status','Parado')
+        except Exception as ex:
+            emit('error',str(ex))
         # print(msg,end=" ")
         # print(aux[1],end=" ")
         # print(aux[2])
