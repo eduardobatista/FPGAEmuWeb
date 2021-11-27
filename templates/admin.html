@@ -31,8 +31,8 @@
                 <button class="button is-info is-small" onclick="checkServerProcs();">Check Server Processes</button>
                 <button class="button is-info is-small" onclick="checkStdOut();">Check Supervisor STDOUT</button>
                 <button class="button is-info is-small" onclick="checkStdErr();">Check Supervisor STDERR</button>
-                <button class="button is-info is-small" onclick="checkCrashes();">Check Crash Logs</button>
-                <button class="button is-danger is-small" onclick="deleteCrashLogs();">Delete Crash Logs</button>
+                <button class="button is-info is-small" onclick="checkLogs();">Check Flask Logs</button>
+                <button class="button is-danger is-small" onclick="deleteEmuLogs();">Delete Flask Logs</button>
             </div> 
 
             <div class="mb-2 mt-1 mx-2 is-size-7" id="psinfo">
@@ -184,14 +184,14 @@
                     });
             }
 
-            function checkCrashes() {
-                $.post("/checkcrashes",{}).done( function (data) {
+            function checkLogs() {
+                $.post("/checklogs",{}).done( function (data) {
                         $("#psinfo").html(data);
                     });
             }
 
-            function deleteCrashLogs() {
-                $.post("/deletecrashlogs",{}).done( function (data) {
+            function deleteEmuLogs() {
+                $.post("/deleteemulogs",{}).done( function (data) {
                         $("#psinfo").html(data);
                     });
             }

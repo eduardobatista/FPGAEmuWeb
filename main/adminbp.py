@@ -67,11 +67,11 @@ def checkStdErr():
     else:
         return "Only for admins." 
 
-@adm.route('/checkcrashes', methods=['POST'])
+@adm.route('/checklogs', methods=['POST'])
 @login_required
-def checkCrashes():
+def checkLogs():
     if (current_user.role == "Admin"):
-        file = Path(current_app.MAINPATH,'work',"crashes.log")
+        file = Path(current_app.MAINPATH,'work',"emulogs.log")
         if file.exists():
             with open(file,"r") as ff:
                 return ff.read().replace('\n','\n<br>') 
@@ -80,11 +80,11 @@ def checkCrashes():
     else:
         return "Only for admins." 
 
-@adm.route('/deletecrashlogs', methods=['POST'])
+@adm.route('/deleteemulogs', methods=['POST'])
 @login_required
-def deleteCrashLogs():
+def deleteEmuLogs():
     if (current_user.role == "Admin"):
-        file = Path(current_app.MAINPATH,'work',"crashes.log")
+        file = Path(current_app.MAINPATH,'work',"emulogs.log")
         if file.exists():
             file.unlink()
             return "File deleted." 

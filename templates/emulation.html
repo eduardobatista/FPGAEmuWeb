@@ -265,7 +265,11 @@
 
         
 
-        $( document ).ready(function() {
+        $(document).ready(function() {
+            $(window).bind('beforeunload',function() {
+                if (window.socketOn) { window.socket.send("Parar"); }
+                return undefined;
+            });
             $("mainImg").css("margin-bottom","-" + $("mainImg").height() + "px;")             
             $("#meuform").submit(function () { return false; });
             $("#switches").html("");
@@ -343,13 +347,14 @@
                 });
                 window.socket.on('status', function(msg){
                     if (msg.startsWith("Parado")) {
+                        window.blockactions = true;
                         $("#iniciar").html("Start Emulation");
                         $('#status').append('<br>Emulation has stopped.');
                         window.socket.disconnect();
-                        window.socketOn = false;
-                        window.blockactions = true;
+                        window.socketOn = false;                                                
                         setTimeout(function (){
                             $('#iniciar').prop('disabled',false);
+                            $("#drawCanvas").hide();
                         }, 1000);                        
                     }
                 });
@@ -357,6 +362,7 @@
                     window.socketOn = false;
                 });
                 window.socket.on('started', function(msg){
+                    $("#drawCanvas").show();
                     window.socket.emit("initstate",getInputStates());
                     window.blockactions = false;
                     setTimeout(function (){

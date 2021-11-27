@@ -131,21 +131,21 @@ def deleteallfiles(fname):
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):
     if checklogged():
-        socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename,current_user.id)
+        socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename,current_user.email)
 
 @socketio.on('Simulate', namespace='/stream')
 def simulate(stoptime,testentity="usertest.vhd"):
     if checklogged():
         current_user.testEntity = testentity[:-4]
         db.session.commit()
-        socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime,current_user.id,testentity[:-4])
+        socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime,current_user.email,testentity[:-4])
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
     if checklogged():
         if cmd == "Compile":
             socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH,
-                                        current_user.id,current_user.topLevelEntity)
+                                        current_user.email,current_user.topLevelEntity)
         else: 
             disconnect()
 
@@ -153,10 +153,10 @@ def stream(cmd):
 def stream2(cmd):
     if checklogged():    
         if cmd == "Parar":
-            current_app.logger.info(f"Stoping emulation for {current_user.email}.")
+            current_app.logger.info(f"{current_user.email}:Stopping emulation.")
             stopEmulation(current_user.email,request.sid)
         elif cmd == "Emular":
-            current_app.logger.info(f"Starting emulation for {current_user.email}.")
+            current_app.logger.info(f"{current_user.email}:Starting emulation.")
             socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH,getuserpath())
         else:
             disconnect()
@@ -204,9 +204,6 @@ def action(msg):
             emit('status','Parado')
         except Exception as ex:
             emit('error',str(ex))
-        # print(msg,end=" ")
-        # print(aux[1],end=" ")
-        # print(aux[2])
 
 
 @socketio.on('requestghwsignals', namespace='/stream') 

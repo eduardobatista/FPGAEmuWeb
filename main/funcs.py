@@ -4,7 +4,7 @@ from random import randrange
 from pathlib import Path
 import pkg_resources
 
-from appp import socketio
+from appp import socketio,logger
 
 newuserprefix = socket.gethostbyname(socket.gethostname())[-2:]
 
@@ -323,13 +323,6 @@ def getvhdfilelist(sessionpath, sort=True):
     else:
         return list(sessionpath.glob("*.vhd"))
 
-def logactivity(sessionpath,userid,message):
-    with open(Path(sessionpath,'activity.log'),'a') as ff:
-        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-        # print(timestamp)
-        ff.write(f"{userid}\t{timestamp}\t{message}\n")
-        ff.close()
-
 
 def cleanfilelist(sessionpath,toplevelfile,filelist):
     filesleft = [toplevelfile]
@@ -376,10 +369,10 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
         if errstring != "":            
             socketio.emit("errors",errstring,namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,f"Compilation of {toplevelentity} with errors.")
+            logger.info(f"{userid}: Compilation of {toplevelentity} with errors.")
         else: 
             socketio.emit("success","done",namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,f"Successful compilation of {toplevelentity}.")
+            logger.info(f"{userid}: Successful compilation of {toplevelentity}.")
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=sid)
     proc.kill()
@@ -404,10 +397,10 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
         if errstring != "":            
             socketio.emit("errors",errstring,namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,f"Analysis with errors.")
+            logger.info(f"{userid}: Analysis of {filename} with errors.")
         else: 
             socketio.emit("asuccess","done",namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,f"Successful analysis of {filename}.")
+            logger.info(f"{userid}: Successful analysis of {filename}.")
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=sid)    
     proc.kill()    
@@ -454,13 +447,13 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
         if errstring != "":
             socketio.emit("errors",errstring,namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,"Simulation with errors.")
+            logger.info(f"{userid}: Simulation of {simentity} with errors.")            
         elif hasError:
             socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,"Simluation with errors.")
+            logger.info(f"{userid}: Simulation of {simentity} with errors.")
         else:
             socketio.emit("success","done",namespace="/stream",room=sid)
-            logactivity(sessionpath,userid,"Successful simulation.")
+            logger.info(f"{userid}: Successful simulation of {simentity}.")
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=sid)
     proc.kill()

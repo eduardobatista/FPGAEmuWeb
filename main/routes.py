@@ -156,7 +156,6 @@ def upload():
 def compilar():
     if request.headers.get('accept') == 'text/event-stream':
         if proc is not None:
-            # print("Rodando!")
             proc = Popen("date", stdout=PIPE) 
         def events():
             rline = proc.stdout.readline()

@@ -62,7 +62,7 @@ subprocess.Popen(
                     stderr=subprocess.PIPE,
                     cwd=Path(MAINPATH,'backend') 
             )
-print('Backend compiled.\nStarting server...')
+# print('Backend compiled.\nStarting server...')
 
 app = create_app(debug=False,mainpath=MAINPATH)
 
@@ -70,7 +70,8 @@ with app.app_context():
     try:        
         user = User.query.filter_by(email='admin@fpgaemu').first()
     except:# OperationalError as err:  
-        print('Database does not exist, creating...')
+        # print('Database does not exist, creating...')
+        app.logger.info('Database does not exist, creating...')
         db.create_all()
         db.session.commit()
         new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin', viewAs='')
@@ -81,10 +82,17 @@ with app.app_context():
 # log.setLevel(logging.ERROR)
 # gunicorn_error_logger = logging.getLogger('gunicorn.error')
 # app.logger.handlers.extend(gunicorn_error_logger.handlers)
-app.logger.setLevel(logging.INFO)
 # app.logger.debug('this will show in the log')
 # app.logger.info('Teeste!')
 # app.logger.error('teste')
+# app.logger.removeHandler(gunicorn_error_logger)
+# app.logger.addHandler(logging.FileHandler('/home/dudu/error.log'))
+# app.logger.setLevel(logging.INFO)
+# fhandler = logging.FileHandler(Path(MAINPATH,'work','emulogs.log'))
+# fhandler.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(message)s'))
+# app.logger.handlers = [fhandler]
+
+# logging.basicConfig(filename='/home/dudu/error.log',level=logging.INFO)
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)

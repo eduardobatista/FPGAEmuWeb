@@ -10,11 +10,20 @@ from sqlalchemy import create_engine
 
 socketio = SocketIO(async_mode="gevent")
 db = SQLAlchemy()  # Database
+logger = logging.getLogger('FPGAEmuWeb')
+logger.setLevel(logging.INFO)
+
 
 def create_app(debug=False,mainpath=""):
-    """Create an application."""
+    """Create an application."""    
     app = Flask(__name__)
     app.debug = debug
+
+    global logger
+    fhandler = logging.FileHandler(Path(mainpath,'work','emulogs.log'))
+    fhandler.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(message)s'))
+    logger.handlers = [fhandler]
+    app.logger = logger
 
     migrate = Migrate(app, db)
 
@@ -22,7 +31,6 @@ def create_app(debug=False,mainpath=""):
 
     seckeyfile = Path(mainpath,"work","seckey")
     if seckeyfile.exists():
-        # print("Skey Found!")
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
         f.close()
@@ -52,7 +60,7 @@ def create_app(debug=False,mainpath=""):
                 app.config['CLOUDDBINFO'] = clouddbconf
                 app.clouddb = create_engine(clouddbconf,connect_args={'connect_timeout': 5})
         except Exception as ex:
-            print(str(ex))
+            app.logger.error(f"Cloud DB Error - {str(ex)}")
             app.config['CLOUDDBINFO'] = ''
             app.clouddb = None
     
@@ -79,12 +87,12 @@ def create_app(debug=False,mainpath=""):
                 with open(oauthfile,"r") as ff:
                     app.config['EMAILINFO'] = ff.read()
             except Exception as ex:
-                print(str(ex))
+                app.logger.error(f"Email Error - {str(ex)}")
                 app.yag = None
         else:            
             app.yag = None
     except ImportError as e:
-        # print("YagMail module missing.")
+        app.logger.error(f"YagMail module missing.")
         app.yag = None
 
     from main import main as main_blueprint
@@ -93,6 +101,8 @@ def create_app(debug=False,mainpath=""):
     app.register_blueprint(auth_blueprint)
     from main import adm as admin_blueprint
     app.register_blueprint(admin_blueprint)
+
+    
 
     socketio.init_app(app)
     
