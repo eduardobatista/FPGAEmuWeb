@@ -477,13 +477,14 @@ def doEmulation(username,sid,mainpath,sessionpath):
     try: 
         for k in sessionpath.rglob("myfifo*"):
             k.unlink();
-    except:
+    except Exception as ex:
         pass
     fpgatestpath = Path(sessionpath,'fpgatest')
     if not fpgatestpath.exists():
         socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=sid)
         socketio.emit('status','Parado',namespace="/emul", room=sid)
         return
+    
     try:
         proc = subprocess.Popen(
                     [fpgatestpath],
@@ -492,8 +493,8 @@ def doEmulation(username,sid,mainpath,sessionpath):
                     cwd=sessionpath 
             )
         emulprocs[username] = proc
-        socketio.sleep(0.2)     
-     
+        socketio.sleep(0.2)  
+
         fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
         # poller = select.epoll()
         poller = select.poll()
@@ -501,7 +502,7 @@ def doEmulation(username,sid,mainpath,sessionpath):
         poller.poll()
         os.read(fiforead,3).decode()
         socketio.sleep(0.2)
-        fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY) 
+        fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY | os.O_NONBLOCK) 
         lasttime = time.time()    
         run = True
         socketio.emit('message','Emulation started.',namespace="/emul",room=sid)
@@ -525,13 +526,17 @@ def doEmulation(username,sid,mainpath,sessionpath):
     except FileNotFoundError as err:
         socketio.emit('error','Error opening pipe.',namespace="/emul", room=sid)  
     except Exception as ex:
-        socketio.emit('error',str(ex),namespace="/emul", room=sid)     
+        logger.error("Emulation crash:" + str(ex))
+        socketio.emit('error',"Emulation chased at the beginning. Check your code, especially regarding bounds and indices of ports and signals.",namespace="/emul", room=sid)   
+    except:
+        logger.error("Unexpected error:", sys.exc_info()[0])
     closeEmul(username)
     socketio.emit('status','Parado',namespace="/emul", room=sid)
     poller.unregister(fiforead)
-    os.close(fifowrite[username])
+    if username in fifowrite.keys():
+        os.close(fifowrite[username])
+        del fifowrite[username]
     os.close(fiforead)
-    del fifowrite[username]
     # socketio.disconnect(namespace="/emul",room=sid)
 
 def stopEmulation(username,sid):

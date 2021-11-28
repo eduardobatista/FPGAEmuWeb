@@ -153,10 +153,10 @@ def stream(cmd):
 def stream2(cmd):
     if checklogged():    
         if cmd == "Parar":
-            current_app.logger.info(f"{current_user.email}:Stopping emulation.")
+            current_app.logger.info(f"{current_user.email}: Stopping emulation.")
             stopEmulation(current_user.email,request.sid)
         elif cmd == "Emular":
-            current_app.logger.info(f"{current_user.email}:Starting emulation.")
+            current_app.logger.info(f"{current_user.email}: Starting emulation.")
             socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH,getuserpath())
         else:
             disconnect()

@@ -23,7 +23,8 @@ def create_app(debug=False,mainpath=""):
     fhandler = logging.FileHandler(Path(mainpath,'work','emulogs.log'))
     fhandler.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(message)s'))
     logger.handlers = [fhandler]
-    app.logger = logger
+    if not debug:
+        app.logger = logger
 
     migrate = Migrate(app, db)
 
