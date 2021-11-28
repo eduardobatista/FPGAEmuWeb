@@ -35,7 +35,7 @@
                 <button class="button is-danger is-small" onclick="deleteEmuLogs();">Delete Flask Logs</button>
             </div> 
 
-            <div class="mb-2 mt-1 mx-2 is-size-7" id="psinfo">
+            <div class="mb-2 mt-1 mx-2 is-size-7" id="psinfo" style="height: 70vh; overflow-y:auto">
                 
             </div>
 
@@ -166,32 +166,41 @@
     {% block scripts %}
         <script>
 
+            $(document).ready(function () {
+                $("#psinfo").hide();
+            });
+
             function checkServerProcs() {
                 $.post("/serverprocs",{}).done( function (data) {
+                        $("#psinfo").show();
                         $("#psinfo").html(data);
                     });
             }
 
             function checkStdOut() {
                 $.post("/checkstdout",{}).done( function (data) {
+                        $("#psinfo").show();
                         $("#psinfo").html(data);
                     });
             }
 
             function checkStdErr() {
                 $.post("/checkstderr",{}).done( function (data) {
+                        $("#psinfo").show();
                         $("#psinfo").html(data);
                     });
             }
 
             function checkLogs() {
                 $.post("/checklogs",{}).done( function (data) {
+                        $("#psinfo").show();
                         $("#psinfo").html(data);
                     });
             }
 
             function deleteEmuLogs() {
                 $.post("/deleteemulogs",{}).done( function (data) {
+                        $("#psinfo").show();
                         $("#psinfo").html(data);
                     });
             }
@@ -221,6 +230,7 @@
             }
 
             function checkCloudDb() {
+                $("#psinfo").hide();
                 $("#running").css("display", "block");
                 $.get("/clouddbinfo",{}).done( function (data) {
                     $('#cloudinfo').html(data);

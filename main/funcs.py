@@ -527,7 +527,7 @@ def doEmulation(username,sid,mainpath,sessionpath):
         socketio.emit('error','Error opening pipe.',namespace="/emul", room=sid)  
     except Exception as ex:
         logger.error("Emulation crash:" + str(ex))
-        socketio.emit('error',"Emulation chased at the beginning. Check your code, especially regarding bounds and indices of ports and signals.",namespace="/emul", room=sid)   
+        socketio.emit('error',"Emulation crashed at the beginning. Check your code, especially regarding bounds and indices of ports and signals.",namespace="/emul", room=sid)   
     except:
         logger.error("Unexpected error:", sys.exc_info()[0])
     closeEmul(username)
