@@ -291,6 +291,8 @@
                     // $("#status").html("<br>File(s) sent.");                    
                     location.href = "/files";
                     // fpgaCompile();
+                } else if (response.startsWith("Fail")) {
+                    errorMessage(response);
                 }                
                 // In this callback you get the AJAX response to check
                 // if everything is right...

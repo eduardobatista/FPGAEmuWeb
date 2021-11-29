@@ -135,6 +135,9 @@ def downloadsimfile():
 @login_required
 def upload():
     if request.method == 'POST':
+        if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+            # emit("error","Not allowed while viewing as a different user.")
+            return "Fail! Not allowed while viewing as a different user."
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
