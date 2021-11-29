@@ -158,6 +158,10 @@
             window.socket.on('notlogged',function(msg){
                 location.href = '/login';
             });
+            window.socket.on('error',function(msg){
+                $("#alerts").html(msg);
+                $("#alerts").removeClass("is-info").addClass("is-danger").delay(100).fadeIn(300);
+            });
         }
 
         function checkchanged() {

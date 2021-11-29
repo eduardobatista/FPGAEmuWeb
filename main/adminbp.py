@@ -6,7 +6,7 @@ from appp import db
 from flask_login import login_required, current_user
 from sqlalchemy import Table,MetaData
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine,func,asc
 import psutil
 import json
 
@@ -14,7 +14,7 @@ import json
 @login_required
 def profile():    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
     # TODO: Sort list and filter by student
-    userlist = sorted([row.email for row in User.query.filter_by(role='Student')])
+    userlist = [row.email for row in User.query.filter_by(role='Student').order_by(asc(func.lower(User.email))).all()]
     userlist.insert(0,current_user.email)    
     return render_template('profile.html',userlist=userlist)
 

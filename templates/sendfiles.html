@@ -66,7 +66,7 @@
             
             <form class="md-form" id="meuform" enctype="multipart/form-data">
 
-                <div id="fileselector" class="file is-info is-small has-name is-fullwidth">
+                <div id="fileselector" class="file is-info is-small has-name is-fullwidth" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
                     <label class="file-label">
                       <input class="file-input" type="file" name="fileToUpload" id="fileToUpload" accept=".vhd" multiple>
                       <span class="file-cta">
@@ -176,6 +176,50 @@
     <!-- Your custom scripts (optional) -->
     <script type="text/javascript">
 
+        function dropHandler(ev) {
+        // console.log('File(s) dropped');
+
+        // Prevent default behavior (Prevent file from being opened)
+        ev.preventDefault();
+
+            if (ev.dataTransfer.items) {
+                // Use DataTransferItemList interface to access the file(s)
+                console.log(ev.dataTransfer.files);  
+                const dt = new DataTransfer()
+                for (var i = ev.dataTransfer.files.length-1; i >= 0; i--) {
+                // // If dropped items aren't files, reject them
+                //     if (ev.dataTransfer.items[i].kind === 'file') {
+                //         var file = ev.dataTransfer.items[i].getAsFile();
+                //         console.log('... file[' + i + '].name = ' + file.name);
+                //     }
+                    if (ev.dataTransfer.files[i].name.endsWith("vhd")) {
+                        dt.items.add(ev.dataTransfer.files[i]);
+                    }
+                }            
+                console.log(dt.files.length); 
+                if (dt.files.length > 0) {
+                    $("#fileToUpload")[0].files = dt.files;
+                    $("#fileToUpload").trigger('change');
+                } else {
+                    $("#fileToUpload").val('');
+                    const fileName = document.querySelector('#fileselector .file-name');
+                    fileName.textContent = "...";
+                }                
+                // $("#fileToUpload").trigger("change");
+            } else {
+                // $("#fileToUpload").val('');
+                // Use DataTransfer interface to access the file(s)
+                // for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+                //     console.log('... file[' + i + '].name = ' + ev.dataTransfer.files[i].name);
+                // }
+            }
+        }
+        function dragOverHandler(ev) {
+            // console.log('File(s) in drop zone');
+            // Prevent default behavior (Prevent file from being opened)
+            ev.preventDefault();
+        }
+
         const fileInput = document.querySelector('#fileselector input[type=file]');
         fileInput.onchange = () => {
             if (fileInput.files.length > 0) {
@@ -184,8 +228,11 @@
                     filestr = filestr + fileInput.files[i].name + ",";
                 }
                 const fileName = document.querySelector('#fileselector .file-name');
-                fileName.textContent = filestr;
-            }            
+                fileName.textContent = filestr.substring(0, filestr.length - 1);
+            } else {
+                const fileName = document.querySelector('#fileselector .file-name');
+                fileName.textContent = "...";
+            }           
         }
 
         $(document).ready(function() {

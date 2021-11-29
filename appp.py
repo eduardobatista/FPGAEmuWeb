@@ -1,4 +1,5 @@
 import os,logging
+from logging.handlers import WatchedFileHandler
 from pathlib import Path
 from flask import Flask
 from flask_socketio import SocketIO
@@ -20,7 +21,7 @@ def create_app(debug=False,mainpath=""):
     app.debug = debug
 
     global logger
-    fhandler = logging.FileHandler(Path(mainpath,'work','emulogs.log'))
+    fhandler = WatchedFileHandler(Path(mainpath,'work','emulogs.log'))
     fhandler.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(message)s'))
     logger.handlers = [fhandler]
     if not debug:
