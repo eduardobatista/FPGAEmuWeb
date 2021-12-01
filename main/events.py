@@ -83,9 +83,14 @@ def savefile(dataa):
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
-        fname = Path(sessionpath,dataa['filename'])
-        data = open(fname,'w').write(dataa['data'])
-        emit("filesaved",dataa['filename'])
+        try: 
+            fname = Path(sessionpath,dataa['filename'])
+            data = open(fname,'w').write(dataa['data'])
+            emit("filesaved",dataa['filename'])
+        except Exception as ex:
+            emit("error","File could not be saved. Check file name.")
+
+        
 
 @socketio.on('deletefile', namespace='/stream') 
 def deletefile(filename):

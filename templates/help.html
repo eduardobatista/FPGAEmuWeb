@@ -6,7 +6,7 @@
 
             <div class="box">
 
-            <h2 class="title is-4">Authors</h2>
+                <h2 class="title is-4">Authors</h2>
 
                 The <strong>FPGA Emulator Web</strong> has been developed by <strong>Prof. Eduardo L. O. Batista</strong> (web front and back ends) and 
                 <strong>Prof. Fabian L. Cabrera</strong> (emulation backend), both from the <a href="http://www.eel.ufsc.br" target="_BLANK">Department of Electrical 
@@ -28,16 +28,27 @@
 
                 <h2 class="title is-4">General Instructions</h2>
 
-                <p>The following <strong>ports</strong> are mapped to the FPGA Emulator Web:</p>
-                <ul class="list-group">
-                    <li class="list-group-item">CLK_500Hz: in std_logic;</li>
-                    <li class="list-group-item">CLK_1Hz: in std_logic;</li>
-                    <li class="list-group-item">CLK_10Hz: in std_logic;</li>
-                    <li class="list-group-item">KEY: in std_logic_vector(3 downto 0)</li>
-                    <li class="list-group-item">SW: in std_logic_vector(17 downto 0)</li>
-                    <li class="list-group-item">LEDR: out std_logic_vector(17 downto 0)</li>
-                    <li class="list-group-item">HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7	: out std_logic_vector(6 downto 0)</li>
-                </ul>
+                <div class="container">
+
+                    <p>The following <strong>ports</strong> are mapped to the FPGA Emulator Web:</p>
+                    
+                    <table class="table is-striped is-hoverable">
+                        <thead>
+                            <tr><th>FPGAEmuWeb Port List</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>CLK_500Hz: in std_logic;</td></tr>
+                            <tr><td>CLK_1Hz: in std_logic;</td></tr>
+                            <tr><td>CLK_10Hz: in std_logic;</td></tr>
+                            <tr><td>KEY: in std_logic_vector(3 downto 0);</td></tr>
+                            <tr><td>SW: in std_logic_vector(17 downto 0);</td></tr>
+                            <tr><td>LEDR: out std_logic_vector(17 downto 0);</td></tr>
+                            <tr><td>HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7	: out std_logic_vector(6 downto 0);</td></tr>
+                        </tbody>
+                    </table>
+
+                </div>
+            
 
             </div>
             

@@ -152,7 +152,7 @@
                 <p id="errorMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-primary is-small" onclick="$('#modalError').removeClass('is-active');">Close</button>
+                <button id="bcloseerr"class="button is-danger is-small" onclick="$('#modalError').removeClass('is-active');">Close</button>
               </footer>
             </div>
           </div> 
@@ -200,7 +200,7 @@
 
         function errorMessage(msg) {
             $("#errorMessage").html(msg);
-            $("#modalError").modal();
+            $("#modalError").addClass("is-active");
             $('#bcloseerr').focus();
         }
 
