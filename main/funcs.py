@@ -224,7 +224,7 @@ def createFpgaTest2(sessionpath,toplevelentity):
                 for pp in aux4:
                     ppp = pp.strip().upper()
                     if ppp not in validportkeys:
-                        return f"Error: {pp} is not a valid port for a top level entity. You have to use the Mapper or SW, LEDR, KEY and HEX as port names."
+                        return f"Error: {pp} is not a valid port for a top level entity. You have to use the Mapper or SW, LEDR, KEY, HEX0, HEX1, etc as port names."
                     if validports[ppp][1] < typesize:
                         return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
                     foundports.append(ppp)
@@ -342,14 +342,14 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
             filelist.pop(k) 
     # print(filelist)
 
-def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
-    socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=sid)
+def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
+    socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=userid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     retcode = createFpgaTest2(sessionpath,toplevelentity)
     if retcode == "Ok!":
         pass
     else:
-        socketio.emit('errors', retcode, namespace="/stream", room=sid)
+        socketio.emit('errors', retcode, namespace="/stream", room=userid)
         return
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
@@ -360,26 +360,26 @@ def compilefile(sessionpath,sid,mainpath,userid,toplevelentity="usertop"):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
-    socketio.emit("message",'Compiling...',namespace="/stream",room=sid)
+    socketio.emit("message",'Compiling...',namespace="/stream",room=userid)
     socketio.sleep(0.1)
     try:
         outs, errs = proc.communicate(timeout=15)
-        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
+        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=userid)
         socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
         if errstring != "":            
-            socketio.emit("errors",errstring,namespace="/stream",room=sid)
+            socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Compilation of {toplevelentity} with errors.")
         else: 
-            socketio.emit("success","done",namespace="/stream",room=sid)
+            socketio.emit("success","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful compilation of {toplevelentity}.")
     except Exception as ex: # TimeoutExpired
-        socketio.emit("errors",str(ex),namespace="/stream",room=sid)
+        socketio.emit("errors",str(ex),namespace="/stream",room=userid)
     proc.kill()
     outs, errs = proc.communicate()
 
 
-def analyzefile(sessionpath,sid,mainpath,filename,userid):
+def analyzefile(sessionpath,mainpath,filename,userid):
     compilerpath = Path(mainpath,'backend','analyze.sh')
     basepath = Path(mainpath,'work')
     proc = subprocess.Popen(
@@ -388,40 +388,40 @@ def analyzefile(sessionpath,sid,mainpath,filename,userid):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
-    socketio.emit("message",'Analyzing...',namespace="/stream",room=sid)
+    socketio.emit("message",'Analyzing...',namespace="/stream",room=userid)
     socketio.sleep(0.1)
     try:
         outs, errs = proc.communicate(timeout=10)
-        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=sid)
+        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=userid)
         socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
         if errstring != "":            
-            socketio.emit("errors",errstring,namespace="/stream",room=sid)
+            socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Analysis of {filename} with errors.")
         else: 
-            socketio.emit("asuccess","done",namespace="/stream",room=sid)
+            socketio.emit("asuccess","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful analysis of {filename}.")
     except Exception as ex: # TimeoutExpired
-        socketio.emit("errors",str(ex),namespace="/stream",room=sid)    
+        socketio.emit("errors",str(ex),namespace="/stream",room=userid)    
     proc.kill()    
     outs, errs = proc.communicate()
 
 
-def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
+def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
     # basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
     if "ns" not in stoptime:
-        socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=sid)
+        socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
         return    
     stoptime = re.sub("\s+","",stoptime)
     aux = re.sub("ns","",stoptime)
     try:
         if int(aux) > 1000:
-            socketio.emit("errors","Simulator limitation: stop time must be at most 1000 ns.",namespace="/stream",room=sid)
+            socketio.emit("errors","Simulator limitation: stop time must be at most 1000 ns.",namespace="/stream",room=userid)
             return
     except:
-        socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=sid)
+        socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=userid)
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [x.name for x in aux]
@@ -431,7 +431,7 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
                 stderr=subprocess.PIPE
         )
     rline = 'start'
-    socketio.emit("message",'Running simulation...',namespace="/stream",room=sid)
+    socketio.emit("message",'Running simulation...',namespace="/stream",room=userid)
     socketio.sleep(0.1)
     hasError = False
     errmsgs = ""
@@ -442,35 +442,35 @@ def simulatefile(sessionpath,sid,mainpath,stoptime,userid,simentity="usertest"):
             hasError = True
             errmsgs = outstring
         else:
-            socketio.emit("message",outstring,namespace="/stream",room=sid)
+            socketio.emit("message",outstring,namespace="/stream",room=userid)
             socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
         if errstring != "":
-            socketio.emit("errors",errstring,namespace="/stream",room=sid)
+            socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Simulation of {simentity} with errors.")            
         elif hasError:
-            socketio.emit("errors",errmsgs,namespace="/stream",room=sid)
+            socketio.emit("errors",errmsgs,namespace="/stream",room=userid)
             logger.info(f"{userid}: Simulation of {simentity} with errors.")
         else:
-            socketio.emit("success","done",namespace="/stream",room=sid)
+            socketio.emit("success","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful simulation of {simentity}.")
     except Exception as ex: # TimeoutExpired
-        socketio.emit("errors",str(ex),namespace="/stream",room=sid)
+        socketio.emit("errors",str(ex),namespace="/stream",room=userid)
     proc.kill()
     outs, errs = proc.communicate()
 
 
 emulprocs = {}
 fifowrite = {}
-def doEmulation(username,sid,mainpath,sessionpath):
+def doEmulation(username,mainpath,sessionpath):
     keysprocs = emulprocs.keys()
     if len(keysprocs) >= 25:
-        socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=sid)
-        socketio.emit('status','Parado',namespace="/emul", room=sid)
+        socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=username)
+        socketio.emit('status','Parado',namespace="/emul", room=username)
         return
     elif username in keysprocs:
-        socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=sid)
-        socketio.emit('status','Parado',namespace="/emul", room=sid)
+        socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=username)
+        socketio.emit('status','Parado',namespace="/emul", room=username)
         return        
     basepath = Path(mainpath,'work')
     # sessionpath = Path(basepath, username)
@@ -481,8 +481,8 @@ def doEmulation(username,sid,mainpath,sessionpath):
         pass
     fpgatestpath = Path(sessionpath,'fpgatest')
     if not fpgatestpath.exists():
-        socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=sid)
-        socketio.emit('status','Parado',namespace="/emul", room=sid)
+        socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=username)
+        socketio.emit('status','Parado',namespace="/emul", room=username)
         return
     
     try:
@@ -505,8 +505,8 @@ def doEmulation(username,sid,mainpath,sessionpath):
         fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY | os.O_NONBLOCK) 
         lasttime = time.time()    
         run = True
-        socketio.emit('message','Emulation started.',namespace="/emul",room=sid)
-        socketio.emit('started','Ok!',namespace="/emul",room=sid)
+        socketio.emit('message','Emulation started.',namespace="/emul",room=username)
+        socketio.emit('started','Ok!',namespace="/emul",room=username)
         # print("Running!!!!") 
         while run:
             events = poller.poll(50) 
@@ -516,36 +516,36 @@ def doEmulation(username,sid,mainpath,sessionpath):
                     run = False
                 elif (events[0][1] & select.POLLIN) != 0:
                     data = os.read(fiforead,11)
-                    socketio.emit('bytes', data, namespace="/emul", room=sid)
+                    socketio.emit('bytes', data, namespace="/emul", room=username)
                     lasttime = time.time()
             else:
                 if ((time.time()-lasttime) >= 120 ):
-                    socketio.emit('error','Inactivity timeout...',namespace="/emul", room=sid)                
+                    socketio.emit('error','Inactivity timeout...',namespace="/emul", room=username)                
                     run = False
             socketio.sleep(0.1)
     except FileNotFoundError as err:
-        socketio.emit('error','Error opening pipe.',namespace="/emul", room=sid)  
+        socketio.emit('error','Error opening pipe.',namespace="/emul", room=username)  
     except Exception as ex:
         logger.error("Emulation crash:" + str(ex))
-        socketio.emit('error',"Emulation crashed at the beginning. Check your code, especially regarding bounds and indices of ports and signals.",namespace="/emul", room=sid)   
+        socketio.emit('error',"Emulation crashed at the beginning. Check your code, especially regarding bounds and indices of ports and signals.",namespace="/emul", room=username)   
     except:
         logger.error("Unexpected error:", sys.exc_info()[0])
     closeEmul(username)
-    socketio.emit('status','Parado',namespace="/emul", room=sid)
+    socketio.emit('status','Parado',namespace="/emul", room=username)
     poller.unregister(fiforead)
     if username in fifowrite.keys():
         os.close(fifowrite[username])
         del fifowrite[username]
     os.close(fiforead)
-    # socketio.disconnect(namespace="/emul",room=sid)
+    # socketio.disconnect(namespace="/emul",room=username)
 
-def stopEmulation(username,sid):
+def stopEmulation(username):
     if username not in emulprocs.keys():
-        socketio.emit('error',f'Emulation not running for {username}.',namespace="/emul", room=sid)
+        socketio.emit('error',f'Emulation not running for {username}.',namespace="/emul", room=username)
         return
     else:
         closeEmul(username)
-        socketio.emit('status',"Parado",namespace="/emul", room=sid)
+        socketio.emit('status',"Parado",namespace="/emul", room=username)
 
 def closeEmul(username):
     if username in emulprocs.keys():

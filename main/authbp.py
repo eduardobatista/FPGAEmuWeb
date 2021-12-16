@@ -160,6 +160,8 @@ def passrecovery():
 
 @auth.route('/logout')
 def logout():
+    # print(current_user.email)
+    # return "Uepa!"
     logout_user()
     # flash('User logged out.')
     return redirect(url_for('auth.login'))

@@ -1,7 +1,7 @@
 import subprocess,time,os,select,threading
 from pathlib import Path
 from flask import session, current_app, request
-from flask_socketio import send, emit, disconnect
+from flask_socketio import send, emit, disconnect, join_room, leave_room
 from appp import socketio
 from pathlib import Path
 from .funcs import *
@@ -109,8 +109,10 @@ def deletefile(filename):
                 emit("filedeleted",filename)
             except FileNotFoundError as fnf:
                 emit("error",f"Could not delete: file {filename} not found.<br>Refresh page to update file list.")
-            except Exception as ex:
+            except BaseException as ex:
                 emit("error",str(ex))
+            except OSError as err:
+                emit("error",str(err))
         else:
             emit("error","Only .vhd and .vhdl files allowed.")
 
@@ -136,20 +138,20 @@ def deleteallfiles(fname):
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):
     if checklogged():
-        socketio.start_background_task(analyzefile,getuserpath(),request.sid,current_app.MAINPATH,filename,current_user.email)
+        socketio.start_background_task(analyzefile,getuserpath(),current_app.MAINPATH,filename,current_user.email)
 
 @socketio.on('Simulate', namespace='/stream')
 def simulate(stoptime,testentity="usertest.vhd"):
     if checklogged():
         current_user.testEntity = testentity[:-4]
         db.session.commit()
-        socketio.start_background_task(simulatefile,getuserpath(),request.sid,current_app.MAINPATH,stoptime,current_user.email,testentity[:-4])
+        socketio.start_background_task(simulatefile,getuserpath(),current_app.MAINPATH,stoptime,current_user.email,testentity[:-4])
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
     if checklogged():
         if cmd == "Compile":
-            socketio.start_background_task(compilefile,getuserpath(),request.sid,current_app.MAINPATH,
+            socketio.start_background_task(compilefile,getuserpath(),current_app.MAINPATH,
                                         current_user.email,current_user.topLevelEntity)
         else: 
             disconnect()
@@ -159,10 +161,10 @@ def stream2(cmd):
     if checklogged():    
         if cmd == "Parar":
             current_app.logger.info(f"{current_user.email}: Stopping emulation.")
-            stopEmulation(current_user.email,request.sid)
+            stopEmulation(current_user.email)
         elif cmd == "Emular":
             current_app.logger.info(f"{current_user.email}: Starting emulation.")
-            socketio.start_background_task(doEmulation,current_user.email,request.sid,current_app.MAINPATH,getuserpath())
+            socketio.start_background_task(doEmulation,current_user.email,current_app.MAINPATH,getuserpath())
         else:
             disconnect()
 
@@ -237,7 +239,20 @@ def requestghwdata():
 @socketio.on('disconnect', namespace='/emul')
 def test_disconnect():   
     if checklogged():
+        leave_room(current_user.email)
         if current_user.email in emulprocs.keys():        
             closeEmul(current_user.email)
             emit('error','Stopped on disconnect...')
             emit('status',"Parado")
+
+
+@socketio.on('connect', namespace='/emul')
+def connection():
+    if checklogged():
+        join_room(current_user.email)
+
+
+@socketio.on('connect', namespace='/stream')
+def connection():
+    if checklogged():
+        join_room(current_user.email)

@@ -118,7 +118,7 @@
 
 {% block content %}
 
-
+        <input type="hidden" id="username" value="{{username}}">
 
         <div class="container mt-2 px-4 pb-0 is-max-desktop">
             <div class="container is-max-desktop mt-0 has-text-centered" id="imgDiv">
@@ -156,6 +156,7 @@
     <!-- Your custom scripts (optional) -->
     <script type="text/javascript">
 
+        window.username = "";
         window.socket = 0;
         window.socketOn = false;
         window.scl = 1;
@@ -266,6 +267,7 @@
         
 
         $(document).ready(function() {
+            window.username = $("#username").val();
             $(window).bind('beforeunload',function() {
                 if (window.socketOn) { window.socket.send("Parar"); }
                 return undefined;
@@ -319,9 +321,9 @@
 
                 adjustCanvas();
                 $("#iniciar").html("Stop Emulation");
-                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul');                
-                window.socket.on('connect', function(msg) {
-                    window.socket.send("Emular");
+                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul');       
+                window.socket.on('connect', function(msg) {                    
+                    window.socket.send("Emular");                    
                 });
                 window.socket.on('bytes', function(msg) {
                     //$('#status').append('<br>'+String(msg));  
