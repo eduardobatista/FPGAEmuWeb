@@ -1,4 +1,4 @@
-import subprocess,time,os,select,threading
+import subprocess,time,os,select,threading,traceback
 from pathlib import Path
 from flask import session, current_app, request
 from flask_socketio import send, emit, disconnect, join_room, leave_room
@@ -36,7 +36,7 @@ def getfile(filename):
         except FileNotFoundError as fnf:
             emit("error",f'File not found: {filename}.<br>Refresh page and try again.')
         except Exception as ex:
-            emit("error",type(ex) + ":" + str(ex))
+            emit("error",traceback.format_exc())
 
 @socketio.on('getmap', namespace='/stream') 
 def getmap(filename):
@@ -77,9 +77,9 @@ def renamefile(dataa):
 @socketio.on('savefile', namespace='/stream') 
 def savefile(dataa):
     if checklogged():
-        if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
-            emit("error","Not allowed while viewing as a different user.")
-            return
+        # if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        #     emit("error","Not allowed while viewing as a different user.")
+        #     return
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
@@ -95,9 +95,9 @@ def savefile(dataa):
 @socketio.on('deletefile', namespace='/stream') 
 def deletefile(filename):
     if checklogged():
-        if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
-            emit("error","Not allowed while viewing as a different user.")
-            return
+        # if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+        #     emit("error","Not allowed while viewing as a different user.")
+        #     return
         if (str(filename).endswith('.vhd') or str(filename).endswith('.vhdl')):
             try:
                 sessionpath = getuserpath()
