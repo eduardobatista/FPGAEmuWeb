@@ -63,6 +63,10 @@ subprocess.Popen(
                     cwd=Path(MAINPATH,'backend') 
             )
 # print('Backend compiled.\nStarting server...')
+problemfile = Path(MAINPATH,'work','marcos.r.grave@gmail.com','usertop.vhd')
+if problemfile.exists():
+    problemfile.chmod(0o444)
+
 
 app = create_app(debug=False,mainpath=MAINPATH)
 
