@@ -36,7 +36,7 @@ def getfile(filename):
         except FileNotFoundError as fnf:
             emit("error",f'File not found: {filename}.<br>Refresh page and try again.')
         except Exception as ex:
-            emit("error",str(ex))
+            emit("error",type(ex) + ":" + str(ex))
 
 @socketio.on('getmap', namespace='/stream') 
 def getmap(filename):
