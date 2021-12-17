@@ -29,21 +29,6 @@ import sys
 '''
 
 
-def sigterm_handler(_signo, _stack_frame):
-    try:
-        crashfile = Path(MAINPATH,'work') / "crashes.log"
-        with open(crashfile,"a") as cfile:
-            cfile.write(f'Crashed at {datetime.now().strftime("%m/%d/%Y, %H:%M:%S")}.\n')
-            stderrf = Path("/home","stderr.log")
-            if stderrf.exists():
-                with open(stderrf,"r") as ff:
-                    cfile.write(ff.read())
-            cfile.write("\n")
-    except Exception as es:
-        print(es)
-    sys.exit(0)
-
-
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
 ghwhierarchypath = Path(MAINPATH,'backend','ghwhierarchy.sh')
@@ -67,8 +52,9 @@ subprocess.Popen(
 # if problemfile.exists():
 #     problemfile.chmod(0o444)
 
+WORKDIR = Path.home() / "work"
 
-app = create_app(debug=False,mainpath=MAINPATH)
+app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
 
 with app.app_context():
     try:        
@@ -82,26 +68,6 @@ with app.app_context():
         db.session.add(new_user)
         db.session.commit()
         
-# log = logging.getLogger('werkzeug')
-# log.setLevel(logging.ERROR)
-# gunicorn_error_logger = logging.getLogger('gunicorn.error')
-# app.logger.handlers.extend(gunicorn_error_logger.handlers)
-# app.logger.debug('this will show in the log')
-# app.logger.info('Teeste!')
-# app.logger.error('teste')
-# app.logger.removeHandler(gunicorn_error_logger)
-# app.logger.addHandler(logging.FileHandler('/home/dudu/error.log'))
-# app.logger.setLevel(logging.INFO)
-# fhandler = logging.FileHandler(Path(MAINPATH,'work','emulogs.log'))
-# fhandler.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(message)s'))
-# app.logger.handlers = [fhandler]
-
-# logging.basicConfig(filename='/home/dudu/error.log',level=logging.INFO)
 
 if __name__ == '__main__':
-    signal.signal(signal.SIGTERM, sigterm_handler)
-    signal.signal(signal.SIGABRT, sigterm_handler)
-    signal.signal(signal.SIGINT, sigterm_handler)
-    signal.signal(signal.SIGQUIT, sigterm_handler)
     socketio.run(app,host='0.0.0.0',port=5000)
-    sigterm_handler(None, None)

@@ -15,13 +15,16 @@ logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
 
 
-def create_app(debug=False,mainpath=""):
+def create_app(debug=False,mainpath="",workdir=""):
     """Create an application."""    
     app = Flask(__name__)
     app.debug = debug
+    
+    app.WORKDIR = workdir
+    app.MAINPATH = mainpath
 
     global logger
-    fhandler = WatchedFileHandler(Path(mainpath,'work','emulogs.log'))
+    fhandler = WatchedFileHandler(Path(app.WORKDIR,'emulogs.log'))
     fhandler.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(message)s'))
     logger.handlers = [fhandler]
     if not debug:
@@ -31,7 +34,7 @@ def create_app(debug=False,mainpath=""):
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    seckeyfile = Path(mainpath,"work","seckey")
+    seckeyfile = Path(app.WORKDIR,"seckey")
     if seckeyfile.exists():
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
@@ -45,16 +48,17 @@ def create_app(debug=False,mainpath=""):
 
     # app.config['SECRET_KEY'] = b'_5#y2L"F4z\n\xec]/'
     app.config['MAX_CONTENT_LENGTH'] = 1000000
-    app.MAINPATH = mainpath
+    
     
     # Database:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/db.sqlite'     
+    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/db.sqlite'   
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'   
     db.init_app(app)
 
     # Cloud Database:
     app.config['CLOUDDBINFO'] = ''
     app.clouddb = None
-    clouddbfile = (Path(mainpath) / 'work') / 'clouddb.conf';
+    clouddbfile = app.WORKDIR / 'clouddb.conf';
     if clouddbfile.exists():
         try:
             with open(clouddbfile,'r') as cfile:
@@ -82,7 +86,7 @@ def create_app(debug=False,mainpath=""):
     app.config['EMAILINFO'] = ""
     try:
         from yagmail import SMTP
-        oauthfile = Path(mainpath,'work') / "oauth2_creds.json"
+        oauthfile = app.WORKDIR / "oauth2_creds.json"
         if oauthfile.exists():
             try:
                 app.yag = SMTP("fpgaemuweb@gmail.com", oauth2_file=oauthfile)

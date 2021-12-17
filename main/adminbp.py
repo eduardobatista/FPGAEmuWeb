@@ -85,7 +85,7 @@ def checkStdErr():
 @login_required
 def checkLogs():
     if (current_user.role == "Admin"):
-        file = Path(current_app.MAINPATH,'work',"emulogs.log")
+        file = Path(current_app.WORKDIR,"emulogs.log")
         if file.exists():
             with open(file,"r") as ff:
                 return ff.read().replace('\n','\n<br>') 
@@ -98,7 +98,7 @@ def checkLogs():
 @login_required
 def deleteEmuLogs():
     if (current_user.role == "Admin"):
-        file = Path(current_app.MAINPATH,'work',"emulogs.log")
+        file = Path(current_app.WORKDIR,"emulogs.log")
         if file.exists():
             file.unlink()
             return "File deleted." 
@@ -143,9 +143,8 @@ def savecloudinfo():
     if current_user.role != "Admin":
         return redirect(url_for('main.sendfiles'))
     info = request.form.get('info')
-    workdir = Path(current_app.MAINPATH,'work')
     try:
-        with open(workdir / "clouddb.conf","w") as ff:
+        with open(current_app.WORKDIR / "clouddb.conf","w") as ff:
             ff.write(info)
             current_app.config['CLOUDDBINFO'] = info
             current_app.clouddb = create_engine(info, connect_args={'connect_timeout': 5})
@@ -161,8 +160,7 @@ def saveemailinfo():
     if current_user.role != "Admin":
         return redirect(url_for('main.sendfiles'))
     info = request.form.get('info')
-    workdir = Path(current_app.MAINPATH,'work')
-    oauthfile = workdir / "oauth2_creds.json"
+    oauthfile = current_app.WORKDIR / "oauth2_creds.json"
     with open(oauthfile,"w") as ff:
         ff.write(info)
         current_app.config['EMAILINFO'] = info
@@ -233,8 +231,7 @@ def changepass():
     return redirect(url_for('adm.profile'))
 
 @adm.route('/workbackup')
-def workbackup():
-    
+def workbackup():    
     if current_user.role != "Admin":
         return "Error! Not an Admin."
     bckfile = Path(current_app.MAINPATH,"workbackup.zip")

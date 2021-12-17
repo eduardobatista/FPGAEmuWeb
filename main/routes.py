@@ -10,9 +10,9 @@ from appp import db
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
-        userpath = Path(current_app.MAINPATH,'work',current_user.email)
+        userpath = Path(current_app.WORKDIR,current_user.email)
     else:
-        userpath = Path(current_app.MAINPATH,'work',current_user.viewAs)
+        userpath = Path(current_app.WORKDIR,current_user.viewAs)
     if not userpath.exists():
         userpath.mkdir(parents=True)
     return userpath

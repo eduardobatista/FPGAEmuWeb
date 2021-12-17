@@ -11,6 +11,7 @@ EXPOSE 5000
 
 RUN apt-get update && apt-get install -y supervisor
 # COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir /home/work
 RUN touch /home/stdout.log
 RUN touch /home/stdout.err
 
