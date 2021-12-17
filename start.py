@@ -52,7 +52,7 @@ subprocess.Popen(
 # if problemfile.exists():
 #     problemfile.chmod(0o444)
 
-WORKDIR = Path.home() / "work"
+WORKDIR = MAINPATH / "work"
 
 app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
 
@@ -67,7 +67,7 @@ with app.app_context():
         new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin', viewAs='')
         db.session.add(new_user)
         db.session.commit()
-        
+
 
 if __name__ == '__main__':
     socketio.run(app,host='0.0.0.0',port=5000)
