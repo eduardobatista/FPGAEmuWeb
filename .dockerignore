@@ -13,3 +13,4 @@ seckey
 oauth2_creds.*
 clouddb.conf
 *.Identifier
+workbackup.zip

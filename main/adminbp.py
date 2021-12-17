@@ -1,4 +1,4 @@
-from flask import current_app, render_template, redirect, url_for, request, flash
+from flask import current_app, render_template, redirect, url_for, request, flash,send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User
 from . import adm
@@ -10,6 +10,7 @@ from sqlalchemy import create_engine,func,asc
 import psutil
 import json
 from datetime import datetime
+import subprocess
 
 @adm.route('/profile')
 @login_required
@@ -230,3 +231,29 @@ def changepass():
     db.session.commit()
     flash("Password changed successfully.")    
     return redirect(url_for('adm.profile'))
+
+@adm.route('/workbackup')
+def workbackup():
+    
+    if current_user.role != "Admin":
+        return "Error! Not an Admin."
+    bckfile = Path(current_app.MAINPATH,"workbackup.zip")
+    if bckfile.exists():
+        bckfile.unlink()
+    try:    
+        pp = subprocess.Popen("zip -r workbackup.zip work/*",
+                    # ["zip","-r","workbackup.zip","work/*"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=Path(current_app.MAINPATH),
+                    shell=True
+            )
+        pp.wait()
+    except BaseException as ex:
+        return (str(ex))
+    return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
+    # return "Terminou!"
+    
+    
+    
+    
