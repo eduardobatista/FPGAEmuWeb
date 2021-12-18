@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y supervisor
 RUN mkdir /home/work
 RUN touch /home/stdout.log
 RUN touch /home/stdout.err
-RUN sleep 10
 
 ENTRYPOINT ["/usr/bin/supervisord","-c","/home/fpgaemuweb/supervisord.conf"]
 # ENTRYPOINT /usr/local/bin/gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -b :5000 -w 1 --chdir /home/fpgaemuweb start:app
