@@ -52,7 +52,8 @@ subprocess.Popen(
 # if problemfile.exists():
 #     problemfile.chmod(0o444)
 
-WORKDIR = Path(MAINPATH) / "work"
+# WORKDIR = Path(MAINPATH) / "work"
+WORKDIR = Path("/home/work")
 
 app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
 
