@@ -238,14 +238,14 @@ def workbackup():
     if bckfile.exists():
         bckfile.unlink()
     try:    
-        pp = subprocess.Popen("zip -r workbackup.zip work/*",
+        pp = subprocess.Popen("sudo zip -r workbackup.zip work/*",
                     # ["zip","-r","workbackup.zip","work/*"],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     cwd=Path(current_app.MAINPATH),
                     shell=True
             )
-        pp.wait()
+        # pp.wait()
     except BaseException as ex:
         return (str(ex))
     return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
