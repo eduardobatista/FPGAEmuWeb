@@ -250,6 +250,15 @@ def workbackup():
         return (str(ex))
     return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
     # return "Terminou!"
+
+@adm.route('/workbackup2')
+def workbackup2():    
+    if current_user.role != "Admin":
+        return "Error! Not an Admin."
+    bckfile = Path(current_app.MAINPATH,"workbackup.zip")
+    if bckfile.exists():
+        return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
+    return "File not found."
     
     
     
