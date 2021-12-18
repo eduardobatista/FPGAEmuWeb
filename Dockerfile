@@ -10,6 +10,7 @@ RUN pip install flask flask_socketio flask_migrate flask_login flask_sqlalchemy 
 EXPOSE 5000
 
 RUN apt-get update && apt-get install -y supervisor
+RUN apt-get install -y zip
 # COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN mkdir /home/work
 RUN touch /home/stdout.log

@@ -381,7 +381,6 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
 
 def analyzefile(sessionpath,mainpath,filename,userid):
     compilerpath = Path(mainpath,'backend','analyze.sh')
-    basepath = current_app.WORKDIR
     proc = subprocess.Popen(
                 [compilerpath,sessionpath,filename],
                 stdout=subprocess.PIPE,
@@ -409,8 +408,6 @@ def analyzefile(sessionpath,mainpath,filename,userid):
 
 def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
-    # basepath = current_app.WORKDIR
-    # sessionpath = Path(basepath, username)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
         return    
@@ -472,8 +469,6 @@ def doEmulation(username,mainpath,sessionpath):
         socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=username)
         socketio.emit('status','Parado',namespace="/emul", room=username)
         return        
-    basepath = current_app.WORKDIR
-    # sessionpath = Path(basepath, username)
     try: 
         for k in sessionpath.rglob("myfifo*"):
             k.unlink();
