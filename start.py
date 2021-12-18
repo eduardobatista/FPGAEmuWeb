@@ -56,7 +56,7 @@ subprocess.Popen(
 WORKDIR = Path(MAINPATH) / "work"
 # WORKDIR = Path("/home/work")
 
-sleep(5)
+# sleep(5)
 
 app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
 
