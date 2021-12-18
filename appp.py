@@ -52,7 +52,8 @@ def create_app(debug=False,mainpath="",workdir=""):
     
     # Database:
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/db.sqlite'   
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/dbnew.sqlite'
     db.init_app(app)
 
     # Cloud Database:
