@@ -167,10 +167,10 @@ def createFpgaTest(sessionpath,toplevelentity):
     fpgatest.close()
     return "Ok!"
 
-def createFpgaTest2(sessionpath,toplevelentity):
+def createFpgaTest2(sessionpath,temppath,toplevelentity):
     toplevel = Path(sessionpath,toplevelentity + ".vhd")
     if not toplevel.exists(): return f"Error: Top level entity not found.";
-    fpgatestfile = Path(sessionpath,'fpgatest.aux')
+    fpgatestfile = Path(temppath,'fpgatest.aux')
     if fpgatestfile.exists(): fpgatestfile.unlink()
     
     portmaptxt = None
@@ -345,7 +345,9 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
 def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
     socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=userid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
-    retcode = createFpgaTest2(sessionpath,toplevelentity)
+    temppath = Path(mainpath,"temp",userid)
+    temppath.mkdir(parents=True,exist_ok=True)
+    retcode = createFpgaTest2(sessionpath,temppath,toplevelentity)
     if retcode == "Ok!":
         pass
     else:
@@ -353,9 +355,9 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
         return
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
-    filenames = [x.name for x in aux]
+    filenames = [str(x) for x in aux]
     proc = subprocess.Popen(
-                [compilerpath,sessionpath] + filenames + ['fpgatest.aux'],
+                [compilerpath,temppath] + filenames + ['fpgatest.aux'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
@@ -408,22 +410,24 @@ def analyzefile(sessionpath,mainpath,filename,userid):
 
 def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
+    temppath = Path(mainpath,"temp",userid)
+    temppath.mkdir(parents=True,exist_ok=True)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
         return    
     stoptime = re.sub("\s+","",stoptime)
     aux = re.sub("ns","",stoptime)
     try:
-        if int(aux) > 1000:
-            socketio.emit("errors","Simulator limitation: stop time must be at most 1000 ns.",namespace="/stream",room=userid)
+        if int(aux) > 2000:
+            socketio.emit("errors","Simulator limitation: stop time must be at most 2000 ns.",namespace="/stream",room=userid)
             return
     except:
-        socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=userid)
+        socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=userid)    
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
-    filenames = [x.name for x in aux]
+    filenames = [str(x) for x in aux]
     proc = subprocess.Popen(
-                [simulatorpath,sessionpath,stoptime,simentity] + filenames,
+                [simulatorpath,temppath,stoptime,simentity] + filenames,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
@@ -459,7 +463,8 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
 
 emulprocs = {}
 fifowrite = {}
-def doEmulation(username,mainpath,sessionpath):
+def doEmulation(username,mainpath):
+    temppath = Path(mainpath,'temp',username)
     keysprocs = emulprocs.keys()
     if len(keysprocs) >= 25:
         socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=username)
@@ -470,11 +475,11 @@ def doEmulation(username,mainpath,sessionpath):
         socketio.emit('status','Parado',namespace="/emul", room=username)
         return        
     try: 
-        for k in sessionpath.rglob("myfifo*"):
+        for k in temppath.rglob("myfifo*"):
             k.unlink();
     except Exception as ex:
         pass
-    fpgatestpath = Path(sessionpath,'fpgatest')
+    fpgatestpath = Path(temppath,'fpgatest')
     if not fpgatestpath.exists():
         socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=username)
         socketio.emit('status','Parado',namespace="/emul", room=username)
@@ -485,19 +490,19 @@ def doEmulation(username,mainpath,sessionpath):
                     [fpgatestpath],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    cwd=sessionpath 
+                    cwd=temppath 
             )
         emulprocs[username] = proc
         socketio.sleep(0.2)  
 
-        fiforead = os.open(Path(sessionpath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
+        fiforead = os.open(Path(temppath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
         # poller = select.epoll()
         poller = select.poll()
         poller.register(fiforead)
         poller.poll()
         os.read(fiforead,3).decode()
         socketio.sleep(0.2)
-        fifowrite[username] = os.open(Path(sessionpath,'myfifo2'+str(proc.pid)), os.O_WRONLY | os.O_NONBLOCK) 
+        fifowrite[username] = os.open(Path(temppath,'myfifo2'+str(proc.pid)), os.O_WRONLY | os.O_NONBLOCK) 
         lasttime = time.time()    
         run = True
         socketio.emit('message','Emulation started.',namespace="/emul",room=username)
@@ -555,10 +560,11 @@ def getsocketiofile():
         socketiofile = 'socket.io.js'
     return socketiofile
 
-def getghwhierarchy(sessionpath,mainpath,filename):
+def getghwhierarchy(username,mainpath,filename):
     ghwhpath = Path(mainpath,'backend','ghwhierarchy.sh')   
+    temppath = Path(mainpath,'temp',username)
     proc = subprocess.Popen(
-                [ghwhpath,sessionpath,filename],
+                [ghwhpath,temppath,filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
@@ -618,10 +624,11 @@ def getghwhierarchy(sessionpath,mainpath,filename):
     return hierarchy
         
 
-def getghwsignals(sessionpath,mainpath,filename,groups):
+def getghwsignals(username,mainpath,filename,groups):
     ghwhpath = Path(mainpath,'backend','ghwgetsignals.sh')   
+    temppath = Path(mainpath,'temp',username)
     proc = subprocess.Popen(
-                [ghwhpath,sessionpath,filename],
+                [ghwhpath,temppath,filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )

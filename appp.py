@@ -22,6 +22,9 @@ def create_app(debug=False,mainpath="",workdir=""):
     
     app.WORKDIR = workdir
     app.MAINPATH = mainpath
+    app.TEMPDIR = Path(mainpath) / "temp"
+    if not app.TEMPDIR.exists():
+        app.TEMPDIR.mkdir()
 
     global logger
     fhandler = WatchedFileHandler(Path(app.WORKDIR,'emulogs.log'))
@@ -107,9 +110,7 @@ def create_app(debug=False,mainpath="",workdir=""):
     from main import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
     from main import adm as admin_blueprint
-    app.register_blueprint(admin_blueprint)
-
-    
+    app.register_blueprint(admin_blueprint)    
 
     socketio.init_app(app)
     

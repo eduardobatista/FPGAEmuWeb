@@ -164,7 +164,7 @@ def stream2(cmd):
             stopEmulation(current_user.email)
         elif cmd == "Emular":
             current_app.logger.info(f"{current_user.email}: Starting emulation.")
-            socketio.start_background_task(doEmulation,current_user.email,current_app.MAINPATH,getuserpath())
+            socketio.start_background_task(doEmulation,current_user.email,current_app.MAINPATH)
         else:
             disconnect()
 
@@ -225,14 +225,14 @@ def requestghwsignals():
 def requestghwdata():
     if checklogged():
         sessionpath = getuserpath()
-        hie = getghwhierarchy(sessionpath,current_app.MAINPATH,'output.ghw')
+        hie = getghwhierarchy(current_user.email,current_app.MAINPATH,'output.ghw')
         groups = []
         for inst in hie:
             for sig in hie[inst]:
                 aux = hie[inst][sig]['idxs']
                 if "-" in aux:
                     groups.append(aux)
-        data = [hie,getghwsignals(sessionpath,current_app.MAINPATH,'output.ghw',groups)]
+        data = [hie,getghwsignals(current_user.email,current_app.MAINPATH,'output.ghw',groups)]
         emit("ghwdata",data)
 
 

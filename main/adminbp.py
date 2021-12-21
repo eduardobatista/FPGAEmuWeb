@@ -15,8 +15,10 @@ import subprocess
 @adm.route('/profile')
 @login_required
 def profile():    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    # TODO: Sort list and filter by student
-    userlist = [row.email for row in User.query.filter_by(role='Student').order_by(asc(func.lower(User.email))).all()]
+    userlist = [arq.name for arq in current_app.WORKDIR.iterdir() if arq.is_dir()]
+    userlist.remove(current_user.email)
+    userlist.sort()
+    # userlist = [row.email for row in User.query.filter_by(role='Student').order_by(asc(func.lower(User.email))).all()]
     userlist.insert(0,current_user.email)    
     return render_template('profile.html',userlist=userlist)
 

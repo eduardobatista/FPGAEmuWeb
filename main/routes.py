@@ -128,8 +128,8 @@ def downloadafile(fname):
 @main.route("/downloadsimfile")
 @login_required
 def downloadsimfile():
-    sessionpath = getuserpath()
-    return send_from_directory(sessionpath, 'output.ghw', as_attachment=True, cache_timeout=-1)
+    temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+    return send_from_directory(temppath, 'output.ghw', as_attachment=True, cache_timeout=-1)
 
 @main.route('/upload', methods=['GET', 'POST'])
 @login_required

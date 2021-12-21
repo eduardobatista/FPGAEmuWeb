@@ -49,9 +49,6 @@ subprocess.Popen(
                     cwd=Path(MAINPATH,'backend') 
             )
 # print('Backend compiled.\nStarting server...')
-# problemfile = Path(MAINPATH,'work','marcos.r.grave@gmail.com','usertop.vhd')
-# if problemfile.exists():
-#     problemfile.chmod(0o444)
 
 WORKDIR = Path(MAINPATH) / "work"
 # WORKDIR = Path("/home/work")
