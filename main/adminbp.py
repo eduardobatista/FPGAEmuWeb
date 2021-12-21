@@ -204,32 +204,6 @@ def changerole():
     db.session.commit()
     return "Role changed!"
 
-@adm.route('/changepass', methods=['POST'])
-def changepass():
-    oldpass = request.form.get('oldpass')
-    newpass = request.form.get('newpass')
-    repeatnew = request.form.get('repeatnew')
-    email = request.form.get('email')
-
-    user = User.query.filter_by(email=email).first()
-
-    if newpass != repeatnew:
-        flash("New passes do not match!")
-        return redirect(url_for('adm.profile'))
-    
-    if not check_password_hash(user.password, oldpass):
-        flash("Old password is not correct!")
-        return redirect(url_for('adm.profile'))
-
-    if newpass == "":
-        flash("New pass is empty.")
-        return redirect(url_for('adm.profile'))
-
-    user.password = generate_password_hash(newpass, method='sha256')
-    db.session.commit()
-    flash("Password changed successfully.")    
-    return redirect(url_for('adm.profile'))
-
 @adm.route('/workbackup')
 def workbackup():    
     if current_user.role != "Admin":

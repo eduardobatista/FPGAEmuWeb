@@ -160,7 +160,7 @@ def stream(cmd):
 def stream2(cmd):
     if checklogged():    
         if cmd == "Parar":
-            current_app.logger.info(f"{current_user.email}: Stopping emulation.")
+            # current_app.logger.info(f"{current_user.email}: Stopping emulation.")
             stopEmulation(current_user.email)
         elif cmd == "Emular":
             current_app.logger.info(f"{current_user.email}: Starting emulation.")

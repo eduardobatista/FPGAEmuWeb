@@ -27,24 +27,27 @@ def login_post():
 
     user = User.query.filter_by(email=email).first()
 
-    if (not user) and (current_app.clouddb is not None):
+    # if (not user) and (current_app.clouddb is not None):
+    if current_app.clouddb is not None:
         try:
             with current_app.clouddb.connect() as conncloud:     
                 table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select())
                 for row in clouddata:
                     if email == row['email']:
-                        new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
+                        if not user:
+                            new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
                                         lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
-                        db.session.add(new_user)
-                        db.session.commit()
-                        user = new_user
+                            db.session.add(new_user)
+                            user = new_user
+                        else:
+                            user.password = row['password']
+                        db.session.commit()                        
                 clouddata.close()
         except OperationalError as err:
             current_app.logger.error(err)
         except BaseException as err:
             current_app.logger.error(err)
-
 
     # check if the user actually exists
     # take the user-supplied password, hash it, and compare it to the hashed password in the database
@@ -80,7 +83,7 @@ def signup_post():
             return redirect(url_for('auth.signup'))
         
     try:
-        if User.query.count() >= 500:
+        if User.query.count() >= 1000:
             flash('Too many users in the system. Please contact the administrator.')
             return redirect(url_for('auth.signup'))        
     except OperationalError as err:
@@ -156,6 +159,55 @@ def passrecovery():
     current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
                          contents=f"Dear {user.name},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
     return "New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact fpgaemuweb@gmail.com."
+
+
+@auth.route('/changepass', methods=['POST'])
+def changepass():
+    oldpass = request.form.get('oldpass')
+    newpass = request.form.get('newpass')
+    repeatnew = request.form.get('repeatnew')
+    email = request.form.get('email')
+
+    if newpass != repeatnew:
+        flash("New passes do not match!")
+        return redirect(url_for('adm.profile'))
+
+    if newpass == "":
+        flash("New pass is empty.")
+        return redirect(url_for('adm.profile'))
+
+    user = User.query.filter_by(email=email).first()    
+    
+    if not check_password_hash(user.password, oldpass):
+        flash("Old password is not correct!")
+        return redirect(url_for('adm.profile'))    
+
+    user.password = generate_password_hash(newpass, method='sha256')
+    db.session.commit()
+
+    if current_app.clouddb is not None:
+        try:
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
+                usercloud = clouddata.first()                
+                if usercloud is not None:
+                    conncloud.execute(table1.update().where(table1.c.email==email).values(password=user.password))
+                else:
+                    ndict = {'email': email, 'name': user.name, 'password': user.password, 
+                        'role': user.role, 'viewAs': user.viewAs, 'lastPassRecovery': None, 
+                        'topLevelEntity': user.topLevelEntity, 'testEntity': user.testEntity}
+                    conncloud.execute(table1.insert(), ndict)
+                clouddata.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
+
+    current_app.logger.info(f"Successful password chage for {email}.")
+
+    flash("Password changed successfully.")    
+    return redirect(url_for('adm.profile'))
 
 
 @auth.route('/logout')

@@ -479,7 +479,7 @@ def doEmulation(username,mainpath,sessionpath):
         socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=username)
         socketio.emit('status','Parado',namespace="/emul", room=username)
         return
-    
+    logger.info(f"{username}: Starting emulation.")
     try:
         proc = subprocess.Popen(
                     [fpgatestpath],
@@ -539,6 +539,7 @@ def stopEmulation(username):
         socketio.emit('error',f'Emulation not running for {username}.',namespace="/emul", room=username)
         return
     else:
+        logger.info(f"{username}: Stopping emulation.")
         closeEmul(username)
         socketio.emit('status',"Parado",namespace="/emul", room=username)
 
