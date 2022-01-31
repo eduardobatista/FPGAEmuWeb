@@ -550,8 +550,8 @@ def stopEmulation(username):
 
 def closeEmul(username):
     if username in emulprocs.keys():
-        # emulprocs[username].kill()
-        emulprocs[username].terminate()
+        emulprocs[username].kill()
+        # emulprocs[username].terminate()
         del emulprocs[username]
 
 def getsocketiofile():

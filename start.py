@@ -53,7 +53,7 @@ subprocess.Popen(
 WORKDIR = Path(MAINPATH) / "work"
 # WORKDIR = Path("/home/work")
 
-app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
+app = create_app(debug=True,mainpath=MAINPATH,workdir=WORKDIR)
 
 with app.app_context():
     try:        
