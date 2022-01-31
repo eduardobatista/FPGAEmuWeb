@@ -511,8 +511,9 @@ def doEmulation(username,mainpath):
         while run:
             events = poller.poll(50) 
             # print(events)
-            if (len(events) > 0):
-                if ((events[0][1] & select.POLLHUP) | (events[0][1] & select.POLLERR)) != 0:
+            if (len(events) > 0):   
+                # logger.info(f"Event: {events[0][1]} - {select.POLLHUP}.{select.POLLERR}.{select.POLLNVAL}.{select.POLLRDHUP}.")             
+                if (events[0][1] & (select.POLLHUP | select.POLLERR | select.POLLNVAL | select.POLLRDHUP | select.POLLOUT)) != 0:
                     run = False
                 elif (events[0][1] & select.POLLIN) != 0:
                     data = os.read(fiforead,11)
