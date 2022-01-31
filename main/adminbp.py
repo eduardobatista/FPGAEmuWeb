@@ -11,6 +11,7 @@ import psutil
 import json
 from datetime import datetime
 import subprocess
+from sqlalchemy.exc import OperationalError
 
 @adm.route('/profile')
 @login_required
@@ -115,9 +116,37 @@ def deleteEmuLogs():
 def admin():
     if current_user.role != "Admin":
         return redirect(url_for('main.sendfiles'))
-    userlist = User.query
+
     # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    return render_template('admin.html',userlist=userlist,clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'])
+    return render_template('admin.html',clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'])
+
+
+@adm.route('/getuserlist', methods=['POST'])
+@login_required
+def getuserlist():
+    if current_user.role != "Admin":
+        return redirect(url_for('main.sendfiles'))
+
+    listtype = request.form.get('type')
+
+    rendereduserlist = "Empty user list."
+    if current_app.clouddb and (not listtype):        
+        try:
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                userlist = conncloud.execute(table1.select().order_by(table1.c.role,table1.c.name))
+                rendereduserlist = render_template('userlist.html',userlist=userlist)
+                userlist.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
+    else:
+        userlist = User.query
+        rendereduserlist = render_template('userlist.html',userlist=userlist)
+    
+    return rendereduserlist
+
 
 @adm.route('/clouddbinfo')
 @login_required
@@ -201,10 +230,36 @@ def changerole():
         return "Error! Not an Admin."
     email = request.form.get('email')
     newrole = request.form.get('newrole')
+
+    # Recording in local DB:
     user = User.query.filter_by(email=email).first()
-    user.role = newrole
-    db.session.commit()
+    if user is not None:
+        user.role = newrole
+        db.session.commit()
+
+    # Recording at Cloud DB
+    if current_app.clouddb is not None:
+        try:
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
+                usercloud = clouddata.first()
+                if usercloud is not None:
+                    conncloud.execute(table1.update().where(table1.c.email==email).values(role=newrole))
+                else:
+                    if user is not None:
+                        ndict = {'email': email, 'name': user.name, 'password': user.password, 
+                            'role': user.role, 'viewAs': user.viewAs, 'lastPassRecovery': None, 
+                            'topLevelEntity': user.topLevelEntity, 'testEntity': user.testEntity}
+                        conncloud.execute(table1.insert(), ndict)
+                clouddata.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
+
     return "Role changed!"
+
 
 @adm.route('/workbackup')
 def workbackup():    

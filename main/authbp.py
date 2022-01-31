@@ -145,19 +145,41 @@ def passrecovery():
     email = request.form.get('email').strip()
     if email == "admin@fpgaemu":
         return "Can't recover password for this user."
-    user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
-    if user == None: # if a user is found, we want to redirect back to signup page so user can try again
-        return 'User not found!'
-    if (user.lastPassRecovery is not None) and ( datetime.now() < (user.lastPassRecovery+timedelta(minutes=10)) ):
-        return "Password recovery allowed only after 10 minutes"
-    user.lastPassRecovery = datetime.now()
     letters = string.ascii_lowercase
     randompass = ''.join(random.choice(letters) for i in range(6))
-    user.password = generate_password_hash(randompass, method='sha256')
-    
-    db.session.commit()
+    randompasshash = generate_password_hash(randompass, method='sha256')
+
+    userincloud = False
+    if current_app.clouddb is not None:
+        try:
+            with current_app.clouddb.connect() as conncloud:     
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
+                usercloud = clouddata.first()  
+                if usercloud is not None:
+                    userincloud = True
+                    if (usercloud.lastPassRecovery is not None) and ( datetime.now() < (usercloud.lastPassRecovery+timedelta(minutes=10)) ):
+                        return "Password recovery allowed only after 10 minutes"
+                    conncloud.execute(table1.update().where(table1.c.email==email).values(password=randompasshash,lastPassRecovery=datetime.now()))
+                clouddata.close()
+        except OperationalError as err:
+            current_app.logger.error(err)
+        except BaseException as err:
+            current_app.logger.error(err)
+
+    user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
+    if (user == None): # if a user is found, we want to redirect back to signup page so user can try again
+        if (not userincloud):
+            return 'User not found!'
+    else: 
+        if (user.lastPassRecovery is not None) and ( datetime.now() < (user.lastPassRecovery+timedelta(minutes=10)) ):
+            return "Password recovery allowed only after 10 minutes"
+        user.lastPassRecovery = datetime.now()
+        user.password = randompasshash    
+        db.session.commit()    
+
     current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
-                         contents=f"Dear {user.name},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
+                         contents=f"Dear {email},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
     return "New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact fpgaemuweb@gmail.com."
 
 

@@ -79,75 +79,23 @@
             <button class="btn btn-primary btn-sm" onclick="checkCloudDb();">Check Cloud DB Info</button>
         </div> -->
 
-       
-    
-        {%- if userlist is defined -%}
         <div class="box mt-2">
-        <h2 class="title is-4">User List</h2>
 
-        <table class="table mx-auto is-striped">
-            <thead>
-              <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Email</th>
-                <th scope="col">Role</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-
+            <h2 class="title is-4">User List</h2>
                 
-                {% for uu in userlist %}
-                <tr>
-                    <td>{{ uu.name }}</td>
-                    <td>{{ uu.email }}</td>
-                    <td>
-                        {% if uu.email == current_user.email %}
-                            <div class="select is-small">
-                            <select class="custom-select" disabled>
-                        {% else %}
-                            <input type="hidden" id="val{{loop.index}}" value="{{uu.email}}">
-                            <div class="select is-small">
-                            <select class="custom-select" id="sel{{loop.index}}" onchange="changerole({{loop.index}});">
-                        {% endif %}
-                            {% if uu.role == 'Student' %}
-                                <option value="Student" selected>Student</option>
-                                <option value="Professor">Professor</option>
-                                <option value="Admin">Admin</option>
-                            {% elif uu.role == 'Admin' %}
-                                <option value="Student">Student</option>
-                                <option value="Professor">Professor</option>
-                                <option value="Admin" selected>Admin</option>
-                            {% else %}
-                                <option value="Student">Student</option>
-                                <option value="Professor" selected>Professor</option>
-                                <option value="Admin">Admin</option>
-                            {% endif %}
-                          </select></div>
-                    </td>
-                    <td>
-                        {% if uu.email == current_user.email %}
-                            <button class="button is-danger is-small" disabled>Delete</button>
-                        {% else %}
-                            <button class="button is-danger is-small" onclick="delUser({{loop.index}});">Delete</button>
-                        {% endif %}
-                        
-                    </td>
-                </tr>
-                <!-- <li class="list-group-item" id="user{{uu}}">   -->
-                    <!-- <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}.vhd');">Delete</button>
-                    <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}.vhd');">Rename</button>
-                    <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button> -->
-                    <!-- <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="settop('{{ fname }}');" disabled>Set top level</button>                         -->
-                <!-- </li> -->
-                {% endfor %}
+                <div class="tabs is-boxed">
+                    <ul>
+                      <li class="is-active" id="LocalTab"><a onclick="getLocalList()">Local</a></li>
+                      <li id="CloudTab"><a onclick="getCloudList()">Cloud</a></li>
+                    </ul>
+                  </div>
+                  <i id="ulistspinner" class="fas fa-cog fa-spin fa-2x"></i>
+            <div id="userlist">
+                
+            </div>
 
-
-
-            </tbody>
-          </table>
-
-        {% endif %}
+        </div>
+        
 
     </div>
 
@@ -168,7 +116,33 @@
 
             $(document).ready(function () {
                 $("#psinfo").hide();
+                $.post("/getuserlist",{"type":"local"}).done( function (data) {
+                        $("#ulistspinner").hide();
+                        $("#userlist").html(data);
+                    });
             });
+
+            function getLocalList() {
+                $("#CloudTab").removeClass("is-active")
+                $("#LocalTab").addClass("is-active")
+                $("#ulistspinner").show();
+                $("#userlist").html("");
+                $.post("/getuserlist",{"type":"local"}).done( function (data) {
+                        $("#ulistspinner").hide();
+                        $("#userlist").html(data);
+                    });
+            }
+
+            function getCloudList() {
+                $("#LocalTab").removeClass("is-active")
+                $("#CloudTab").addClass("is-active")
+                $("#ulistspinner").show();
+                $("#userlist").html("");
+                $.post("/getuserlist",{}).done( function (data) {
+                        $("#ulistspinner").hide();
+                        $("#userlist").html(data);
+                    });
+            }
 
             function checkServerProcs() {
                 $.post("/serverprocs",{}).done( function (data) {

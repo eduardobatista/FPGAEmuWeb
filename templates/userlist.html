@@ -1,0 +1,66 @@
+        {%- if userlist is defined -%}
+       
+
+        <table class="table mx-auto is-striped">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+
+                
+                {% for uu in userlist %}
+                <tr>
+                    <td>{{ uu.name }}</td>
+                    <td>{{ uu.email }}</td>
+                    <td>
+                        {% if uu.email == current_user.email %}
+                            <div class="select is-small">
+                            <select class="custom-select" disabled>
+                        {% else %}
+                            <input type="hidden" id="val{{loop.index}}" value="{{uu.email}}">
+                            <div class="select is-small">
+                            <select class="custom-select" id="sel{{loop.index}}" onchange="changerole({{loop.index}});">
+                        {% endif %}
+                            {% if uu.role == 'Student' %}
+                                <option value="Student" selected>Student</option>
+                                <option value="Professor">Professor</option>
+                                <option value="Admin">Admin</option>
+                            {% elif uu.role == 'Admin' %}
+                                <option value="Student">Student</option>
+                                <option value="Professor">Professor</option>
+                                <option value="Admin" selected>Admin</option>
+                            {% else %}
+                                <option value="Student">Student</option>
+                                <option value="Professor" selected>Professor</option>
+                                <option value="Admin">Admin</option>
+                            {% endif %}
+                          </select></div>
+                    </td>
+                    <td>
+                        {% if uu.email == current_user.email %}
+                            <button class="button is-danger is-small" disabled>Delete</button>
+                        {% else %}
+                            <button class="button is-danger is-small" onclick="delUser({{loop.index}});">Delete</button>
+                        {% endif %}
+                        
+                    </td>
+                </tr>
+                <!-- <li class="list-group-item" id="user{{uu}}">   -->
+                    <!-- <button class="btn btn-danger btn-sm float-right m-0 ml-1 p-2" onclick="deletefile('{{ fname }}.vhd');">Delete</button>
+                    <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="rename('{{ fname }}.vhd');">Rename</button>
+                    <button class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button> -->
+                    <!-- <button id="btl{{ fname }}" class="btn btn-primary btn-sm float-right m-0 ml-1 p-2" onclick="settop('{{ fname }}');" disabled>Set top level</button>                         -->
+                <!-- </li> -->
+                {% endfor %}
+
+
+
+            </tbody>
+          </table>
+
+        {% endif %}
