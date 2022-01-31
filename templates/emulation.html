@@ -328,7 +328,7 @@
                 window.socket.on('bytes', function(msg) {
                     //$('#status').append('<br>'+String(msg));  
                     const view = new Int8Array(msg);
-                    // if (view.byteLength != 11) { return; }
+                    if (view.byteLength != 11) { return; }
                     var aux = [parseInt(view[0]),parseInt(view[1]),parseInt(view[2])];
                     updateLEDRs(aux);
                     aux = [parseInt(view[10]),parseInt(view[9]),parseInt(view[8]),parseInt(view[7]),
