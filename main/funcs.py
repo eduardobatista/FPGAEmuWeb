@@ -512,7 +512,7 @@ def doEmulation(username,mainpath):
             events = poller.poll(50) 
             # print(events)
             if (len(events) > 0):
-                if (events[0][1] & select.POLLHUP) != 0:                
+                if ((events[0][1] & select.POLLHUP) | (events[0][1] & select.POLLERR)) != 0:
                     run = False
                 elif (events[0][1] & select.POLLIN) != 0:
                     data = os.read(fiforead,11)
@@ -550,8 +550,8 @@ def stopEmulation(username):
 
 def closeEmul(username):
     if username in emulprocs.keys():
-        emulprocs[username].kill()
-        # emulprocs[username].terminate()
+        # emulprocs[username].kill()
+        emulprocs[username].terminate()
         del emulprocs[username]
 
 def getsocketiofile():
