@@ -284,40 +284,11 @@ def workbackup():
     if bckfile.exists():
         bckfile.unlink()
     try: 
-        # shutil.make_archive(base_name, format)
-        shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))
-        # bcktemp = Path(current_app.MAINPATH,"bcktemp")
-        # if bcktemp.exists():
-        #     if bcktemp.is_dir():
-        #         shutil.rmtree(bcktemp)
-        #     else:
-        #         bcktemp.unlink()
-        # else:
-        #     bcktemp.mkdir()
-        # shutil.copytree(Path(current_app.MAINPATH,"work"),bcktemp)       
-        # shutil.make_archive(bckfile, 'tar', bcktemp)
-        # shutil.rmtree(bcktemp)     
-        # pp = subprocess.Popen(["zip","-r","workbackup.zip","bcktemp/*"],
-        #             stdout=subprocess.PIPE,
-        #             stderr=subprocess.PIPE,
-        #             cwd=Path(current_app.MAINPATH),
-        #             shell=True
-        #     )
-        # pp.wait()
+        shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))        
     except BaseException as ex:
         return (str(ex))
     return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, cache_timeout=-1)
-    # return "Terminou!"
+    
+    
 
-@adm.route('/workbackup2')
-def workbackup2():    
-    if current_user.role != "Admin":
-        return "Error! Not an Admin."
-    bckfile = Path(current_app.MAINPATH,"workbackup.zip")
-    if bckfile.exists():
-        return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True, cache_timeout=-1)
-    return "File not found."
-    
-    
-    
     

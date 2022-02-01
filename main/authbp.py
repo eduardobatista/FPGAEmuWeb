@@ -57,6 +57,9 @@ def login_post():
 
     # if the above check passes, then we know the user has the right credentials
     login_user(user, remember=True)
+    current_app.logger.info(f"User {user.id}:{user.email}|{current_user.email} logged in.")
+    if email != current_user.email:
+        logout_user()
     return redirect(url_for('main.sendfiles'))
 
 @auth.route('/signup')

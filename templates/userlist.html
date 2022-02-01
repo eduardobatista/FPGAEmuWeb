@@ -4,6 +4,7 @@
         <table class="table mx-auto is-striped">
             <thead>
               <tr>
+                <th scope="col">id</th>
                 <th scope="col">Name</th>
                 <th scope="col">Email</th>
                 <th scope="col">Role</th>
@@ -15,6 +16,7 @@
                 
                 {% for uu in userlist %}
                 <tr>
+                    <td>{{ uu.id }}</td>
                     <td>{{ uu.name }}</td>
                     <td>{{ uu.email }}</td>
                     <td>
