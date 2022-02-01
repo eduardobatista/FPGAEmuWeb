@@ -51,6 +51,10 @@ subprocess.Popen(
 # print('Backend compiled.\nStarting server...')
 
 WORKDIR = Path(MAINPATH) / "work"
+# Workdir cleanup:
+for ff in WORKDIR.rglob("*"):
+    if (ff.name == "fpgatest") or (ff.suffix == ".o") or (ff.name == "activity.log") or (ff.name == "fpgatest.aux") or (ff.name == "output.ghw") or (ff.name == "usertest") or (ff.name == "usertop") or (ff.suffix == ".cf"):
+        ff.unlink()
 # WORKDIR = Path("/home/work")
 
 app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
