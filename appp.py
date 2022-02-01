@@ -37,7 +37,7 @@ def create_app(debug=False,mainpath="",workdir=""):
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    seckeyfile = Path(app.WORKDIR,"seckey")
+    seckeyfile = Path(app.TEMPDIR,"seckey")  # Volatile seckey
     if seckeyfile.exists():
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
