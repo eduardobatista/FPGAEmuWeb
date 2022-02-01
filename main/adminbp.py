@@ -214,9 +214,23 @@ def deleteuser():
         return redirect(url_for('main.sendfiles'))
     email = request.form.get('email')
     try:
-        User.query.filter_by(email=email).delete()
-        db.session.commit()
+        usertodelete = User.query.filter_by(email=email)
+        if usertodelete:
+            usertodelete.delete()
+            db.session.commit()
         # TODO: Delete user folder !?
+
+        if current_app.clouddb is not None:
+            try:
+                with current_app.clouddb.connect() as conncloud:     
+                    table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                    clouddata = conncloud.execute(table1.delete().where(table1.c.email==email))
+                    clouddata.close()
+            except OperationalError as err:
+                current_app.logger.error(err)
+            except BaseException as err:
+                current_app.logger.error(err)
+
         return f"User {email} deleted successfully."
     except Exception as e:
         current_app.logger.error(f"Error deleting user {email}: {str(e)}.")
@@ -269,14 +283,14 @@ def workbackup():
     if bckfile.exists():
         bckfile.unlink()
     try:    
-        pp = subprocess.Popen("sudo zip -r workbackup.zip work/*",
+        pp = subprocess.Popen("zip -r workbackup.zip work/*",
                     # ["zip","-r","workbackup.zip","work/*"],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     cwd=Path(current_app.MAINPATH),
                     shell=True
             )
-        # pp.wait()
+        pp.wait()
     except BaseException as ex:
         return (str(ex))
     return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
