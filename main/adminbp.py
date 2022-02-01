@@ -12,6 +12,7 @@ import json
 from datetime import datetime
 import subprocess
 from sqlalchemy.exc import OperationalError
+import shutil
 
 @adm.route('/profile')
 @login_required
@@ -279,21 +280,33 @@ def changerole():
 def workbackup():    
     if current_user.role != "Admin":
         return "Error! Not an Admin."
-    bckfile = Path(current_app.MAINPATH,"workbackup.zip")
+    bckfile = Path(current_app.MAINPATH,"workbackup.tar")
     if bckfile.exists():
         bckfile.unlink()
-    try:    
-        pp = subprocess.Popen("zip -r workbackup.zip work/*",
-                    # ["zip","-r","workbackup.zip","work/*"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=Path(current_app.MAINPATH),
-                    shell=True
-            )
-        pp.wait()
+    try: 
+        # shutil.make_archive(base_name, format)
+        shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))
+        # bcktemp = Path(current_app.MAINPATH,"bcktemp")
+        # if bcktemp.exists():
+        #     if bcktemp.is_dir():
+        #         shutil.rmtree(bcktemp)
+        #     else:
+        #         bcktemp.unlink()
+        # else:
+        #     bcktemp.mkdir()
+        # shutil.copytree(Path(current_app.MAINPATH,"work"),bcktemp)       
+        # shutil.make_archive(bckfile, 'tar', bcktemp)
+        # shutil.rmtree(bcktemp)     
+        # pp = subprocess.Popen(["zip","-r","workbackup.zip","bcktemp/*"],
+        #             stdout=subprocess.PIPE,
+        #             stderr=subprocess.PIPE,
+        #             cwd=Path(current_app.MAINPATH),
+        #             shell=True
+        #     )
+        # pp.wait()
     except BaseException as ex:
         return (str(ex))
-    return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
+    return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, cache_timeout=-1)
     # return "Terminou!"
 
 @adm.route('/workbackup2')
@@ -302,7 +315,7 @@ def workbackup2():
         return "Error! Not an Admin."
     bckfile = Path(current_app.MAINPATH,"workbackup.zip")
     if bckfile.exists():
-        return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True)
+        return send_from_directory(current_app.MAINPATH, 'workbackup.zip', as_attachment=True, cache_timeout=-1)
     return "File not found."
     
     

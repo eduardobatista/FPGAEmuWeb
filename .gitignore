@@ -16,3 +16,4 @@ clouddb.conf
 *.Identifier
 workbackup.zip
 temp/
+workbackup.tar

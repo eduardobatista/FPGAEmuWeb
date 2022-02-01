@@ -111,7 +111,7 @@ def downloadfile():
     for f in aux:
         zipobj.write(f,f.name)    
     zipobj.close()
-    return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True)
+    return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True, cache_timeout=-1)
 
 @main.route("/downloadafile/<fname>") 
 @login_required
@@ -122,7 +122,7 @@ def downloadafile(fname):
     tfile = sessionpath / fname
     if not tfile.exists():
         abort(404)
-    return send_from_directory(sessionpath, fname, as_attachment=True)
+    return send_from_directory(sessionpath, fname, as_attachment=True, cache_timeout=-1)
 
 
 @main.route("/downloadsimfile")
