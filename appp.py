@@ -15,7 +15,7 @@ logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
 
 
-def create_app(debug=False,mainpath="",workdir=""):
+def create_app(debug=False,mainpath="",workdir="",localdburl=""):
     """Create an application."""    
     app = Flask(__name__)
     app.debug = debug
@@ -37,26 +37,23 @@ def create_app(debug=False,mainpath="",workdir=""):
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    seckeyfile = Path(app.TEMPDIR,"seckey")  # Volatile seckey
+    seckeyfile = Path(app.MAINPATH,"seckey")  # WARNING: do not put seckey in other place.
     if seckeyfile.exists():
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
         f.close()
     else:
+        logger.info("SECKEY does not exist, creating new...")
         skey = os.urandom(16)
         app.config['SECRET_KEY'] = skey
         f = open(seckeyfile,"wb")
         f.write(skey)
         f.close()
 
-    # app.config['SECRET_KEY'] = b'_5#y2L"F4z\n\xec]/'
     app.config['MAX_CONTENT_LENGTH'] = 1000000
-    
-    
-    # Database:
-    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/db.sqlite'   
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work/dbnew.sqlite'
+        
+    # Database: 
+    app.config['SQLALCHEMY_DATABASE_URI'] = localdburl
     db.init_app(app)
 
     # Cloud Database:

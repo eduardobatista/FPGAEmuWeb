@@ -51,15 +51,22 @@ subprocess.Popen(
 # print('Backend compiled.\nStarting server...')
 
 WORKDIR = Path(MAINPATH) / "work"
-# Workdir cleanup:
+
+# Workdir cleanup (can be removed in the future):
 for ff in WORKDIR.rglob("*"):
     if (ff.suffix == "") or (ff.suffix == ".o") or (ff.name == "activity.log") or (ff.name == "fpgatest.aux") or (ff.name == "output.ghw") or (ff.suffix == ".cf") or (ff.suffix == ".zip"):
         if ff.name != "seckey":
             if not ff.is_dir():
                 ff.unlink()
-# WORKDIR = Path("/home/work")
 
-app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR)
+# If db.sqlite does not exist, erase seckey:
+localdburl = 'sqlite:///db.sqlite'  # WARNING: do not put local database in other place without changing the seckey.
+if not Path(MAINPATH,"db.sqlite").exists():
+    seckeyfile = Path(MAINPATH,"seckey")
+    if seckeyfile.exists():
+        seckeyfile.unlink()
+
+app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl)
 
 with app.app_context():
     try:        
