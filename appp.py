@@ -59,7 +59,7 @@ def create_app(debug=False,mainpath="",workdir="",localdburl=""):
     # Cloud Database:
     app.config['CLOUDDBINFO'] = ''
     app.clouddb = None
-    clouddbfile = app.WORKDIR / 'clouddb.conf';
+    clouddbfile =  Path(workdir,'clouddb.conf');
     if clouddbfile.exists():
         try:
             with open(clouddbfile,'r') as cfile:

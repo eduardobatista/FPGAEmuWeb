@@ -369,6 +369,7 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
         socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=userid)
         socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
+        errstring = errstring.replace(str(Path(filenames[0]).parent) + "/","")
         if errstring != "":            
             socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Compilation of {toplevelentity} with errors.")
