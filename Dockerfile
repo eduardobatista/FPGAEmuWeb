@@ -6,11 +6,12 @@ COPY ./ fpgaemuweb/
 
 VOLUME ["/home/fpgaemuweb/work"]
 
-RUN pip install flask flask_socketio flask_migrate flask_login flask_sqlalchemy yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn
+RUN pip install flask flask_socketio flask_migrate flask_login flask_sqlalchemy yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 EXPOSE 5000
+EXPOSE 6379
 
 RUN apt-get update && apt-get install -y supervisor
-RUN apt-get install -y zip
+RUN apt-get install -y redis-server
 # COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN mkdir /home/work
 RUN touch /home/stdout.log

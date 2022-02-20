@@ -7,12 +7,17 @@ from flask_sqlalchemy import SQLAlchemy # Database
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from sqlalchemy import create_engine
-
+from celery import Celery
 
 socketio = SocketIO(async_mode="gevent")
 db = SQLAlchemy()  # Database
 logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
+
+celery = Celery('main.tasks', include=["main.tasks"])
+celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/0")
+# celery.autodiscover_tasks()
 
 
 def create_app(debug=False,mainpath="",workdir="",localdburl=""):
@@ -36,6 +41,9 @@ def create_app(debug=False,mainpath="",workdir="",localdburl=""):
     migrate = Migrate(app, db)
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    app.config['CELERY_BROKER_URL'] = 'redis://127.0.0.1:6379/0',
+    app.config['CELERY_RESULT_BACKEND'] ='redis://127.0.0.1:6379/0'
 
     seckeyfile = Path(app.MAINPATH,"seckey")  # WARNING: do not put seckey in other place.
     if seckeyfile.exists():
@@ -63,7 +71,7 @@ def create_app(debug=False,mainpath="",workdir="",localdburl=""):
     if clouddbfile.exists():
         try:
             with open(clouddbfile,'r') as cfile:
-                clouddbconf = cfile.read();
+                clouddbconf = cfile.read()
                 app.config['CLOUDDBINFO'] = clouddbconf
                 app.clouddb = create_engine(clouddbconf,connect_args={'connect_timeout': 5})
         except Exception as ex:

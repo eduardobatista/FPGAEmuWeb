@@ -26,12 +26,12 @@
           </p>
         </div>
         <div class="card-content">
-          <form method="POST" action="login">
+          <form method="POST" action="" onsubmit="doLogin(event)">
 
             <div class="field">
               <label class="label">Email</label>
               <div class="control has-icons-left">
-                <input class="input" type="email" name="email" placeholder="your@email">
+                <input class="input" type="email" name="email" id="email" placeholder="your@email" required>
                 <span class="icon is-small is-left">
                   <i class="fas fa-envelope"></i>
                 </span>
@@ -45,7 +45,7 @@
             <div class="field">
               <label class="label">Password</label>
               <p class="control has-icons-left">                
-                <input class="input" type="password" name="password" placeholder="Password">
+                <input class="input" type="password" name="password" id="password" placeholder="Password" required>
                 <span class="icon is-small is-left">
                   <i class="fas fa-lock"></i>
                 </span>
@@ -63,11 +63,13 @@
                 </article> -->
               {% endif %}
               {% endwith %} 
-
-              <div class="notification is-warning is-light py-1 px-2 my-1" style="display: none;" id="msg2">
+                            
+              <div class="notification is-warning is-light py-1 px-2 my-1" style="display: none;" id="msg2">                
               </div>
            
-            <input type="submit" value="Login" class="button is-info mt-1 mb-2" >
+            <input type="submit" value="Login" class="button is-info mt-1 mb-2">
+            
+            <!-- <button type="button" class="button is-info mt-1 mb-2" onclick="doLogin()" >Login</button> -->
 
             </form> 
 
@@ -115,7 +117,7 @@
       </div>
     </section>
     <footer class="modal-card-foot">
-      <button type="button" class="button is-info is-small" onclick="recovery();">Recovery</button>
+      <button type="button" class="button is-info is-small" onclick="recovery(event);">Recovery</button>
       <button class="button is-danger is-success is-small" onclick="$('#modalPassRecovery').removeClass('is-active');">Close</button>
       
     </footer>
@@ -128,27 +130,119 @@
 <script>
 
         // $( document ).ready(function() {  
+        //   $("#myspinner").css("visibility","visible");
         //   $("#msg2").css("visibility", "visible");
         //   $("#msg2").css("display", "block");
         //   $("#msg2").html("Testeeee!");
         // });
+
+    var loginworking = false;
+    function doLogin(e) {
+      e.preventDefault();
+      if (!loginworking) {
+        loginworking = true;
+      } else {
+        console.log("Wait...");
+        return false;
+      }
+      $("#msg2").css("visibility", "visible");
+      $("#msg2").css("display", "block");
+      $("#msg2").html('<div class="fa-1x"><i class="fas fa-spinner fa-spin"></i></div>');
+      $.post("/login",{ "email": $("#email").val(), "password": $("#password").val() } ).done(
+          function (data) {            
+            if (data.startsWith("Starting")) {
+              setTimeout(doLogin2,2000);
+            } else if (data.startsWith("AlreadyDone")) {
+              doLogin2();
+            } else if (data.startsWith("Success")) {
+              $("#msg2").html("Success! Redirecting...");
+              loginworking = false;
+              document.location = "files" 
+            } else {
+              loginworking = false;
+              $("#msg2").html(data);  
+            }                                    
+          }
+      );
+      return false;
+    }
+
+    function doLogin2() {
+      $.post("/login",{"email": "", "password": ""} ).done(
+          function (data) {            
+            if (data.startsWith("Success")) {
+              $("#msg2").html("Success! Redirecting...");
+              loginworking = false;
+              document.location = "files"              
+            } else if (data.startsWith("Running")) {
+              setTimeout(doLogin2,1000);
+            } else {
+              loginworking = false;
+              $("#msg2").html(data);
+            }                                    
+          }
+      );
+      
+    }
 
     function passRecovery() {
         $("#modalPassRecovery").addClass("is-active");
         $("#recoveryemail").focus();
     }
 
-    function recovery() {
-        $("#modalPassRecovery").removeClass("is-active");
-        emailadd = $("#recoveryemail").val();
-        
-        $("#msg2").css("visibility", "visible");
-        $("#msg2").css("display", "block");
-        $.post("/passrecovery",{ email: emailadd } ).done(
-                    function (data) {
-                        $("#msg2").html(data);                        
-                    }
-                );
+    var recoveryworking = false;
+    function recovery(e) {
+      $("#modalPassRecovery").removeClass("is-active");
+      e.preventDefault();
+      if (!recoveryworking) {
+        recoveryworking = true;
+      } else {
+        console.log("Wait...");
+        return false;
+      }
+      $("#msg2").css("visibility", "visible");
+      $("#msg2").css("display", "block");
+      $("#msg2").html('<div class="fa-1x"><i class="fas fa-spinner fa-spin"></i></div>');
+      $.post("/passrecovery",{ "email": $("#recoveryemail").val() } ).done(
+          function (data) {            
+            if (data.startsWith("Starting")) {
+              setTimeout(recovery2,2000);
+            } else  {
+              processPassRecResult(data);
+            }                                    
+          }
+      );
+      return false;
+    }
+
+    function recovery2() {
+        $.post("/passrecoverystatus",{ } ).done(
+                function (data) {            
+                  if (data.startsWith("Running")) {
+                    setTimeout(recovery2,1000);
+                  } else {
+                    processPassRecResult(data);
+                  }                                
+                }
+            );
+            return false;
+    }
+
+    function processPassRecResult(data) {
+      if (data.startsWith("Success")) {
+          $("#msg2").html("New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact the system administrator.");
+      } else if (data.startsWith("LocalOnly")) {
+          $("#msg2").html("New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact the system administrator (local database only).");
+      } else if (data.startsWith("NotAllowed10Min")) {
+          $("#msg2").html("Password recovery allowed only after 10 minutes.");
+      } else if (data.startsWith("NotFoundLocal")) {
+          $("#msg2").html("User not found (local database).");
+      } else if (data.startsWith("NotFoundInCloud")) {
+          $("#msg2").html("User not found (cloud database).");
+      } else {          
+          $("#msg2").html(data);  
+      }   
+      recoveryworking = false;
     }
 
 

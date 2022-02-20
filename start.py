@@ -13,6 +13,7 @@ from time import sleep
 
 '''
     TODO:
+        - settings file
         - Melhorar Logging
         - Templates.
 
@@ -20,15 +21,9 @@ from time import sleep
         - Melhorar Timeouts: fazer inactivity para entrada e saída diferentes.
         nn Matar outro processo do usuário na criação de um novo.
         nn Controlar melhor processos de emulação.
-        - Implementar escolha para compilação.
-        - Limpar todos os "fpgatest" após compilação inicial?
-        - Limpeza periódica dos diretórios de trabalho...
         nn Desabilitar botões e chaves quando simulação não estiver rodando?
-        - Disponibilizar template de usertop?
         - Melhorar gerenciamento de usuários.
-        - Manutenção de subdiretórios: apagar com certo tempo sem uso.
 '''
-
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
@@ -66,7 +61,11 @@ if not Path(MAINPATH,"db.sqlite").exists():
     if seckeyfile.exists():
         seckeyfile.unlink()
 
-app = create_app(debug=False,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl)
+debugopt = False
+if "debug" in sys.argv:
+    debugopt = True
+    
+app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl)
 
 with app.app_context():
     try:        

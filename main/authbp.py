@@ -1,5 +1,5 @@
-from flask import current_app, render_template, redirect, url_for, request, flash
-from appp import db
+from flask import current_app, render_template, redirect, url_for, request, flash, session
+from appp import db,socketio,celery
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import auth
 from flask_login import login_user, logout_user, current_user
@@ -8,8 +8,23 @@ from sqlalchemy.exc import OperationalError
 from pathlib import Path
 import random
 import string
+import time
 from datetime import datetime,timedelta
-from sqlalchemy import Table,MetaData
+from sqlalchemy import Table,MetaData,create_engine
+# from .funcs import checkLogin,clearLoginAttempt,getLoginInfo
+
+from .tasks import doLogin,doChangePass,doPassRecovery
+
+from celery.result import AsyncResult
+
+def checkCeleryOn():
+    insp = celery.control.inspect(timeout=0.1)   
+    try: 
+        celeryon = True if insp.ping() else False
+    except BaseException as err:
+        celeryon = False
+        current_app.logger.error(err)
+    return celeryon
 
 @auth.route('/login')
 def login():
@@ -17,50 +32,93 @@ def login():
         return redirect(url_for('main.sendfiles'))
     return render_template('login.html')
 
+class MyTaskResp:
+    def __init__(self,status,info):
+        self.status = status
+        self.info = info
+
 @auth.route('/login', methods=['POST'])
 def login_post():
     if current_user.is_authenticated:
-        return redirect(url_for('main.sendfiles'))
+        return redirect(url_for('main.sendfiles'))   
+
+    # If CloudDb is not defined, use local database only:    
+    if not current_app.clouddb:
+        email = request.form.get('email').strip()
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            return "User not found in local database (cloud database is offline)."
+
+        if not check_password_hash(user.password, password):  
+            return "Login failed! Please check your password and try again."
+
+        login_user(user, remember=True)
+        current_app.logger.info(f"User {user.email} logged in successfully (local database).")
+        return "Success"
+
+    insp = celery.control.inspect(timeout=0.1)   
+    try: 
+        celeryon = True if insp.ping() else False
+    except BaseException as err:
+        celeryon = False
+        current_app.logger.error(err) 
+
+    if "logindata" in session.keys():
+
+        if isinstance(session["logindata"][2],dict):
+            task = MyTaskResp("SUCCESS", session["logindata"][2])           
+        else: 
+            task = doLogin.AsyncResult(session["logindata"][2])
+ 
+        # print(task)     
+        if task.status == "PENDING":
+            return "Running"
+        elif task.status == "SUCCESS": 
+            if task.info['status'] == "NotFound":    
+                del session["logindata"]             
+                return "Login failed! Please check your login details and try again." 
+            elif task.info['status'] == "Pass":
+                user = User.query.filter_by(email=session["logindata"][0]).first()
+                user.password = task.info['password']
+                db.session.commit()
+            elif task.info['status'] == "NewUser":
+                new_user = User(email=task.info['email'], name=task.info['name'], password=task.info['password'], role=task.info['role'], viewAs=task.info['email'], 
+                                        lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
+                db.session.add(new_user)
+                db.session.commit()
+                user = User.query.filter_by(email=session["logindata"][0]).first()
+            else:
+                del session["logindata"]  
+                return "Login failed."
+        
+        if not check_password_hash(user.password, session["logindata"][1]):
+            del session["logindata"]  
+            return "Login failed! Please check your password and try again."
+
+        del session["logindata"]                        
+        login_user(user, remember=True)
+        current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not celeryon else ''}.")
+        return "Success"
+
+
     email = request.form.get('email').strip()
     password = request.form.get('password')
-    # remember = True if request.form.get('remember') else False
 
-    user = User.query.filter_by(email=email).first()
+    userexists = True if User.query.filter_by(email=email).first() else False
 
-    # if (not user) and (current_app.clouddb is not None):
-    if current_app.clouddb is not None:
-        try:
-            with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
-                clouddata = conncloud.execute(table1.select())
-                for row in clouddata:
-                    if email == row['email']:
-                        if not user:
-                            new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
-                                        lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
-                            db.session.add(new_user)
-                            user = new_user
-                        else:
-                            user.password = row['password']
-                        db.session.commit()                        
-                clouddata.close()
-        except OperationalError as err:
-            current_app.logger.error(err)
-        except BaseException as err:
-            current_app.logger.error(err)
+    if celeryon:
+        task = doLogin.delay(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
+        session["logindata"] = (email,password,task.id)
+        return "Starting"
+    else:
+        resp = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
+        session["logindata"] = (email,password,resp)
+        return "AlreadyDone"
 
-    # check if the user actually exists
-    # take the user-supplied password, hash it, and compare it to the hashed password in the database
-    if not user or not check_password_hash(user.password, password):
-        flash('Please check your login details and try again.')
-        return redirect(url_for('auth.login')) # if the user doesn't exist or password is wrong, reload the page
+    
 
-    # if the above check passes, then we know the user has the right credentials
-    login_user(user, remember=True)
-    current_app.logger.info(f"User {user.id}:{user.email}|{current_user.email} logged in.")
-    if email != current_user.email:
-        logout_user()
-    return redirect(url_for('main.sendfiles'))
 
 @auth.route('/signup')
 def signup():
@@ -86,7 +144,7 @@ def signup_post():
             return redirect(url_for('auth.signup'))
         
     try:
-        if User.query.count() >= 1000:
+        if User.query.count() >= 2000:
             flash('Too many users in the system. Please contact the administrator.')
             return redirect(url_for('auth.signup'))        
     except OperationalError as err:
@@ -141,10 +199,55 @@ def signup_post():
     login_user(new_user, remember=True)
     return redirect(url_for('main.sendfiles'))
 
+
+@auth.route('/passrecoverystatus',methods=['POST'])
+def passrecstatus(nocelery=False,resp=None):
+
+    if ("passrecoverydata" in session.keys()) or nocelery:
+
+        if nocelery:
+            task = MyTaskResp("SUCCESS", resp)
+        else:        
+            task = doChangePass.AsyncResult(session["passrecoverydata"][2])
+
+        print(task.status)
+        if task.status == "PENDING":
+            return "Running"
+
+        elif task.status == "SUCCESS":
+
+            if 'passrecoverydata' in session:
+                email = session['passrecoverydata'][0]
+                randompass = session['passrecoverydata'][1]
+                del session['passrecoverydata']
+            else:
+                return "Failed"
+
+            if task.info['status'].startswith("NotAllowed10Min"):
+                return "NotAllowed10Min"
+            elif task.info['status'] == "Success": 
+                current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
+                         contents=f"Dear {email},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
+                # return "New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact the system administrator."
+                current_app.logger.info(f"Successful password change for {email}{' (no celery)' if nocelery else ''}.")                
+                return "Success"
+            elif task.info['status'] == "NotFoundInCloud":
+                return "NotFoundInCloud"
+            elif task.info["status"] == "Error":
+                current_app.logger.info(f"Pass change error: {task.info['message']}.")                
+                return "Error"
+            else:
+                return "Failed"
+        
+        return "Failed"
+
+
+
+
 @auth.route('/passrecovery',methods=['POST'])
 def passrecovery():
     if current_app.yag is None:
-        return "Password recovery not working in this machine. Please contact fpgaemuweb@gmail.com."
+        return "Password recovery not working in this machine. Please contact the system administrator."
     email = request.form.get('email').strip()
     if email == "admin@fpgaemu":
         return "Can't recover password for this user."
@@ -152,42 +255,60 @@ def passrecovery():
     randompass = ''.join(random.choice(letters) for i in range(6))
     randompasshash = generate_password_hash(randompass, method='sha256')
 
-    userincloud = False
+    if not current_app.clouddb:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            if (user.lastPassRecovery is not None) and ( datetime.now() < (user.lastPassRecovery+timedelta(minutes=10)) ):
+                    return "NotAllowed10Min"
+            else:                
+                user.password = randompasshash
+                user.LastPassRecovery = datetime.now()
+                db.session.commit()  
+                current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
+                            contents=f"Dear {email},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
+                current_app.logger.info(f"Password recovered sucessfully for {email} (local database only).")
+                return "LocalOnly"
+        else:
+            return "NotFoundLocal"
+
     if current_app.clouddb is not None:
-        try:
-            with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
-                clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
-                usercloud = clouddata.first()  
-                if usercloud is not None:
-                    userincloud = True
-                    if (usercloud.lastPassRecovery is not None) and ( datetime.now() < (usercloud.lastPassRecovery+timedelta(minutes=10)) ):
-                        return "Password recovery allowed only after 10 minutes"
-                    conncloud.execute(table1.update().where(table1.c.email==email).values(password=randompasshash,lastPassRecovery=datetime.now()))
-                clouddata.close()
-        except OperationalError as err:
-            current_app.logger.error(err)
-        except BaseException as err:
-            current_app.logger.error(err)
+        if checkCeleryOn():
+            task = doPassRecovery.delay(email,randompasshash,current_app.config['CLOUDDBINFO'])
+            session["passrecoverydata"] = (email,randompass,task.id)
+            return "Starting"
+        else:
+            resp = doPassRecovery(email,randompasshash,current_app.config['CLOUDDBINFO'])
+            session["passrecoverydata"] = (email,randompass)
+            return passrecstatus(False,resp)
 
-    user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
-    if (user == None): # if a user is found, we want to redirect back to signup page so user can try again
-        if (not userincloud):
-            return 'User not found!'
-    else: 
-        if (user.lastPassRecovery is not None) and ( datetime.now() < (user.lastPassRecovery+timedelta(minutes=10)) ):
-            return "Password recovery allowed only after 10 minutes"
-        user.lastPassRecovery = datetime.now()
-        user.password = randompasshash    
-        db.session.commit()    
 
-    current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
-                         contents=f"Dear {email},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
-    return "New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact fpgaemuweb@gmail.com."
+@auth.route('/changepassstatus', methods=['POST'])
+def changepassstatus(nocelery=False,resp=None):
+
+    if ("changepassdata" in session.keys()) or nocelery:
+
+        if nocelery:
+            task = MyTaskResp("SUCCESS", resp)
+        else:        
+            task = doChangePass.AsyncResult(session["changepassdata"][1])
+
+        if task.status == "PENDING":
+            return "Running"
+        elif task.status == "SUCCESS":
+            if 'changepassdata' in session:
+                del session['changepassdata']
+            if task.info['status'].startswith("PassUpdated"):
+                current_app.logger.info(f"Successful password change for {current_user.email}{' (no celery)' if nocelery else ''}.")                
+                return "Success"
+            elif task.info["status"] == "Error":
+                current_app.logger.info(f"Pass change error: {task.info['message']}.")                
+                return "LocalOnly"
+            else:
+                return "Failed"
 
 
 @auth.route('/changepass', methods=['POST'])
-def changepass():
+def changepass():    
     oldpass = request.form.get('oldpass')
     newpass = request.form.get('newpass')
     repeatnew = request.form.get('repeatnew')
@@ -201,7 +322,7 @@ def changepass():
         flash("New pass is empty.")
         return redirect(url_for('adm.profile'))
 
-    user = User.query.filter_by(email=email).first()    
+    user = User.query.filter_by(email=email).first()
     
     if not check_password_hash(user.password, oldpass):
         flash("Old password is not correct!")
@@ -210,37 +331,33 @@ def changepass():
     user.password = generate_password_hash(newpass, method='sha256')
     db.session.commit()
 
-    if current_app.clouddb is not None:
-        try:
-            with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
-                clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
-                usercloud = clouddata.first()                
-                if usercloud is not None:
-                    conncloud.execute(table1.update().where(table1.c.email==email).values(password=user.password))
-                else:
-                    ndict = {'email': email, 'name': user.name, 'password': user.password, 
-                        'role': user.role, 'viewAs': user.viewAs, 'lastPassRecovery': None, 
-                        'topLevelEntity': user.topLevelEntity, 'testEntity': user.testEntity}
-                    conncloud.execute(table1.insert(), ndict)
-                clouddata.close()
-        except OperationalError as err:
-            current_app.logger.error(err)
+    if current_app.clouddb is None:
+
+        current_app.logger.info(f"Successful password change for {email} (local database only).")
+        return "Success"
+
+    else:
+
+        insp = celery.control.inspect(timeout=0.1)   
+        try: 
+            celeryon = True if insp.ping() else False
         except BaseException as err:
+            celeryon = False
             current_app.logger.error(err)
 
-    current_app.logger.info(f"Successful password chage for {email}.")
+        if celeryon:
+            task = doChangePass.delay(email,generate_password_hash(newpass, method='sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
+            session["changepassdata"] = (email,task.id)
+            return "Starting"
+        else:
+            resp = doChangePass(email,generate_password_hash(newpass, method='sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
+            return changepassstatus(True,resp)
 
-    flash("Password changed successfully.")    
-    return redirect(url_for('adm.profile'))
 
 
 @auth.route('/logout')
 def logout():
-    # print(current_user.email)
-    # return "Uepa!"
     logout_user()
-    # flash('User logged out.')
     return redirect(url_for('auth.login'))
 
 

@@ -17,3 +17,5 @@ clouddb.conf
 workbackup.zip
 temp/
 workbackup.tar
+dump.rdb
+backend/fpgaemu_c.o

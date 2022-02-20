@@ -4,9 +4,74 @@ from random import randrange
 from pathlib import Path
 import pkg_resources
 
-from appp import socketio,logger
+from appp import socketio,logger,celery
 
-newuserprefix = socket.gethostbyname(socket.gethostname())[-2:]
+# from .models import User
+# from sqlalchemy.exc import OperationalError
+# from sqlalchemy import Table,MetaData
+# from sqlalchemy import create_engine
+
+
+## Background login management ---------------------------------------------------------------
+
+# loginattempts = {}
+# logininfo = {}  # new user or password hash
+
+# def getLoginInfo(loginkey):
+#     if loginkey in logininfo.keys():
+#         return logininfo[loginkey]
+#     else:
+#         return None
+
+# def clearLoginAttempt(loginkey):
+#     if loginkey in loginattempts.keys():
+#         del loginattempts[loginkey]
+#     if loginkey in logininfo.keys():
+#         del logininfo[loginkey]
+        
+# def checkLogin(loginkey):
+#     if loginkey in loginattempts.keys():
+#         return loginattempts[loginkey]
+#     else:
+#         return None
+
+# @celery.task()
+# def doLogin(userexists,email,password,clouddburl,loginkey):
+
+#     loginattempts[loginkey] = "Running"
+#     logininfo[loginkey] = None
+
+
+#     if clouddburl is not None:
+#         try:
+#             clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
+#             with clouddb.connect() as conncloud:     
+#                 table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+#                 clouddata = conncloud.execute(table1.select())           
+#                 for row in clouddata:
+#                     if email == row['email']:
+#                         if not userexists:
+#                             new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
+#                                         lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
+#                             logininfo[loginkey] = new_user
+#                         else:
+#                             logininfo[loginkey] = row['password']                     
+#                 clouddata.close()
+#         except OperationalError as err:
+#             logger.error(err)
+#         except BaseException as err:
+#             logger.error(err)
+
+#     # check if the user actually exists
+#     # take the user-supplied password, hash it, and compare it to the hashed password in the database
+#     # if not user or not check_password_hash(user.password, password):
+#     #     loginattempts[loginkey] = "Failed"
+#     #     return
+
+#     loginattempts[loginkey] = "Success"
+
+## ---------------------------------------------------------------------------------------
+
 
 fpgatesttemplate = '''
 library ieee;
@@ -172,16 +237,94 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
     if not toplevel.exists(): return f"Error: Top level entity not found.";
     fpgatestfile = Path(temppath,'fpgatest.aux')
     if fpgatestfile.exists(): fpgatestfile.unlink()
-    
-    portmaptxt = None
-    mapfile = Path(sessionpath,toplevelentity + ".vhd.map")
-    if mapfile.exists():
-        ff = open(mapfile,'r')
-        portmap = ff.readline()
-        if len(portmap) > 2:
-            portmaptxt = "port map(" + portmap + ");"
 
-    if not portmaptxt:
+    try:
+    
+        portmaptxt = None
+        mapfile = Path(sessionpath,toplevelentity + ".vhd.map")
+        if mapfile.exists():
+            ff = open(mapfile,'r')
+            portmap = ff.readline()
+            if len(portmap) > 2:
+                portmaptxt = "port map(" + portmap + ");"
+
+        if not portmaptxt:
+            toplevel = open(toplevel, 'r')    
+            data = toplevel.read()
+            data = re.sub("--.*?\n|\n"," ",data)
+            data = re.sub("\s+"," ",data)
+            data = re.sub("\s+;",";",data)
+            toplevel.close()
+            entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
+            if entityname is None: 
+                return f"Error: entity not found in {toplevelentity}.vhd."
+            entityname = entityname.group(1)
+            aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
+            if aux is None:
+                return f"Error: entity not found in {toplevelentity}.vhd."
+            aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
+            if aux is None:
+                return f"Error: ports not found in {toplevelentity}.vhd."
+            aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
+            sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
+            sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
+            sepspace = re.compile(r"\s+")
+            validportkeys = validports.keys()
+            foundports = []
+            foundsizes = []
+            founddifs = []
+            try:
+                for item in aux2:
+                    aux3 = sepdots.split(item)
+                    if len(aux3) != 2:
+                        continue
+                    dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
+                    typesize = 1
+                    if "std_logic_vector" in dirtype[1].lower():
+                        auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
+                        if (auxx is None) or (len(auxx.groups()) < 2):
+                            return "Error: Fail parsing " + dirtype[1] + "."
+                        typesize = int(auxx.group(1)) - int(auxx.group(2)) 
+                        if typesize < 0: typesize = -typesize
+                        typesize = typesize+1
+                    aux4 = sepcomma.split(aux3[0])
+                    for pp in aux4:
+                        ppp = pp.strip().upper()
+                        if ppp not in validportkeys:
+                            return f"Error: {pp} is not a valid port for a top level entity. You have to use the Mapper or SW, LEDR, KEY, HEX0, HEX1, etc as port names."
+                        if validports[ppp][1] < typesize:
+                            return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
+                        foundports.append(ppp)
+                        foundsizes.append(typesize)
+                        founddifs.append(validports[ppp][1]-typesize)
+            except:
+                return "Error parsing usertop ports."
+            if len(foundports) == 0:
+                return "Error: ports not found."
+            portmaptxt = "port map("
+            for port,tsize,dif in zip(foundports,foundsizes,founddifs):
+                
+                if (tsize == 1) or (dif == 0):
+                    portmaptxt = portmaptxt + f"{port} => {port},"
+                else:              
+                    portmaptxt = portmaptxt + f'{port}({tsize-1} downto 0) => {port}({tsize-1} downto 0),'
+            portmaptxt = portmaptxt[:-1] + ");"
+
+        fpgatest = open(fpgatestfile, 'w')
+        fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
+        fpgatest.close()
+        return "Ok!"
+    
+    except BaseException as err:
+        return f"Error: {err}."
+
+
+def getportlist(sessionpath,file):
+    toplevel = Path(sessionpath,file)
+    if not toplevel.exists(): 
+        return f"Error: Top level entity not found."
+    
+    try:
         toplevel = open(toplevel, 'r')    
         data = toplevel.read()
         data = re.sub("--.*?\n|\n"," ",data)
@@ -190,23 +333,20 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
         toplevel.close()
         entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
         if entityname is None: 
-            return f"Error: entity not found in {toplevelentity}.vhd."
+            return "Error: entity not found in usertop."
         entityname = entityname.group(1)
         aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
         if aux is None:
-            return f"Error: entity not found in {toplevelentity}.vhd."
+            return "Error: entity not found in usertop."
         aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
         if aux is None:
-            return f"Error: ports not found in {toplevelentity}.vhd."
+            return "Error: ports not found in usertop."
         aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
         sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
         sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
         sepspace = re.compile(r"\s+")
-        validportkeys = validports.keys()
-        foundports = []
-        foundsizes = []
-        founddifs = []
         try:
+            myports = []
             for item in aux2:
                 aux3 = sepdots.split(item)
                 if len(aux3) != 2:
@@ -222,80 +362,16 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
                     typesize = typesize+1
                 aux4 = sepcomma.split(aux3[0])
                 for pp in aux4:
-                    ppp = pp.strip().upper()
-                    if ppp not in validportkeys:
-                        return f"Error: {pp} is not a valid port for a top level entity. You have to use the Mapper or SW, LEDR, KEY, HEX0, HEX1, etc as port names."
-                    if validports[ppp][1] < typesize:
-                        return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
-                    foundports.append(ppp)
-                    foundsizes.append(typesize)
-                    founddifs.append(validports[ppp][1]-typesize)
+                    ppp = {'name':pp.strip().upper(),'typesize':typesize,'direction':dirtype[0].lower().strip()}
+                    myports.append(ppp)
+            # print(myports)
+            return myports
         except:
-            return "Error parsing usertop ports."
-        if len(foundports) == 0:
-            return "Error: ports not found."
-        portmaptxt = "port map("
-        for port,tsize,dif in zip(foundports,foundsizes,founddifs):
-            
-            if (tsize == 1) or (dif == 0):
-                portmaptxt = portmaptxt + f"{port} => {port},"
-            else:              
-                portmaptxt = portmaptxt + f'{port}({tsize-1} downto 0) => {port}({tsize-1} downto 0),'
-        portmaptxt = portmaptxt[:-1] + ");"
-    
-    fpgatest = open(fpgatestfile, 'w')
-    fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
-    fpgatest.close()
-    return "Ok!"
+            #return "Error parsing usertop ports."
+            return []
 
-
-def getportlist(sessionpath,file):
-    toplevel = Path(sessionpath,file)
-    if not toplevel.exists(): return f"Error: Top level entity not found.";
-    toplevel = open(toplevel, 'r')    
-    data = toplevel.read()
-    data = re.sub("--.*?\n|\n"," ",data)
-    data = re.sub("\s+"," ",data)
-    data = re.sub("\s+;",";",data)
-    toplevel.close()
-    entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
-    if entityname is None: 
-        return "Error: entity not found in usertop."
-    entityname = entityname.group(1)
-    aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
-    if aux is None:
-        return "Error: entity not found in usertop."
-    aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
-    if aux is None:
-        return "Error: ports not found in usertop."
-    aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
-    sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
-    sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
-    sepspace = re.compile(r"\s+")
-    try:
-        myports = []
-        for item in aux2:
-            aux3 = sepdots.split(item)
-            if len(aux3) != 2:
-                continue
-            dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
-            typesize = 1
-            if "std_logic_vector" in dirtype[1].lower():
-                auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
-                if (auxx is None) or (len(auxx.groups()) < 2):
-                    return "Error: Fail parsing " + dirtype[1] + "."
-                typesize = int(auxx.group(1)) - int(auxx.group(2)) 
-                if typesize < 0: typesize = -typesize
-                typesize = typesize+1
-            aux4 = sepcomma.split(aux3[0])
-            for pp in aux4:
-                ppp = {'name':pp.strip().upper(),'typesize':typesize,'direction':dirtype[0].lower().strip()}
-                myports.append(ppp)
-        # print(myports)
-        return myports
-    except:
-        #return "Error parsing usertop ports."
-        return []
+    except BaseException as err:
+        return f"Error: {err}."
 
 def getexistingportmap(sessionpath,file):
     mapfile = Path(sessionpath,file + ".map")
@@ -447,6 +523,7 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
             socketio.emit("message",outstring,namespace="/stream",room=userid)
             socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
+        errstring = errstring.replace(str(Path(filenames[0]).parent) + "/","")
         if errstring != "":
             socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Simulation of {simentity} with errors.")            
