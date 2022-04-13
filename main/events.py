@@ -28,8 +28,11 @@ def getfile(filename):
     if checklogged():
         try:
             sessionpath = getuserpath()
-            fname = Path(sessionpath,filename)
+            # print(filename)
+            fname = Path(sessionpath,filename)   
+            
             data = open(fname,'r').read()
+            
             emit("filecontent",data)
         except TypeError as terror:
             emit("error",str(terror))
@@ -71,8 +74,35 @@ def renamefile(dataa):
         if not filetorename.exists():
             emit("error","File to rename not found.")
             return
-        filetorename.rename(Path(sessionpath,dataa['filenameto']))
-        emit("filerenamed",dataa['filenameto'])
+        if (filetorename.suffix == "") or (filetorename.suffix == ".vhd"): 
+            filetorename.rename(Path(sessionpath,dataa['filenameto']))
+            if filetorename.suffix == ".vhd":
+                filetorenamemap = Path(sessionpath,dataa['filename'] + ".map")
+                if filetorenamemap.exists():
+                    filetorenamemap.rename(Path(sessionpath,dataa['filenameto'] + ".map"))
+            emit("filerenamed",dataa['filenameto'])
+        else: 
+            emit("error",f"Renaming files with suffix {filetorename.suffix} is not allowed.")
+
+@socketio.on('createproject', namespace='/stream') 
+def createproject(dataa):
+    if checklogged():
+        if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+            emit("error","Not allowed while viewing as a different user.")
+            return
+        sessionpath = getuserpath()
+        if not sessionpath.exists():
+            emit("error","Directory not found.")
+            return
+        if dataa['projectname'] == "_OldFiles":
+            emit("error","Project name not allowed.")
+            return
+        newproject = Path(sessionpath,dataa['projectname'])
+        if newproject.exists():
+            emit("error","Project already exists.")
+            return
+        newproject.mkdir()
+        emit("projectcreated",dataa['projectname'])
 
 @socketio.on('savefile', namespace='/stream') 
 def savefile(dataa):
@@ -83,8 +113,9 @@ def savefile(dataa):
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
-        try: 
+        try:             
             fname = Path(sessionpath,dataa['filename'])
+            # print(fname)
             data = open(fname,'w').write(dataa['data'])
             emit("filesaved",dataa['filename'])
         except Exception as ex:
@@ -98,11 +129,11 @@ def deletefile(filename):
         # if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
         #     emit("error","Not allowed while viewing as a different user.")
         #     return
-        if (str(filename).endswith('.vhd') or str(filename).endswith('.vhdl')):
-            try:
-                sessionpath = getuserpath()
-                fname = Path(sessionpath,filename)
-                fname.unlink()
+        sessionpath = getuserpath()
+        fpath = Path(sessionpath,filename)
+        if (fpath.suffix == ".vhd"):
+            try:                
+                fpath.unlink()                
                 fmap = Path(sessionpath,filename+".map")
                 if fmap.exists():
                     fmap.unlink()
@@ -113,21 +144,34 @@ def deletefile(filename):
                 emit("error",str(ex))
             except OSError as err:
                 emit("error",str(err))
+        elif fpath.is_dir():
+            try:     
+                for ff in fpath.glob("*"):
+                    ff.unlink()           
+                fpath.rmdir()
+                emit("filedeleted",filename)
+            except FileNotFoundError as fnf:
+                emit("error",f"Could not delete: file {filename} not found.<br>Refresh page to update file list.")
+            except BaseException as ex:
+                emit("error",str(ex))
+            except OSError as err:
+                emit("error",str(err))
         else:
-            emit("error","Only .vhd and .vhdl files allowed.")
+            emit("error","Only .vhd files or projects are allowed.")
 
 @socketio.on('deleteallfiles', namespace='/stream') 
-def deleteallfiles(fname):
+def deleteallfiles(pname):
     if checklogged():
         if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
             emit("error","Not allowed while viewing as a different user.")
             return
         try:
             sessionpath = getuserpath()
-            aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+            fpath = sessionpath / pname
+            aux = list(fpath.glob("*.vhd"))
             for ff in aux:
                 ff.unlink()
-            aux2 = list(sessionpath.glob("*.map"))
+            aux2 = list(fpath.glob("*.map"))
             for ff2 in aux2:
                 ff2.unlink 
             emit("filedeleted","*")
@@ -145,7 +189,13 @@ def simulate(stoptime,testentity="usertest.vhd"):
     if checklogged():
         current_user.testEntity = testentity[:-4]
         db.session.commit()
-        socketio.start_background_task(simulatefile,getuserpath(),current_app.MAINPATH,stoptime,current_user.email,testentity[:-4])
+        if ("/" not in testentity):
+            curproject = ""
+        else:
+            aux = testentity.split("/")
+            curproject = aux[0]
+            testentity = aux[1]
+        socketio.start_background_task(simulatefile,getuserpath(),current_app.MAINPATH,stoptime,current_user.email,testentity[:-4],curproject)
 
 @socketio.on('message', namespace='/stream') 
 def stream(cmd):
@@ -163,8 +213,9 @@ def stream2(cmd):
             # current_app.logger.info(f"{current_user.email}: Stopping emulation.")
             stopEmulation(current_user.email)
         elif cmd == "Emular":
-            current_app.logger.info(f"{current_user.email}: Starting emulation.")
-            socketio.start_background_task(doEmulation,current_user.email,current_app.MAINPATH)
+            current_app.logger.info(f"{current_user.email}: Starting emulation of {current_user.topLevelEntity}.")
+            curproject = "" if ("/" not in current_user.topLevelEntity) else current_user.topLevelEntity.split("/")[0]
+            socketio.start_background_task(doEmulation,current_user.email,current_app.MAINPATH,curproject,current_user.topLevelEntity)
         else:
             disconnect()
 

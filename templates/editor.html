@@ -129,7 +129,20 @@
                 <button class="delete" aria-label="close" onclick="$('#modalSaveAs').removeClass('is-active');"></button>
               </header>
               <section class="modal-card-body">
-                <input type="text" id="filenameas" class="input" placeholder="File Name">
+                <div class="field has-addons w-100">                    
+                    <div class="control">
+                        <div class="select is-info">
+                            <select id="projectselect">
+                                {% for proj in projectnames %} 
+                                    <option value="{{proj}}">{{proj}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <input type="text" id="filenameas" class="input" placeholder="File Name">
+                    </div>
+                </div>                    
                 <div id="saveasalert" class="notification is-warning py-1 mt-1">
                     File extension must be ".vhd".                  
                 </div>
@@ -140,6 +153,7 @@
               </footer>
             </div>
           </div>
+
         
           <div class="modal is-clipped" id="modalError">
             <div class="modal-background"></div>
@@ -240,8 +254,7 @@
                 window.filechanged = false;
                 if (window.lastfilesaveopt >= 1) {
                     location.href = "/editor?file=" + String(msg);
-                }
-                
+                }                
             }); 
             window.socket.on('filecontent', function(msg){
                 editor.setValue(msg);                
@@ -320,7 +333,7 @@
             var val = $("#fileselect").children("option:selected").val();
             // if (((opt == 1) && (val != 0)) || (opt == 2)) {
             if ( opt > 0 ) {
-                val = $("#filenameas").val();
+                val = $('#projectselect option:selected').val() + "/" + $("#filenameas").val();
             } 
 
             if (val != 0) {
@@ -349,12 +362,24 @@
 
         function savefileas() {
             window.isnewfile = false;
+            if ('{{currentproject}}' != "") {
+                $("#projectselect").val("{{currentproject}}");
+                $('#projectselect').prop('disabled', true);
+            } else {
+                $('#projectselect').prop('disabled', false);
+            }
             $("#modalSaveAs").addClass("is-active");   
             $('#filenameas').focus();
         }
 
         function newfile() {
             window.isnewfile = true;
+            if ('{{currentproject}}' != "") {
+                $("#projectselect").val("{{currentproject}}");
+                $('#projectselect').prop('disabled', true);
+            } else {
+                $('#projectselect').prop('disabled', false);
+            }
             $("#modalSaveAs").addClass("is-active");
             $('#filenameas').focus();
         }

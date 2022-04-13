@@ -1,4 +1,4 @@
-from flask import current_app, render_template, redirect, url_for, request, flash,send_from_directory
+from flask import current_app, render_template, redirect, url_for, request, flash,send_from_directory, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User
 from . import adm
@@ -32,6 +32,7 @@ def setViewAs():
     email = request.form.get('viewAsSelect')
     current_user.viewAs = email
     db.session.commit()
+    session["CurrentProject"] = ""
     return redirect(url_for('main.sendfiles')) 
 
 

@@ -1,5 +1,6 @@
 from pathlib import Path
-from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash
+import shutil
+from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash, abort
 from werkzeug.utils import secure_filename
 from zipfile import ZipFile
 from . import main
@@ -16,7 +17,14 @@ def getuserpath():
     if not userpath.exists():
         userpath.mkdir(parents=True)
     return userpath
-    
+
+def getcurrentproject(sessionpath):
+    if "CurrentProject" not in session.keys():
+        session["CurrentProject"] = ""    
+    if session["CurrentProject"] != "":
+        if not (sessionpath / session["CurrentProject"]).exists():
+            session["CurrentProject"] = ""
+    return session["CurrentProject"]    
 
 @main.route('/')
 def entrance():
@@ -30,24 +38,85 @@ def entrance():
 def sendfiles():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
-    sessionpath = getuserpath()
-    aux = getvhdfilelist(sessionpath) #list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    filenames = [x.stem for x in aux]    
-    if (current_user.topLevelEntity is None) or (current_user.topLevelEntity not in filenames):
-        if len(filenames) == 1:
-            current_user.topLevelEntity = filenames[0]
+    sessionpath = getuserpath() 
+    cproj = getcurrentproject(sessionpath)        
+    if cproj == "":
+        aux = getdirlist(sessionpath)
+        projectnames = [x.stem for x in aux]
+        aux = getvhdfilelist(sessionpath) + list(sessionpath.glob("*.map"))
+        if len(aux) > 0:
+            oldfilespath = sessionpath / "_OldFiles"
+            if not oldfilespath.exists():
+                oldfilespath.mkdir()
+                projectnames = ["_OldFiles"] + projectnames
+            for ff in aux:
+                shutil.move(ff,oldfilespath)            
+    else: 
+        projectnames = []
+        sessionpath = sessionpath / cproj
+    aux = getvhdfilelist(sessionpath) #list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))  
+    filenames = [x.stem for x in aux]
+    if (current_user.topLevelEntity is None):
+        if len(filenames) > 0:
+            current_user.topLevelEntity = ((cproj + "/") if (cproj != "") else "") + filenames[0]
         else:    
             current_user.topLevelEntity = "usertop"
         db.session.commit()
-    return render_template('sendfiles.html',username=current_user.email,toplevel=current_user.topLevelEntity,filenames=filenames,socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')        
+    else:
+        if not current_user.topLevelEntity.startswith(cproj):
+            if len(filenames) > 0:
+                current_user.topLevelEntity = ((cproj + "/") if (cproj != "") else "") + filenames[0]
+            else: 
+                current_user.topLevelEntity =  ((cproj + "/") if (cproj != "") else "") + "usertop"
+            db.session.commit()    
+    return render_template('files.html',username=current_user.email,toplevel=current_user.topLevelEntity,
+                            filenames=filenames,projectnames=projectnames, currentproject=cproj,
+                            socketiofile=getsocketiofile()) # current_app.send_static_file('main.html')        
+
+@main.route("/openproject/<pname>") 
+@login_required
+def openproject(pname):
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login'))
+    if pname == "":
+        abort(404)
+    sessionpath = getuserpath()
+    pdir = sessionpath / pname
+    if pdir.exists() and pdir.is_dir():
+        session["CurrentProject"] = pname
+        configfile = pdir / ".config"
+        if configfile.exists():
+            with open(configfile,"r") as cfile:
+                aux = cfile.read()
+                current_user.topLevelEntity = pname + "/" + aux
+                db.session.commit()
+    else:
+        abort(404)
+    return  redirect(url_for('main.sendfiles'))
+
+@main.route("/closeproject") 
+@login_required
+def closeproject():
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login'))
+    projpath = (getuserpath() / session["CurrentProject"])
+    cfgpath = projpath / ".config"
+    with open(cfgpath,"w") as cfile:
+        cfile.write(Path(current_user.topLevelEntity).name)
+    session["CurrentProject"] = ""
+    return  redirect(url_for('main.sendfiles'))
 
 @main.route('/settoplevel',methods=['POST'])
 @login_required
 def settoplevel():
-    toplevelfile = request.form.get('toplevelfile')
+    toplevelfile = request.form.get('toplevelfile')    
     if current_user.topLevelEntity != toplevelfile:
-        current_user.topLevelEntity = toplevelfile        
+        current_user.topLevelEntity = toplevelfile
         db.session.commit()
+        sessionpath = getuserpath()
+        cfgpath =  (sessionpath / getcurrentproject(sessionpath)) / ".config"
+        with open(cfgpath,"w") as cfile:
+            cfile.write(Path(toplevelfile).name)
         fpgatestpath = Path(getuserpath(),'fpgatest')
         if fpgatestpath.exists():
             fpgatestpath.unlink()
@@ -74,55 +143,84 @@ def emular():
 @login_required
 def simular():
     sessionpath = getuserpath()
-    aux = getvhdfilelist(sessionpath)
-    filenames = [x.name for x in aux]
+    cproj = getcurrentproject(sessionpath)
+    if cproj != "":
+        aux = getvhdfilelist(sessionpath / cproj,recursive=False)
+    else:
+        aux = getvhdfilelist(sessionpath,recursive=True)
+    filenames = [str(x.relative_to(sessionpath)) for x in aux]
     tentity = f"{current_user.testEntity}.vhd"
     if tentity not in filenames:
         tentity = "usertest.vhd"
     return render_template('simulation.html',username=current_user.email,
-                    socketiofile=getsocketiofile(),filenames=filenames,selectedfile=tentity)
+                    socketiofile=getsocketiofile(),filenames=filenames,testentity=tentity)
 
 @main.route('/editor')
 @login_required
 def editor():       
     sessionpath = getuserpath()
-    aux = getvhdfilelist(sessionpath) # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    filenames = [x.name for x in aux]
-    return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile(),toplevel=current_user.topLevelEntity)
+    aux = getdirlist(sessionpath)
+    projectnames = [x.stem for x in aux] 
+    curproject = getcurrentproject(sessionpath)
+    if curproject == "":
+        aux = getvhdfilelist(sessionpath,recursive=True)
+    else:
+        aux = getvhdfilelist(sessionpath / curproject)
+    filenames = [x.relative_to(sessionpath) for x in aux]
+    return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile(),
+                            toplevel=current_user.topLevelEntity,projectnames=projectnames,currentproject=curproject)
 
 @main.route('/mapper')
 @login_required
 def mapper():       
     sessionpath = getuserpath()
-    aux = getvhdfilelist(sessionpath)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    filenames = [x.name for x in aux]
+    curproject = getcurrentproject(sessionpath)
+    if curproject == "":
+        aux = getvhdfilelist(sessionpath,recursive=True)
+    else:
+        aux = getvhdfilelist(sessionpath / curproject)
+    # aux = getvhdfilelist(sessionpath,recursive=True)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    filenames = [x.relative_to(sessionpath) for x in aux]
     return render_template('mapper.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
 
 @main.route("/downloadfile")
 @login_required
 def downloadfile():
     sessionpath = getuserpath()
-    aux = getvhdfilelist(sessionpath)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    aux = getvhdfilelist(sessionpath,recursive=True)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # filenames = [x.name for x in aux]
     zipname = Path(sessionpath,'VHDLFiles.zip')
     if zipname.exists(): 
         zipname.unlink()
     zipobj = ZipFile(zipname, 'w')
     for f in aux:
-        zipobj.write(f,f.name)    
+        zipobj.write(f,f.relative_to(sessionpath))    
     zipobj.close()
     return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True, cache_timeout=-1)
 
-@main.route("/downloadafile/<fname>") 
+@main.route("/downloadafile", methods=['GET', 'POST']) 
 @login_required
-def downloadafile(fname):
-    if not fname.endswith("vhd"):
-        abort(404)
+def downloadafile():
+    fname = request.args.get('file')
     sessionpath = getuserpath()
-    tfile = sessionpath / fname
-    if not tfile.exists():
+    fpath = Path(sessionpath,fname)
+    if not fpath.exists():
         abort(404)
-    return send_from_directory(sessionpath, fname, as_attachment=True, cache_timeout=-1)
+    if fpath.is_dir():
+        temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+        zipname = Path(temppath,f'{fname}.zip')
+        if zipname.exists(): 
+            zipname.unlink()
+        zipobj = ZipFile(zipname, 'w')
+        aux = list(fpath.glob("*.vhd"))
+        for f in aux:
+            zipobj.write(f,f.relative_to(fpath))    
+        zipobj.close()
+        return send_from_directory(temppath, f'{fname}.zip', as_attachment=True, cache_timeout=-1)
+    elif fpath.suffix == ".vhd":
+        return send_from_directory(sessionpath, fname, as_attachment=True, cache_timeout=-1)
+    else:
+        abort(404)
 
 
 @main.route("/downloadsimfile")
@@ -142,11 +240,12 @@ def upload():
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
         f = request.files.getlist("fileToUpload")
+        cproj = request.form.get('currentproject') 
         for ff in f:
-            thefile = Path(sessionpath, secure_filename(ff.filename))            
+            thefile = Path(sessionpath, cproj, secure_filename(ff.filename))            
             if thefile.exists():
                 thefile.unlink()
-            themap = Path(sessionpath, secure_filename(ff.filename)+".map")
+            themap = Path(sessionpath, cproj, secure_filename(ff.filename)+".map")
             if themap.exists():
                 themap.unlink()
             ff.save(thefile)
@@ -170,4 +269,4 @@ def compilar():
 
 @main.route('/plottest') 
 def plottest():
-    return render_template('plottest.html',socketiofile=getsocketiofile())
+    return render_template('plottest.html',socketiofile=getsocketiofile(),currentproject=getcurrentproject(getuserpath()))

@@ -1,4 +1,4 @@
-import re,socket,time,subprocess,select,os
+import re,socket,time,subprocess,select,os,shutil
 from datetime import datetime
 from random import randrange
 from pathlib import Path
@@ -391,13 +391,25 @@ def getexistingportmap(sessionpath,file):
                 data.append(dd)
             return data
         return ["nomap"]
-        
 
-def getvhdfilelist(sessionpath, sort=True):
+def getdirlist(sessionpath, sort=True):
     if sort:
-        return list(sorted(sessionpath.glob("*.vhd"))) #+ list(sessionpath.glob("*.vhdl"))
+        dirlist = [dd for dd in sessionpath.iterdir() if dd.is_dir()]
+        return list(sorted(dirlist,key=lambda x: str.lower(x.name)))
     else:
-        return list(sessionpath.glob("*.vhd"))
+        return dirlist        
+
+def getvhdfilelist(sessionpath, sort=True, recursive=False):
+    if recursive:
+        if sort:
+            return list(sorted(sessionpath.rglob("*.vhd"),key=lambda x: (x.relative_to(sessionpath).parent,str.lower(x.name))))
+        else:
+            return list(sessionpath.rglob("*.vhd"))
+    else:
+        if sort:
+            return list(sorted(sessionpath.glob("*.vhd"),key=lambda x: str.lower(x.name))) #+ list(sessionpath.glob("*.vhdl"))
+        else:
+            return list(sessionpath.glob("*.vhd"))
 
 
 def cleanfilelist(sessionpath,toplevelfile,filelist):
@@ -421,7 +433,14 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
 def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
     socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=userid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
+    curproject = ""
     temppath = Path(mainpath,"temp",userid)
+    if "/" in toplevelentity:
+        aux = toplevelentity.split("/")
+        toplevelentity = aux[1]
+        curproject = aux[0]  
+        temppath = temppath / curproject 
+        sessionpath = sessionpath / curproject
     temppath.mkdir(parents=True,exist_ok=True)
     retcode = createFpgaTest2(sessionpath,temppath,toplevelentity)
     if retcode == "Ok!":
@@ -485,9 +504,12 @@ def analyzefile(sessionpath,mainpath,filename,userid):
     outs, errs = proc.communicate()
 
 
-def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
+def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curproject=""):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
-    temppath = Path(mainpath,"temp",userid)
+    if curproject == "":
+        temppath = Path(mainpath,"temp",userid)
+    else:
+        temppath = Path(mainpath,"temp",userid,curproject)
     temppath.mkdir(parents=True,exist_ok=True)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
@@ -500,7 +522,7 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
             return
     except:
         socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=userid)    
-    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+    aux = list((sessionpath / curproject).glob("*.vhd"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [str(x) for x in aux]
     proc = subprocess.Popen(
@@ -531,6 +553,11 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
             socketio.emit("errors",errmsgs,namespace="/stream",room=userid)
             logger.info(f"{userid}: Simulation of {simentity} with errors.")
         else:
+            if curproject != "":
+                destfile = temppath.parent  / "output.ghw"
+                if destfile.exists():
+                    destfile.unlink()
+                shutil.move(temppath / "output.ghw", destfile)
             socketio.emit("success","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful simulation of {simentity}.")
     except Exception as ex: # TimeoutExpired
@@ -541,8 +568,10 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest"):
 
 emulprocs = {}
 fifowrite = {}
-def doEmulation(username,mainpath):
+def doEmulation(username,mainpath,curproject="",toplevelentity=""):
     temppath = Path(mainpath,'temp',username)
+    if curproject != "":
+        temppath = temppath / curproject
     keysprocs = emulprocs.keys()
     if len(keysprocs) >= 25:
         socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=username)
@@ -583,7 +612,7 @@ def doEmulation(username,mainpath):
         fifowrite[username] = os.open(Path(temppath,'myfifo2'+str(proc.pid)), os.O_WRONLY | os.O_NONBLOCK) 
         lasttime = time.time()    
         run = True
-        socketio.emit('message','Emulation started.',namespace="/emul",room=username)
+        socketio.emit('message',f'Emulation of <strong>{toplevelentity}</strong> started.',namespace="/emul",room=username)
         socketio.emit('started','Ok!',namespace="/emul",room=username)
         # print("Running!!!!") 
         while run:

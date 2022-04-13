@@ -33,23 +33,48 @@
 
         {%- if filenames is defined -%}
         <div class="container is-max-desktop mt-4 px-3">            
-            <button class="button is-info is-small is-pulled-right mx-1" onclick="location.href = '/downloadfile';">Download All</button>
-            <button class="button is-danger is-small is-pulled-right mx-1" onclick="deleteAllFiles();">Delete All</button>
-            <!-- <h4 class="mb-3">Current files:</h4> -->
-            <h4 class="title is-4 m-0">Current files:</h4>
+            {% if currentproject == "" %}
+                <button class="button is-info is-small is-pulled-right mx-1" onclick="location.href = '/downloadfile';">Download All</button>  
+                <button class="button is-primary is-small is-pulled-right mx-1" onclick="createProject();">Create Project</button>
+                <h4 class="title is-4 m-0">Project List</h4>
+                <p class="is-6 is-italic">To begin, open a project or create one.</p>
+            {% else %}
+            <button class="button is-info is-small is-pulled-right mx-1" onclick="location.href = '/downloadafile?file={{ currentproject }}';">Download All</button>  
+                <button class="button is-danger is-small is-pulled-right mx-1" onclick="deleteAllFiles('{{ currentproject }}');">Delete All</button> 
+                <button class="button is-warning is-small is-pulled-right mx-1" onclick="location.href = '/closeproject';">Close Project</button>
+                <h4 class="title is-4 m-0">Current Project is <i>{{currentproject}}</i></h4>
+            {% endif %}
             <table class="table is-fullwidth is-hoverable mt-1" >
                 <tbody>
                     <tr><td></td></tr>
-                {% for fname in filenames %}
-                    <tr><td id="vhd{{ fname }}">
-                        {{ fname }}.vhd
-                        <button class="button is-danger is-small is-pulled-right mr-1" onclick="deletefile('{{ fname }}.vhd');"><i class="far fa-trash-alt"></i></button>
-                        <button class="button is-info is-small is-pulled-right mr-1" onclick="window.open('/downloadafile/{{ fname }}.vhd', '_blank');"><i class="fas fa-download"></i></button>
-                        <button class="button is-info is-small is-pulled-right mr-1" onclick="rename('{{ fname }}.vhd');">Rename</button>
-                        <button class="button is-info is-small is-pulled-right mr-1" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button>
-                        <button id="btl{{ fname }}" class="button is-info is-small is-pulled-right mr-1 settopbtl" onclick="settop('{{ fname }}',true);">Set top level</button>
-                    </td></tr>                    
-                {% endfor %}
+                    {% if currentproject == "" %}
+                        {% for pname in projectnames %}
+                            <tr><td id="project-{{ pname }}">
+                                {{ pname }}
+                                <button class="button is-danger is-small is-pulled-right mr-1" onclick="deleteProject('{{ pname }}');"><i class="far fa-trash-alt"></i></button>
+                                <button class="button is-info is-small is-pulled-right mr-1" onclick="window.open('/downloadafile?file={{ pname }}', '_blank');"><i class="fas fa-download"></i></button>
+                                <button class="button is-info is-small is-pulled-right mr-1" onclick="rename('{{ pname }}');">Rename</button>
+                                <!-- <button class="button is-info is-small is-pulled-right mr-1" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button> -->
+                                <button id="btl{{ fname }}" class="button is-primary is-small is-pulled-right mr-1" onclick="location.href = '/openproject/{{ pname }}';">Open Project</button>
+                            </td></tr>
+                        {% endfor %}
+                    {% else %}
+                        {% for fname in filenames %}
+                            {% if currentproject != "" %}
+                                {% set fullfname = currentproject + '/' + fname + '.vhd'  %}
+                            {% else %}
+                                {% set fullfname = fname + '.vhd'  %}
+                            {% endif %} 
+                            <tr><td id="vhd{{ fname }}">
+                                {{ fname }}.vhd                        
+                                <button class="button is-danger is-small is-pulled-right mr-1" onclick="deletefile('{{ fullfname }}');"><i class="far fa-trash-alt"></i></button>
+                                <button class="button is-info is-small is-pulled-right mr-1" onclick="window.open('/downloadafile?file={{ fullfname }}', '_blank');"><i class="fas fa-download"></i></button>                       
+                                <button class="button is-info is-small is-pulled-right mr-1" onclick="rename('{{ fullfname }}');">Rename</button>
+                                <button class="button is-info is-small is-pulled-right mr-1" onclick="location.href = '/editor?file={{ fullfname }}';">Edit</button>                       
+                                <button id="btl{{ fname }}" class="button is-info is-small is-pulled-right mr-1 settopbtl" onclick="settop('{{ fname }}','{{currentproject}}',true);">Set top level</button>
+                            </td></tr>                    
+                        {% endfor %}
+                    {% endif %}
                     <tr><td></td></tr>
                 </tbody>   
             </table>
@@ -61,37 +86,36 @@
         </div>
         {% endif %}
 
-
-        <div class="container is-max-desktop mt-3 px-3">
+        {% if currentproject != "" %}
+            <div class="container is-max-desktop mt-3 px-3">
             
-            <form class="md-form" id="meuform" enctype="multipart/form-data">
+                <form class="md-form" id="meuform" enctype="multipart/form-data">
 
-                <div id="fileselector" class="file is-info is-small has-name is-fullwidth" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
-                    <label class="file-label">
-                      <input class="file-input" type="file" name="fileToUpload" id="fileToUpload" accept=".vhd" multiple>
-                      <span class="file-cta">
-                        <span class="file-icon">
-                          <i class="fas fa-upload"></i>
+                    <div id="fileselector" class="file is-info is-small has-name is-fullwidth" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+                        <label class="file-label">
+                        <input class="file-input" type="file" name="fileToUpload" id="fileToUpload" accept=".vhd" multiple>
+                        <span class="file-cta">
+                            <span class="file-icon">
+                            <i class="fas fa-upload"></i>
+                            </span>
+                            <span class="file-label">
+                            Files to upload
+                            </span>
                         </span>
-                        <span class="file-label">
-                          Files to upload
+                        <span class="file-name">
+                            ...
                         </span>
-                      </span>
-                      <span class="file-name">
-                        ...
-                      </span>
-                    </label>
-                    <button type="button" class="button is-info is-small" onclick="uploadfile();">Upload</button>
-                  </div>
+                        </label>
+                        <button type="button" class="button is-info is-small" onclick="uploadfile();">Upload</button>
+                    </div>
 
-            </form> 
+                </form> 
 
-            <div class="buttons has-addons is-centered mt-4 mx-3">
-                <button type="button" class="button is-danger is-centered" onclick="fpgaCompile();">Compile</button>
+                <div class="buttons has-addons is-centered mt-4 mx-3">
+                    <button type="button" class="button is-danger is-centered" onclick="fpgaCompile();">Compile</button>
+                </div>
             </div>
-
-
-        </div>
+        {% endif %}        
 
 
         <div class="modal is-clipped" id="compilationmodal">
@@ -114,7 +138,38 @@
           </div>
 
 
-        <div class="modal is-clipped" id="modalSaveAs">
+          <div class="modal is-clipped" id="modalSaveAs">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Rename to...</p>
+                <button class="delete" aria-label="close" onclick="$('#modalSaveAs').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <div class="field has-addons w-100">                    
+                    <div class="control">
+                        <div id="projectselectdiv" class="select is-info">
+                            <select id="projectselect">
+                                <option value="{{currentproject}}">{{currentproject}}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <input type="text" id="filenameas" class="input" placeholder="File Name">
+                    </div>
+                </div>                    
+                <div id="saveasalert" class="notification is-warning py-1 mt-1">
+                    File extension must be ".vhd".                  
+                </div>
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-danger is-small" onclick="renameTo()">Rename<i class="fas fa-paper-plane-o ml-1"></i></button>
+                <button class="button is-link is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
+              </footer>
+            </div>
+          </div>
+
+        <!-- <div class="modal is-clipped" id="modalSaveAs">
             <div class="modal-background"></div>
             <div class="modal-card">
               <header class="modal-card-head">
@@ -130,8 +185,27 @@
               <footer class="modal-card-foot">
                 <button type="button" class="button is-info is-small" onclick="renameTo()">Rename</button>
                 <button type="button" class="button is-danger is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
-              </footer>
-                
+              </footer>                
+            </div>
+        </div> -->
+
+        <div class="modal is-clipped" id="modalCreateProject">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Create project...</p>
+                <button class="delete" aria-label="close" onclick="$('#modalCreateProject').removeClass('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <input class="input" type="text" id="projectname" placeholder="Text input" autofocus>
+                <div class="notification is-warning py-1 mt-1" id="createprojectalert">
+                    File extension must be ".vhd".                  
+                </div>
+              </section>
+              <footer class="modal-card-foot">
+                <button type="button" class="button is-info is-small" onclick="createProject2()">Create</button>
+                <button type="button" class="button is-danger is-small" onclick="$('#modalCreateProject').removeClass('is-active');">Close</button>
+              </footer>                
             </div>
         </div>
 
@@ -220,27 +294,43 @@
             ev.preventDefault();
         }
 
+        
         const fileInput = document.querySelector('#fileselector input[type=file]');
-        fileInput.onchange = () => {
-            if (fileInput.files.length > 0) {
-                var filestr = "";
-                for (var i = 0; i < fileInput.files.length; i++) {
-                    filestr = filestr + fileInput.files[i].name + ",";
-                }
-                const fileName = document.querySelector('#fileselector .file-name');
-                fileName.textContent = filestr.substring(0, filestr.length - 1);
-            } else {
-                const fileName = document.querySelector('#fileselector .file-name');
-                fileName.textContent = "...";
-            }           
+        if (fileInput) {
+            fileInput.onchange = () => {
+                if (fileInput.files.length > 0) {
+                    var filestr = "";
+                    for (var i = 0; i < fileInput.files.length; i++) {
+                        filestr = filestr + fileInput.files[i].name + ",";
+                    }
+                    const fileName = document.querySelector('#fileselector .file-name');
+                    fileName.textContent = filestr.substring(0, filestr.length - 1);
+                } else {
+                    const fileName = document.querySelector('#fileselector .file-name');
+                    fileName.textContent = "...";
+                }           
+            }
         }
+       
 
         $(document).ready(function() {
             $('#saveasalert').hide();
-            settop('{{toplevel}}',false);
+            $('#createprojectalert').hide();
+            // console.log('{{toplevel}}');
+            if ('{{toplevel}}'.includes("/")) {
+                var aux = '{{toplevel}}'.split("/");
+                // console.log(aux);
+                if (aux[0] == '{{currentproject}}') {
+                    settop(aux[1],'',false);
+                }
+            } else {
+                if ('{{currentproject}}' == "") {
+                    settop('{{toplevel}}','',false);
+                }                
+            }
         });
 
-        function settop(fname,record) {
+        function settop(fname,projname,record) {
             // $(('#vhd' + fname)).addClass('list-group-item-primary').siblings().removeClass('list-group-item-primary');
             $('[id^=vhd]').each(function( index ) {
                 $(this).removeClass('has-background-light');
@@ -249,8 +339,10 @@
             $(".settopbtl").prop( "disabled", false );
             $(('#btl' + fname)).prop( "disabled", true );
             if (record == true) {
+                if (projname != "") { fname = projname + "/" + fname; }
                 $.post("/settoplevel",{ toplevelfile: fname } ).done(
                     function (data) {
+                        // console.log(data);
                         data = "";
                     }
                 );
@@ -267,7 +359,7 @@
         function uploadfile() { 
 
             var numFiles = $("#fileToUpload")[0].files.length;
-            if ( numFiles > 20 ) {
+            if ( numFiles > 30 ) {
                 errorMessage("Too many files at once.");
                 return;
             } else if (numFiles == 0) {
@@ -276,8 +368,8 @@
             }
 
             var fdata = new FormData( $("#meuform").get(0) );
-            
-            // var ajaxUrl = "process-upload.php";				
+            fdata.append('currentproject',"{{currentproject}}");
+            			
             $.ajax({
                 url : 'upload',
                 type : "POST",
@@ -347,6 +439,9 @@
             window.socket.on('filerenamed',function(msg){
                 location.href = '/';
             });
+            window.socket.on('projectcreated',function(msg){
+                location.href = '/';
+            });
             window.socket.on('notlogged',function(msg){
                 location.href = '/login';
             });
@@ -355,29 +450,59 @@
 
         window.filetorename = "";
         function rename(fname) {
-            window.filetorename = fname;
-            $("#filenameas").val(fname);
+            $('#saveasalert').hide();
+            if (fname.endsWith("vhd")) {
+                $("#projectselectdiv").show();
+                $('#projectselect').prop('disabled', true);
+            } else {
+                $("#projectselectdiv").hide();
+            }
+            window.filetorename = fname;            
+            $("#filenameas").val(fname.split("/")[1]);
             $("#modalSaveAs").addClass("is-active"); //.modal();
             $("#filenameas").focus();
         }
 
         function renameTo() {           
             $('#saveasalert').hide();
-            val = $("#filenameas").val();
+            if ("{{currentproject}}" != "") {
+                val = "{{currentproject}}/" + $("#filenameas").val();
+            } else {
+                val = $("#filenameas").val();
+            }            
             if ((val != "") && (val != window.filetorename)) {
-                if ( val.endsWith(".vhd") ) {
+                // if ( val.endsWith(".vhd") ) {
                     if (!window.socketOn) { openSocket(); }
                     window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});
                     $("#modalSaveAs").removeClass("is-active"); //.modal('hide');              
-                } else {
-                    //alert("Error: File does not end with .vhd or .vhdl.")
-                    $("#saveasalert").show();
-                }            
+                // } else {
+                //     $("#saveasalert").show();
+                // }            
             }     
         }
 
+        function createProject() {
+            $("#modalCreateProject").addClass("is-active");
+            $("#projectname").focus();
+        }
+
+        function createProject2() {
+            $('#createprojectalert').hide();
+            val = $("#projectname").val();
+            if ( val != "" ) {
+                // if ( val.endsWith(".vhd") ) {
+                    if (!window.socketOn) { openSocket(); }
+                    window.socket.emit("createproject",{projectname: val});
+                    $("#modalSaveAs").removeClass("is-active"); //.modal('hide');              
+                // } else {
+                    //alert("Error: File does not end with .vhd or .vhdl.")
+                    // $("#saveasalert").show();
+                // }            
+            } 
+        }
+
         function deletefile(fname) {  
-            $('#confirmDialogMessage').html("Deleting '" + fname + "'.\nAre you sure?"); 
+            $('#confirmDialogMessage').html("Deleting '" + fname + "'.\nAre you sure?");
 
             $('#confirmDeleteBtn').off('click');
             $('#confirmDeleteBtn').click( function() {
@@ -391,13 +516,27 @@
        
         }
 
-        function deleteAllFiles() {
-            $('#confirmDialogMessage').html("Deleting ALL FILES!!!<br>Are you REALLY sure?"); 
+        function deleteProject(pname) {
+            $('#confirmDialogMessage').html("Deleting Project <strong>" + pname + "</strong> and all files within.\n<strong>Are you REALLY SURE?</strong>");
+
+            $('#confirmDeleteBtn').off('click');
+            $('#confirmDeleteBtn').click( function() {
+                // alert(fname);
+                if (!window.socketOn) { openSocket(); }
+                window.socket.emit("deletefile",pname);
+                $('#confirmDialog').removeClass("is-active");
+            });
+
+            $('#confirmDialog').addClass("is-active");  
+        }
+
+        function deleteAllFiles(pname) {
+            $('#confirmDialogMessage').html("Deleting ALL FILES in project!!!<br><strong>Are you REALLY sure?</strong>"); 
 
             $('#confirmDeleteBtn').off('click');
             $('#confirmDeleteBtn').click( function() {
                 if (!window.socketOn) { openSocket(); }
-                window.socket.emit("deleteallfiles","");
+                window.socket.emit("deleteallfiles",pname);
                 $('#confirmDialog').removeClass("is-active");
             });
 

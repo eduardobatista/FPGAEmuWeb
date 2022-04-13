@@ -55,6 +55,7 @@ def login_post():
             return "Login failed! Please check your password and try again."
 
         login_user(user, remember=True)
+        session["CurrentProject"] = ""
         current_app.logger.info(f"User {user.email} logged in successfully (local database).")
         return "Success"
 
@@ -97,8 +98,9 @@ def login_post():
             del session["logindata"]  
             return "Login failed! Please check your password and try again."
 
-        del session["logindata"]                        
+        del session["logindata"]                    
         login_user(user, remember=True)
+        session["CurrentProject"] = ""
         current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not celeryon else ''}.")
         return "Success"
 
@@ -197,6 +199,7 @@ def signup_post():
             current_app.logger.error(err)
 
     login_user(new_user, remember=True)
+    session["CurrentProject"] = ""
     return redirect(url_for('main.sendfiles'))
 
 
@@ -357,6 +360,7 @@ def changepass():
 
 @auth.route('/logout')
 def logout():
+    session["CurrentProject"] = ""
     logout_user()
     return redirect(url_for('auth.login'))
 

@@ -23,11 +23,13 @@
 
                     <div class="">
 
+                        <p>{{testentity}}</p>
+
                         <h6 class="title is-6 is-inline">Testbench file:</h6>
                         <div class="select is-info is-fullwidth is-small">
                             <select id="fileselect" class="" onchange="">
                                 {% for fname in filenames %}
-                                    <option value="{{fname}}" {{'selected' if selectedfile==fname else ''}}>{{fname}}</option>
+                                    <option value="{{fname}}" {{'selected' if testentity == fname else ''}}>{{fname}}</option>
                                 {% endfor %}
                             </select> 
                         </div>
