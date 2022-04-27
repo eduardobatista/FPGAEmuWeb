@@ -102,7 +102,7 @@ def createproject(dataa):
         if newproject.exists():
             emit("error","Project already exists.")
             return
-        newproject.mkdir()
+        newproject.mkdir(parents=True)
         emit("projectcreated",dataa['projectname'])
 
 @socketio.on('savefile', namespace='/stream') 
