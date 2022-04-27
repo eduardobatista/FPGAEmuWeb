@@ -5,7 +5,6 @@ from flask import Flask, Blueprint, url_for, request, session, request, render_t
 from flask_socketio import SocketIO, send, emit, disconnect
 from werkzeug.utils import secure_filename
 from random import randrange
-from zipfile import ZipFile
 import re
 from . import db
 MAINPATH = os.path.dirname(os.path.abspath(__file__))

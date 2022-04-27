@@ -6,72 +6,6 @@ import pkg_resources
 
 from appp import socketio,logger,celery
 
-# from .models import User
-# from sqlalchemy.exc import OperationalError
-# from sqlalchemy import Table,MetaData
-# from sqlalchemy import create_engine
-
-
-## Background login management ---------------------------------------------------------------
-
-# loginattempts = {}
-# logininfo = {}  # new user or password hash
-
-# def getLoginInfo(loginkey):
-#     if loginkey in logininfo.keys():
-#         return logininfo[loginkey]
-#     else:
-#         return None
-
-# def clearLoginAttempt(loginkey):
-#     if loginkey in loginattempts.keys():
-#         del loginattempts[loginkey]
-#     if loginkey in logininfo.keys():
-#         del logininfo[loginkey]
-        
-# def checkLogin(loginkey):
-#     if loginkey in loginattempts.keys():
-#         return loginattempts[loginkey]
-#     else:
-#         return None
-
-# @celery.task()
-# def doLogin(userexists,email,password,clouddburl,loginkey):
-
-#     loginattempts[loginkey] = "Running"
-#     logininfo[loginkey] = None
-
-
-#     if clouddburl is not None:
-#         try:
-#             clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
-#             with clouddb.connect() as conncloud:     
-#                 table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
-#                 clouddata = conncloud.execute(table1.select())           
-#                 for row in clouddata:
-#                     if email == row['email']:
-#                         if not userexists:
-#                             new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
-#                                         lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
-#                             logininfo[loginkey] = new_user
-#                         else:
-#                             logininfo[loginkey] = row['password']                     
-#                 clouddata.close()
-#         except OperationalError as err:
-#             logger.error(err)
-#         except BaseException as err:
-#             logger.error(err)
-
-#     # check if the user actually exists
-#     # take the user-supplied password, hash it, and compare it to the hashed password in the database
-#     # if not user or not check_password_hash(user.password, password):
-#     #     loginattempts[loginkey] = "Failed"
-#     #     return
-
-#     loginattempts[loginkey] = "Success"
-
-## ---------------------------------------------------------------------------------------
-
 
 fpgatesttemplate = '''
 library ieee;
@@ -92,9 +26,7 @@ architecture archtest of fpgatest is
     signal CLK_500Hz:      std_logic := '0';
     signal CLK_1Hz:        std_logic := '0';
     signal CLK_10Hz:       std_logic := '0';
-    signal RKEY:           std_logic_vector(3 downto 0) := "1111";
     signal KEY:            std_logic_vector(3 downto 0) := "1111";
-    signal RSW:            std_logic_vector(17 downto 0) := "000000000000000000";
     signal SW:             std_logic_vector(17 downto 0):= "000000000000000000";
     signal LEDR:           std_logic_vector(17 downto 0):= "000000000000000000" ;
     signal HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7 : std_logic_vector(6 downto 0) := "1111111";
@@ -111,10 +43,8 @@ begin
 	vhdlout(2) := to_integer(signed(to_stdlogicvector(outbytes2)));
 	inbytes <= std_logic_vector(to_unsigned(vhdlin(0),32));        
    end process;
-   CLOCK_50 <= '0';
-   RSW <= inbytes(17 downto 0); 
+   CLOCK_50 <= '0'; 
    SW <= inbytes(17 downto 0); 
-   RKEY <= inbytes(23 downto 20); 
    KEY <= inbytes(23 downto 20);
    part1 <= to_bitvector('0' & HEX7,'1');
    part0 <= to_bitvector("000000" & LEDR,'0');
@@ -125,15 +55,12 @@ begin
    {{portmap}}
 end archtest;
 '''
-# Default: {{portmap}} == port map(CLOCK_50,CLK_500Hz,RKEY,KEY,RSW,SW,LEDR,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5,HEX6,HEX7);
-availableports = "(CLOCK_50|CLK_500Hz|CLK_1Hz|CLK_10Hz|RKEY|KEY|RSW|SW|LEDR|HEX0|HEX1|HEX2|HEX3|HEX4|HEX5|HEX6|HEX7)" # ['CLOCK_50','CLK_500Hz','RKEY','KEY','RSW','SW','LEDR','HEX0','HEX1','HEX2','HEX3','HEX4','HEX5','HEX6','HEX7']
+
 validports = {'CLOCK_50':['in',1], 
               'CLK_500HZ':['in',1], 
               'CLK_1HZ':['in',1],
               'CLK_10HZ':['in',1],
               'KEY':['in',4],
-              'RKEY':['in',4],
-              'RSW':['in',18],
               'SW':['in',18],
               'LEDR':['out',18],
               'HEX0':['out',7],
@@ -145,92 +72,7 @@ validports = {'CLOCK_50':['in',1],
               'HEX6':['out',7],
               'HEX7':['out',7],              
              }
-def createFpgaTest(sessionpath,toplevelentity):
-    toplevel = Path(sessionpath,toplevelentity + ".vhd")
-    if not toplevel.exists(): return f"Error: Top level entity not found.";
-    fpgatestfile = Path(sessionpath,'fpgatest.aux')
-    if fpgatestfile.exists(): fpgatestfile.unlink()
-    toplevel = open(toplevel, 'r')    
-    data = toplevel.read()
-    data = re.sub("--.*?\n|\n"," ",data)
-    data = re.sub("\s+"," ",data)
-    data = re.sub("\s+;",";",data)
-    toplevel.close()
-    entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
-    if entityname is None: 
-        return "Error: entity not found in usertop."
-    entityname = entityname.group(1)
-    # aux = re.search(rf"(entity {entityname} is.*end entity|entity {entityname} is.*end {entityname})",data,re.IGNORECASE)
-    # aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity(\s+|);|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname}(\s+|);",data,re.IGNORECASE)
-    # aux = re.search(rf"entity {entityname} is.*port.*?(\((.+)\)).*?end entity;|entity {entityname} is.*port.*?(\((.+)\)).*?end {entityname};",data,re.IGNORECASE)
-    aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
-    if aux is None:
-        return "Error: entity not found in usertop."
-    # print(aux.groups)
-    # print(aux.group(0))
-    # print(aux.group(1))
-    # print(aux.group(2))
-    aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
-    if aux is None:
-        return "Error: ports not found in usertop."
-    # print(aux.group(1))
-    aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
-    sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
-    sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
-    sepspace = re.compile(r"\s+")
-    validportkeys = validports.keys()
-    # print(aux2)
-    # foundports = []
-    # foundsizes = []
-    try:
-        for item in aux2:
-            aux3 = sepdots.split(item)
-            if len(aux3) != 2:
-                continue
-            # print(aux3)
-            dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
-            typesize = 1
-            if "std_logic_vector" in dirtype[1].lower():
-                auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
-                if (auxx is None) or (len(auxx.groups()) < 2):
-                    return "Error: Fail parsing " + dirtype[1] + "."
-                typesize = int(auxx.group(1)) - int(auxx.group(2)) 
-                if typesize < 0: typesize = -typesize
-                typesize = typesize+1
-            aux4 = sepcomma.split(aux3[0])
-            for pp in aux4:
-                ppp = pp.strip().upper()
-                if ppp not in validportkeys:
-                    return f"Error: {pp} is not a valid port for usertop entity."  
-                if validports[ppp][1] != typesize:
-                    return f"Error: Length of port {pp} does not match the corresponding Emulator port length."
-                # if validports[ppp][1] > typesize:
-                #     return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
-                # foundports.append(ppp)
-                # foundsizes.append(typesize)
-    except:
-        return "Error parsing usertop ports."
-    foundports = re.findall(rf"{availableports}(:|,|\s)",aux.group(0),re.IGNORECASE)
-    # foundports2 = re.findall(rf"{availableports}(;|\))",aux.group(0),re.IGNORECASE)
-    if len(foundports) == 0:
-        return "Error: ports not found."
-    portmaptxt = "port map("
-    zz = 0
-    # for port,tsize in zip(foundports,foundsizes):
-    for port in foundports:
-        portmaptxt = portmaptxt + f"{port[0]} => {port[0]},"
-        # if tsize == 1:
-        #     portmaptxt = portmaptxt + f"{port} => {port},"
-        # else:            
-        #     compl = '0'*3
-        #     portmaptxt = portmaptxt + f'{port} => "{compl}" & {port}({tsize} downto 0),'
-        # portmaptxt = portmaptxt + f"{port[0]}({}) => {port[0]},"
-    portmaptxt = portmaptxt[:-1] + ");"
-    # print(portmaptxt)
-    fpgatest = open(fpgatestfile, 'w')
-    fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
-    fpgatest.close()
-    return "Ok!"
+
 
 def createFpgaTest2(sessionpath,temppath,toplevelentity):
     toplevel = Path(sessionpath,toplevelentity + ".vhd")

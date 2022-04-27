@@ -39,10 +39,30 @@
                 <h4 class="title is-4 m-0">Project List</h4>
                 <p class="is-6 is-italic">To begin, open a project or create one.</p>
             {% else %}
-            <button class="button is-info is-small is-pulled-right mx-1" onclick="location.href = '/downloadafile?file={{ currentproject }}';">Download All</button>  
-                <button class="button is-danger is-small is-pulled-right mx-1" onclick="deleteAllFiles('{{ currentproject }}');">Delete All</button> 
-                <button class="button is-warning is-small is-pulled-right mx-1" onclick="location.href = '/closeproject';">Close Project</button>
-                <h4 class="title is-4 m-0">Current Project is <i>{{currentproject}}</i></h4>
+                <div class="is-flex my-1">  
+                    <h4 class="title is-4 m-0 is-flex-grow-1">Current Project is <i>{{currentproject}}</i></h4>                  
+                    <button class="button is-warning is-small ml-1" onclick="location.href = '/closeproject';">Close Project</button>
+                    <!-- <button class="button is-dark is-small mx-1" onclick="location.href = '/closeproject';">Export as DE1-SoC/Quartus II Project</button> -->
+                    <button class="button is-info is-small is-pulled-right ml-1" onclick="location.href = '/downloadafile?file={{ currentproject }}';">Download All</button>  
+                    <button class="button is-danger is-small is-pulled-right ml-1" onclick="deleteAllFiles('{{ currentproject }}');">Delete All</button> 
+                    <div class="dropdown" id="exportdropdown">
+                        <div class="dropdown-trigger">
+                          <button class="button is-small is-dark mx-1" aria-haspopup="true" aria-controls="dropdown-menu3" onclick="toggleExportList()" >
+                            <span>Export To...</span>
+                            <span class="icon is-small">
+                              <i class="fas fa-angle-down" aria-hidden="true"></i>
+                            </span>
+                          </button>
+                        </div>
+                        <div class="dropdown-menu" id="dropdown-menu3" role="menu">
+                          <div class="dropdown-content">
+                            <a class="dropdown-item" onclick="exportProject();">
+                              DE1-SoC/Quartus II
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                </div>                
             {% endif %}
             <table class="table is-fullwidth is-hoverable mt-1" >
                 <tbody>
@@ -122,8 +142,8 @@
             <div class="modal-background"></div>
             <div class="modal-card">
               <header class="modal-card-head">
-                <p class="modal-card-title">Compilation</p>
-                <button class="delete" aria-label="close" onclick="$('#compilationmodal').removeClass('is-active');"></button>
+                <p class="modal-card-title" id="compmodaltitle">Compilation</p>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
                 <div id="myspinner" class="loader is-loading"></div>
@@ -131,7 +151,7 @@
                 </div> 
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="$('#compilationmodal').removeClass('is-active');">Close</button>
+                <button class="button is-danger is-small" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');">Close</button>
                 <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
               </footer>
             </div>
@@ -143,7 +163,7 @@
             <div class="modal-card">
               <header class="modal-card-head">
                 <p class="modal-card-title">Rename to...</p>
-                <button class="delete" aria-label="close" onclick="$('#modalSaveAs').removeClass('is-active');"></button>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#modalSaveAs').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
                 <div class="field has-addons w-100">                    
@@ -164,37 +184,18 @@
               </section>
               <footer class="modal-card-foot">
                 <button class="button is-danger is-small" onclick="renameTo()">Rename<i class="fas fa-paper-plane-o ml-1"></i></button>
-                <button class="button is-link is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
+                <button class="button is-link is-small" onclick="document.querySelector('#modalSaveAs').classList.remove('is-active');">Close</button>
               </footer>
             </div>
           </div>
 
-        <!-- <div class="modal is-clipped" id="modalSaveAs">
-            <div class="modal-background"></div>
-            <div class="modal-card">
-              <header class="modal-card-head">
-                <p class="modal-card-title">Rename to...</p>
-                <button class="delete" aria-label="close" onclick="$('#modalSaveAs').removeClass('is-active');"></button>
-              </header>
-              <section class="modal-card-body">
-                <input class="input" type="text" id="filenameas" placeholder="Text input" autofocus>
-                <div class="notification is-warning py-1 mt-1" id="saveasalert">
-                    File extension must be ".vhd".                  
-                </div>
-              </section>
-              <footer class="modal-card-foot">
-                <button type="button" class="button is-info is-small" onclick="renameTo()">Rename</button>
-                <button type="button" class="button is-danger is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
-              </footer>                
-            </div>
-        </div> -->
 
         <div class="modal is-clipped" id="modalCreateProject">
             <div class="modal-background"></div>
             <div class="modal-card">
               <header class="modal-card-head">
                 <p class="modal-card-title">Create project...</p>
-                <button class="delete" aria-label="close" onclick="$('#modalCreateProject').removeClass('is-active');"></button>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#modalCreateProject').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
                 <input class="input" type="text" id="projectname" placeholder="Text input" autofocus>
@@ -204,7 +205,7 @@
               </section>
               <footer class="modal-card-foot">
                 <button type="button" class="button is-info is-small" onclick="createProject2()">Create</button>
-                <button type="button" class="button is-danger is-small" onclick="$('#modalCreateProject').removeClass('is-active');">Close</button>
+                <button type="button" class="button is-danger is-small" onclick="document.querySelector('#modalCreateProject').classList.remove('is-active');">Close</button>
               </footer>                
             </div>
         </div>
@@ -215,14 +216,14 @@
             <div class="modal-card">
               <header class="modal-card-head">
                 <p class="modal-card-title">Confirm Deletion</p>
-                <button class="delete" aria-label="close" onclick="$('#confirmDialog').removeClass('is-active');"></button>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#confirmDialog').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
                 <p id="confirmDialogMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
                 <button type="button" class="button is-danger is-small" id="confirmDeleteBtn">Delete!</button>
-                <button class="button is-info is-small" onclick="$('#confirmDialog').removeClass('is-active');">Close</button>
+                <button class="button is-info is-small" onclick="document.querySelector('#confirmDialog').classList.remove('is-active');">Close</button>
               </footer>
             </div>
         </div>
@@ -232,13 +233,13 @@
             <div class="modal-card">
               <header class="modal-card-head">
                 <p class="modal-card-title">Error</p>
-                <button class="delete" aria-label="close" onclick="$('#modalError').removeClass('is-active');"></button>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#modalError').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
                 <p id="errorMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="$('#modalError').removeClass('is-active');">Close</button>
+                <button class="button is-danger is-small" onclick="document.querySelector('#modalError').classList.remove('is-active');">Close</button>
               </footer>
             </div>
           </div>        
@@ -270,12 +271,13 @@
                         dt.items.add(ev.dataTransfer.files[i]);
                     }
                 }            
-                console.log(dt.files.length); 
-                if (dt.files.length > 0) {
-                    $("#fileToUpload")[0].files = dt.files;
-                    $("#fileToUpload").trigger('change');
+                console.log(dt.files.length);
+                f2up = document.querySelector("#fileToUpload");
+                if (dt.files.length > 0) {                    
+                    f2up.files = dt.files;
+                    f2up.dispatchEvent(new Event('change'));
                 } else {
-                    $("#fileToUpload").val('');
+                    f2up.value = '';
                     const fileName = document.querySelector('#fileselector .file-name');
                     fileName.textContent = "...";
                 }                
@@ -445,6 +447,12 @@
             window.socket.on('notlogged',function(msg){
                 location.href = '/login';
             });
+            window.socket.on('exportsuccess',function(msg){
+                $("#myspinner").hide();
+                $('#status').append("<br><strong>Success! File download will begin soon...<strong>")
+                location.href = '/downloadproject/' + msg;
+            });
+            
       
         }
 
@@ -545,13 +553,34 @@
         }
 
         function fpgaCompile() {
+            document.querySelector("#compmodaltitle").innerHTML = "Compiling";
             $("#status").html("");
             $("#myspinner").show();
+            $("#gotoemul").show()
             $("#gotoemul").attr('disabled', true);
             // $("#fullHeightModalRight").modal();
             $("#compilationmodal").addClass("is-active");
             if (!window.socketOn) { openSocket(); }
-            window.socket.send("Compile")            
+            window.socket.send("Compile");           
+        }
+
+        function exportProject() {
+            $("#status").html("");
+            $("#gotoemul").hide();
+            document.querySelector("#compmodaltitle").innerHTML = "Exporting Project";
+            document.querySelector("#compilationmodal").classList.add('is-active');
+            $('#status').append("<strong style='color: red;'>Warning</strong>: DE1-SoC has only 10 LEDRs, 10 SWs and 6 HEX displays. Thus, outputs to LEDR, SW and HEX may be truncated.")
+            $('#exportdropdown').removeClass('is-active');
+            if (!window.socketOn) { openSocket(); }
+            window.socket.emit("exportproject","{{currentproject}}");
+        }
+
+        function toggleExportList() {
+            if ($('#exportdropdown').hasClass("is-active")) {
+                $('#exportdropdown').removeClass('is-active');
+            } else {
+                $('#exportdropdown').addClass('is-active');
+            }
         }
 
         // function fpgaCompile() {

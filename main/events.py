@@ -7,6 +7,7 @@ from pathlib import Path
 from .funcs import *
 from flask_login import login_required, current_user
 from appp import db
+from .projectexporter import ProjectExporter
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -177,7 +178,24 @@ def deleteallfiles(pname):
             emit("filedeleted","*")
         except:
             emit("error","Error deleting all files.")
-    
+
+@socketio.on('exportproject', namespace='/stream')
+def exportproject(projname):
+    if checklogged():
+        # socketio.start_background_task(analyzefile,getuserpath(),current_app.MAINPATH,filename,current_user.email)
+        if projname not in current_user.topLevelEntity:
+            emit("error","Top level entity not in current project. Please set an entity in current project as top level.")
+        sessionpath = getuserpath()
+        projpath = sessionpath / projname        
+        pexp = ProjectExporter(projname, current_user.topLevelEntity)
+        projfiles = getvhdfilelist(projpath)
+        pexp.addFiles(projfiles)
+        temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+        pexp.generateProject(projpath,temppath)
+        emit("exportsuccess",projname)      
+        return
+    emit("error","User not logged.")
+        
 
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):

@@ -183,6 +183,15 @@ def mapper():
     filenames = [x.relative_to(sessionpath) for x in aux]
     return render_template('mapper.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
 
+@main.route("/downloadproject/<pname>")
+@login_required
+def downloadproject(pname):
+    temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+    pzip = temppath / f'{pname}.zip'
+    if not pzip.exists():
+        return abort(404)
+    return send_from_directory(temppath, f'{pname}.zip', as_attachment=True, cache_timeout=-1)
+
 @main.route("/downloadfile")
 @login_required
 def downloadfile():
