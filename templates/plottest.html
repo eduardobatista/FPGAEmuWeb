@@ -82,7 +82,11 @@
         window.zoomlimits = [0,100];
 
         function openSocket() {
-            window.socket = io.connect('http://' + document.domain + ':' + location.port + '/stream');
+            if (location.protocol !== 'https:') {
+                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/stream');
+            } else {
+                window.socket = io.connect('https://' + document.domain + ':' + location.port + '/stream');
+            }
             window.socketOn = true;
             window.socket.on('ghwsignals', function(data){
                 plotdata(data);

@@ -321,7 +321,11 @@
 
                 adjustCanvas();
                 $("#iniciar").html("Stop Emulation");
-                window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul');       
+                if (location.protocol !== 'https:') {
+                    window.socket = io.connect('http://' + document.domain + ':' + location.port + '/emul');
+                } else {
+                    window.socket = io.connect('https://' + document.domain + ':' + location.port + '/emul');
+                }      
                 window.socket.on('connect', function(msg) {                    
                     window.socket.send("Emular");                    
                 });
