@@ -98,11 +98,13 @@ def createproject(dataa):
         if dataa['projectname'] == "_OldFiles":
             emit("error","Project name not allowed.")
             return
+        if " " in dataa['projectname']:
+            emit("error","Project name cannot contain spaces.")
+            return
         newproject = Path(sessionpath,dataa['projectname'])
         if newproject.exists():
             emit("error","Project already exists.")
             return
-        print(newproject)
         newproject.mkdir(parents=True)
         emit("projectcreated",dataa['projectname'])
 
@@ -115,9 +117,11 @@ def savefile(dataa):
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
+        if " " in dataa['filename']:
+            emit("error","File name cannot contain spaces.")
+            return
         try:             
-            fname = Path(sessionpath,dataa['filename'])
-            # print(fname)
+            fname = Path(sessionpath,dataa['filename'])            
             data = open(fname,'w').write(dataa['data'])
             emit("filesaved",dataa['filename'])
         except Exception as ex:
