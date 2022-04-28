@@ -111,9 +111,9 @@ def createproject(dataa):
 @socketio.on('savefile', namespace='/stream') 
 def savefile(dataa):
     if checklogged():
-        # if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
-        #     emit("error","Not allowed while viewing as a different user.")
-        #     return
+        if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
+            emit("error","Not allowed while viewing as a different user.")
+            return
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
@@ -121,7 +121,9 @@ def savefile(dataa):
             emit("error","File name cannot contain spaces.")
             return
         try:             
-            fname = Path(sessionpath,dataa['filename'])            
+            fname = Path(sessionpath,dataa['filename'])    
+            if not fname.parent.exists():
+                fname.parent.mkdir(parents=True,exist_ok=True)      
             data = open(fname,'w').write(dataa['data'])
             emit("filesaved",dataa['filename'])
         except Exception as ex:

@@ -133,9 +133,13 @@
                     <div class="control">
                         <div class="select is-info">
                             <select id="projectselect">
-                                {% for proj in projectnames %} 
-                                    <option value="{{proj}}">{{proj}}</option>
-                                {% endfor %}
+                                {% if projectnames|length > 0 %}
+                                    {% for proj in projectnames %} 
+                                        <option value="{{proj}}">{{proj}}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="NewProject">NewProject</option>
+                                {% endif %}
                             </select>
                         </div>
                     </div>

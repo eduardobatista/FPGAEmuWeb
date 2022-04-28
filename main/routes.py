@@ -50,7 +50,9 @@ def sendfiles():
                 oldfilespath.mkdir()
                 projectnames = ["_OldFiles"] + projectnames
             for ff in aux:
-                shutil.move(ff,oldfilespath)            
+                if (oldfilespath / ff.name).exists():
+                    (oldfilespath / ff.name).unlink()
+                shutil.move(ff,oldfilespath)
     else: 
         projectnames = []
         sessionpath = sessionpath / cproj
