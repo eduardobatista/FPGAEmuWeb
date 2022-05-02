@@ -46,7 +46,30 @@
 
             <button id="bSave" class='mt-2 button is-small is-info' onclick="buildmap()">Save</button>
 
+            <button id="bCompile" class='mt-2 button is-small is-danger' onclick="settop()" disabled>Set as Top Level and Compile</button>
+
         </div>  
+
+
+        <div class="modal is-clipped" id="compilationmodal">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title" id="compmodaltitle">Compilation</p>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <div id="myspinner" class="loader is-loading"></div>
+                <div id="status">    
+                </div> 
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-danger is-small" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');">Close</button>
+                <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
+              </footer>
+            </div>
+          </div>
+
         {% endif %}
 
         
@@ -56,6 +79,30 @@
 {% block scripts %}
 
     <script type="text/javascript">
+
+        function fpgaCompile() {
+            document.querySelector("#compmodaltitle").innerHTML = "Compiling";
+            $("#status").html("");
+            $("#myspinner").show();
+            $("#gotoemul").show()
+            $("#gotoemul").attr('disabled', true);
+            // $("#fullHeightModalRight").modal();
+            $("#compilationmodal").addClass("is-active");
+            if (!window.socketOn) { openSocket(); }
+            window.socket.send("Compile");           
+        }
+
+        function settop() {
+            var val = $("#fileselect").children("option:selected").val();
+            var fname = val.slice(0,-4);
+            $.post("/settoplevel",{ toplevelfile: fname } ).done(
+                function (data) {
+                    fpgaCompile();
+                    data = "";
+                }
+            );
+            
+        }
 
         function getform(idx,typesize,direction) {
             var ax = '<div class="select is-small"><select id="Name' + idx + '" onchange="selectChanged(' + idx + ');">';
@@ -158,6 +205,7 @@
             window.socket.on('mapsavesuccess', function(msg){
                 $("#alerts").html("Map saved successfully!<br><strong>Don't forget to recompile</strong>.");
                 $("#alerts").removeClass("is-danger").addClass("is-info").delay(100).fadeIn(300);
+                $("#bCompile").prop("disabled",false);
             });
             window.socket.on('notlogged',function(msg){
                 location.href = '/login';
@@ -165,6 +213,28 @@
             window.socket.on('error',function(msg){
                 $("#alerts").html(msg);
                 $("#alerts").removeClass("is-info").addClass("is-danger").delay(100).fadeIn(300);
+                $("#bCompile").prop("disabled",true);
+            });
+            window.socket.on('message', function(msg){     
+                if ($('#status').html() == "") {
+                    $('#status').html(String(msg));
+                } else {
+                    $('#status').append('<br>'+String(msg));
+                }                
+            });
+            window.socket.on('errors', function(msg){
+                $('#status').append('<br><span style="color:red;">Errors:<br>'+String(msg)+"</span>");
+                $("#myspinner").hide();
+            });
+            window.socket.on('success',function(msg){
+                $('#status').append(`
+                    <span style="color:blue;">
+                        Compilation successful!<br>
+                        You can now start your emulation.
+                    </span>
+                `);
+                $("#gotoemul").attr('disabled', false);
+                $("#myspinner").hide();
             });
         }
 
@@ -180,6 +250,7 @@
         }
 
         function openmap() {  
+            $("#bCompile").prop("disabled",true);
             $("#alerts").hide();
             var val = $("#fileselect").children("option:selected").val();
             if (val != 0) {
