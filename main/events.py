@@ -192,14 +192,20 @@ def exportproject(projname):
         # socketio.start_background_task(analyzefile,getuserpath(),current_app.MAINPATH,filename,current_user.email)
         if projname not in current_user.topLevelEntity:
             emit("error","Top level entity not in current project. Please set an entity in current project as top level.")
+        emit("message",f"Top Level entity is <strong style='color:red;'>{current_user.topLevelEntity}</strong>.")
         sessionpath = getuserpath()
         projpath = sessionpath / projname        
         pexp = ProjectExporter(projname, current_user.topLevelEntity)
         projfiles = getvhdfilelist(projpath)
         pexp.addFiles(projfiles)
         temppath = Path(current_app.MAINPATH,'temp',current_user.email)
-        pexp.generateProject(projpath,temppath)
-        emit("exportsuccess",projname)      
+        msgs = pexp.generateProject(projpath,temppath)
+        if len(msgs) > 0:
+            if msgs[0].startswith("Error:"):
+                emit("exporterror",msgs[0])
+            else:
+                emit("message","<br>".join(msgs))            
+                emit("exportsuccess",projname)
         return
     emit("error","User not logged.")
         

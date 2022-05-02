@@ -20,12 +20,16 @@ class ProjectExporter:
         self.filelist = []
 
     def generateProject(self,projdir,outputdir):
+        messages = []
         outputdir = Path(outputdir)
         datecreatedtext = datetime.now().strftime("%H:%M:%S  %B %-d, %Y")
         qpfdata = ProjectExporter.qpftemplate.replace("{{PROJNAME}}", f"{self.projname}")
         qpfdata = qpfdata.replace("{{DATECREATED}}", datecreatedtext)
         qpffile = outputdir / f"{self.projname}.qpf"
-        with open(qpffile,"w") as ff:
+        if qpffile.exists():
+            qpffile.unlink()
+        qpffile.touch()
+        with open(qpffile,"wt") as ff:
             ff.write(qpfdata)
         vhdfilestext = ""
         for ff in self.filelist:
@@ -33,8 +37,33 @@ class ProjectExporter:
         qsfdata = ProjectExporter.qsftemplateDE1SOC.replace("{{VHDLFILESINPROJECT}}",vhdfilestext)
         qsfdata = qsfdata.replace("{{DATECREATED}}", datecreatedtext)
         qsfdata = qsfdata.replace("{{TOPLEVELENTITY}}",self.toplevel)
+        mapfile = projdir / (self.toplevel + ".vhd.map")
+        if mapfile.exists():
+            with open(mapfile,"r") as ff:
+                aux = ff.readline()
+                if len(aux) > 2:  # If first line has more than two bytes, map is active.
+                    messages.append("<strong style='color:red;'>Mapper configuration is active:</strong>")
+                    aux = ff.readline()
+                    while aux:
+                        vari,auxmapi = aux.strip().split(":")
+                        mapi = auxmapi.split(",")
+                        if mapi[0].startswith("CLK"):
+                            return ["Error: exporting projects with mapped clock inputs not allowed yet."]
+                        for k in range(1,len(mapi)):
+                            mapi[k] = int(mapi[k])                        
+                        if len(mapi) == 3:
+                            messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]} downto {mapi[2]})</strong>" )
+                            for k in range(mapi[1]-mapi[2]+1):
+                                qsfdata = qsfdata.replace(f"{mapi[0]}[{mapi[2]+k}]",f"{vari}[{k}]")
+                        else:
+                            messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]})</strong>" )
+                            qsfdata = qsfdata.replace(f"{mapi[0]}[{mapi[1]}]",f"{vari}")
+                        aux = ff.readline()
         qsffile = outputdir / f"{self.projname}.qsf"
-        with open(qsffile,"w") as ff:
+        if qsffile.exists():
+            qsffile.unlink()
+        qsffile.touch()
+        with open(qsffile,"wt") as ff:
             ff.write(qsfdata)
         zipname = Path(outputdir,f'{self.projname}.zip')
         if zipname.exists(): 
@@ -44,9 +73,8 @@ class ProjectExporter:
         zipobj.write(qsffile,qsffile.relative_to(outputdir))
         for f in self.filelist:
             zipobj.write(f,f.relative_to(projdir))    
-        zipobj.close() 
-        
-
+        zipobj.close()
+        return messages
 
 
     qpftemplate = '''

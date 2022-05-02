@@ -453,8 +453,12 @@
             });
             window.socket.on('exportsuccess',function(msg){
                 $("#myspinner").hide();
-                $('#status').append("<br><strong>Success! File download will begin soon...<strong>")
+                $('#status').append("<br><br><strong>Success! File download will begin soon...<strong>")
                 location.href = '/downloadproject/' + msg;
+            });
+            window.socket.on('exporterror',function(msg){
+                $("#myspinner").hide();
+                $('#status').append("<br><br><strong style='color:red;'>" + msg + "<strong>")
             });
             
       
