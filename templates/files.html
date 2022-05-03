@@ -62,7 +62,10 @@
                           </div>
                         </div>
                       </div>
-                </div>                
+                </div>  
+                <div class="container w-100 my-0">
+                    <button type="button" class="button is-info is-small mt-2 mb-0 is-pulled-right" onclick="newFile();">New File</button>              
+                </div>
             {% endif %}
             <table class="table is-fullwidth is-hoverable mt-1" >
                 <tbody>
@@ -162,7 +165,7 @@
             <div class="modal-background"></div>
             <div class="modal-card">
               <header class="modal-card-head">
-                <p class="modal-card-title">Rename to...</p>
+                <p id="renameToTitle" class="modal-card-title">Rename to...</p>
                 <button class="delete" aria-label="close" onclick="document.querySelector('#modalSaveAs').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
@@ -183,7 +186,8 @@
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="renameTo()">Rename<i class="fas fa-paper-plane-o ml-1"></i></button>
+                <button id="renameButton" class="button is-danger is-small" onclick="renameTo()">Rename</button>
+                <button id="newFileButton" class="button is-info is-small" onclick="createNewFile()">Create File</button>
                 <button class="button is-link is-small" onclick="document.querySelector('#modalSaveAs').classList.remove('is-active');">Close</button>
               </footer>
             </div>
@@ -353,7 +357,6 @@
 
         function errorMessage(msg) {
             $("#errorMessage").html(msg);
-            // $("#modalError").modal();
             $("#modalError").addClass("is-active");
             $('#bcloseerr').focus();
         }
@@ -454,19 +457,51 @@
             window.socket.on('exportsuccess',function(msg){
                 $("#myspinner").hide();
                 $('#status').append("<br><br><strong>Success! File download will begin soon...<strong>")
-                location.href = '/downloadproject/' + msg;
+                // location.href = '/downloadproject/' + msg;
+                window.open('/downloadproject/' + msg,'_blank');
             });
             window.socket.on('exporterror',function(msg){
                 $("#myspinner").hide();
                 $('#status').append("<br><br><strong style='color:red;'>" + msg + "<strong>")
             });
+            window.socket.on('filesaved',function(msg){
+                $("#myspinner").hide();
+                location.href = "/editor?file=" + msg;
+            });
             
       
         }
 
+
+        function newFile() {           
+            $('#saveasalert').hide();  
+            $('#renameToTitle').html("New File");
+            $('#renameButton').hide();
+            $('#newFileButton').show();
+            window.filetorename = "";
+            $('#projectselect').prop('disabled', true);          
+            $("#filenameas").val("");
+            $("#modalSaveAs").addClass("is-active"); //.modal();
+            $("#filenameas").focus();
+        }
+
+        function createNewFile() {
+            $('#saveasalert').hide();
+            val = "{{currentproject}}/" + $("#filenameas").val();          
+            if (val != "") {
+                if (!window.socketOn) { openSocket(); }
+                window.socket.emit("savefile",{filename: val, data:""});
+                $("#modalSaveAs").removeClass("is-active"); //.modal('hide');                       
+            } 
+        }
+
+
         window.filetorename = "";
         function rename(fname) {
             $('#saveasalert').hide();
+            $('#renameToTitle').html("Rename to...");
+            $('#renameButton').show();
+            $('#newFileButton').hide();
             if (fname.endsWith("vhd")) {
                 $("#projectselectdiv").show();
                 $('#projectselect').prop('disabled', true);
@@ -476,7 +511,7 @@
             window.filetorename = fname;            
             $("#filenameas").val(fname.split("/")[1]);
             $("#modalSaveAs").addClass("is-active"); //.modal();
-            $("#filenameas").focus();
+            $("#filenameas").focus();            
         }
 
         function renameTo() {           
@@ -487,13 +522,9 @@
                 val = $("#filenameas").val();
             }            
             if ((val != "") && (val != window.filetorename)) {
-                // if ( val.endsWith(".vhd") ) {
-                    if (!window.socketOn) { openSocket(); }
-                    window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});
-                    $("#modalSaveAs").removeClass("is-active"); //.modal('hide');              
-                // } else {
-                //     $("#saveasalert").show();
-                // }            
+                if (!window.socketOn) { openSocket(); }
+                window.socket.emit("renamefile",{filename: window.filetorename, filenameto: val});
+                $("#modalSaveAs").removeClass("is-active"); //.modal('hide');                       
             }     
         }
 
@@ -574,6 +605,7 @@
 
         function exportProject() {
             $("#status").html("");
+            $("#myspinner").show();
             $("#gotoemul").hide();
             document.querySelector("#compmodaltitle").innerHTML = "Exporting Project";
             document.querySelector("#compilationmodal").classList.add('is-active');

@@ -72,8 +72,12 @@ def renamefile(dataa):
             emit("error","Directory not found.")
             return
         filetorename = Path(sessionpath,dataa['filename'])
+        filenameto = Path(sessionpath,dataa['filenameto'])
         if not filetorename.exists():
             emit("error","File to rename not found.")
+            return
+        if filenameto.suffix != filetorename.suffix:
+            emit("error","New and old names must have the same suffix.")
             return
         if (filetorename.suffix == "") or (filetorename.suffix == ".vhd"): 
             filetorename.rename(Path(sessionpath,dataa['filenameto']))
@@ -102,6 +106,9 @@ def createproject(dataa):
             emit("error","Project name cannot contain spaces.")
             return
         newproject = Path(sessionpath,dataa['projectname'])
+        if newproject.suffix != "":
+            emit("error","Project name cannot have a suffix or extension.")
+            return
         if newproject.exists():
             emit("error","Project already exists.")
             return
@@ -114,6 +121,9 @@ def savefile(dataa):
         if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
             emit("error","Not allowed while viewing as a different user.")
             return
+        if not dataa['filename'].endswith(".vhd"):
+            emit("error","Only .vhd files are allowed.")
+            return
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
@@ -121,7 +131,7 @@ def savefile(dataa):
             emit("error","File name cannot contain spaces.")
             return
         try:             
-            fname = Path(sessionpath,dataa['filename'])    
+            fname = Path(sessionpath,dataa['filename'])
             if not fname.parent.exists():
                 fname.parent.mkdir(parents=True,exist_ok=True)      
             data = open(fname,'w').write(dataa['data'])
@@ -199,15 +209,18 @@ def exportproject(projname):
         projfiles = getvhdfilelist(projpath)
         pexp.addFiles(projfiles)
         temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+        
         msgs = pexp.generateProject(projpath,temppath)
         if len(msgs) > 0:
             if msgs[0].startswith("Error:"):
                 emit("exporterror",msgs[0])
+                return
             else:
                 emit("message","<br>".join(msgs))            
-                emit("exportsuccess",projname)
+        emit("exportsuccess",projname)
         return
     emit("error","User not logged.")
+    return
         
 
 @socketio.on('Analyze', namespace='/stream')
