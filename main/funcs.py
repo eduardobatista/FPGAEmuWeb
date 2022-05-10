@@ -164,8 +164,7 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
 def getportlist(sessionpath,file):
     toplevel = Path(sessionpath,file)
     if not toplevel.exists(): 
-        return f"Error: Top level entity not found."
-    
+        return f"Error: Top level entity not found."    
     try:
         toplevel = open(toplevel, 'r')    
         data = toplevel.read()
@@ -175,14 +174,14 @@ def getportlist(sessionpath,file):
         toplevel.close()
         entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
         if entityname is None: 
-            return "Error: entity not found in usertop."
+            return "Error: entity not found in file."
         entityname = entityname.group(1)
         aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
         if aux is None:
-            return "Error: entity not found in usertop."
+            return "Error: entity not found in file."
         aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
         if aux is None:
-            return "Error: ports not found in usertop."
+            return "Error: ports not found in entity."
         aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
         sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
         sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")

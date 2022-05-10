@@ -2,6 +2,7 @@
 
 
 {% block styles %}
+<script src="https://www.google.com/recaptcha/api.js"></script>
 <style>      
     #maincard{
       /* height: 370px; */
@@ -66,6 +67,10 @@
             </p>
           </div>
 
+          {% if recaptchaOn %}
+            <div class="g-recaptcha" data-sitekey="{{recaptchaOn}}"></div>
+          {% endif %}
+
           {% with messages = get_flashed_messages() %}
             {% if messages %}
               <!-- <article class="message is-danger is-light my-1">
@@ -76,7 +81,7 @@
                 <!-- </div>
               </article> -->
             {% endif %}
-            {% endwith %} 
+          {% endwith %} 
          
           <input type="submit" value="Sign Up" class="button is-info mt-1 mb-2" >
 

@@ -181,7 +181,7 @@
 
 {% block scripts %}
 
-    <!-- Your custom scripts (optional) -->
+    <script src="/static/js/bulma-toast.min.js"></script>
     <script src="/static/ace/ace.js" type="text/javascript" charset="utf-8"></script>
 
     <script type="text/javascript">
@@ -223,6 +223,7 @@
         }
 
         window.filechanged = false;
+        window.autosave = 0;
 
         var editor = ace.edit("editor");
         // editor.setTheme("ace/theme/monokai");
@@ -246,6 +247,7 @@
         window.socketOn = false;
         window.lastfilesaveopt = 0;
         window.isnewfile = false;
+        window.lastselected = "";
 
         function openSocket() {
             if (location.protocol !== 'https:') {
@@ -255,11 +257,19 @@
             }
             window.socketOn = true;
             window.socket.on('filesaved', function(msg){
-                // alert('File saved successfully!');
+                window.filechanged = false;
+                if (window.autosave == 1) {
+                    window.autosave = 0;
+                    analyze2(true);
+                    return;
+                } else if (window.autosave == 2) {
+                    window.autosave = 0;
+                    fpgaCompile2(true);
+                    return;
+                }
                 $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
                 $("#centralModalSm").addClass("is-active");   
-                $("#filesavedbutton").focus();             
-                window.filechanged = false;
+                $("#filesavedbutton").focus();
                 if (window.lastfilesaveopt >= 1) {
                     location.href = "/editor?file=" + String(msg);
                 }                
@@ -313,14 +323,19 @@
         function openfile() {  
 
             var val = $("#fileselect").children("option:selected").val();
+            if ((val != window.lastselected) && (window.filechanged)) {
+                bulmaToast.toast({ message: 'Hello There' });
+            } 
             if (val != 0) {
                 if (!window.socketOn) {
                     openSocket();
                 }
+                window.lastselected = val;
                 window.socket.emit("getfile",val);
                 checktoplevel(val);
                 // $('#editor').show();            
             } else {
+                window.lastselected = "";
                 editor.setValue("");
                 $("#toplevelbtn").text('Set Top Level');
                 $("#toplevelbtn").prop('disabled', true);
@@ -394,12 +409,23 @@
 
         function fpgaCompile() {
             if (window.filechanged) {
-                var r = confirm("The current file is not saved.\nStart compilation anyways?");
-                if (r == false) {
-                    return;
-                }
+                // var r = confirm("The current file is not saved.\nStart compilation anyways?");
+                // if (r == false) {
+                //     return;
+                // }
+                window.autosave = 2;
+                savefile(0);
+                return;
             }
-            $("#status").html("");
+            fpgaCompile2(false);      
+        }
+
+        function fpgaCompile2(autosave) {
+            if (autosave) {
+                $("#status").html("<strong>File saved automatically.</strong>");
+            } else {
+                $("#status").html("");
+            }
             $("#myspinner").show();
             $("#gotoemul").attr('disabled', true);
             // $("#fullHeightModalRight").modal();
@@ -407,19 +433,30 @@
             if (!window.socketOn) {
                 openSocket();
             }
-            window.socket.send("Compile")            
+            window.socket.send("Compile")
         }
 
         function analyze() {
             if (window.filechanged) {
-                var r = confirm("The current file is not saved.\nAnalyze anyways?");
-                if (r == false) {
-                    return;
-                }
-            }
+                // var r = confirm("The current file is not saved.\nAnalyze anyways?");
+                // if (r == false) {
+                //     return;
+                // }
+                window.autosave = 1;
+                savefile(0);
+                return;
+            }   
+            analyze2(false);         
+        }
+
+        function analyze2(autosave) {
             var val = $("#fileselect").children("option:selected").val();
-            if (val != 0) {               
-                $("#status").html("");
+            if (val != 0) {          
+                if (autosave) {
+                    $("#status").html("<strong>File saved automatically.</strong>");
+                } else {
+                    $("#status").html("");
+                }                
                 $("#myspinner").show();
                 $("#gotoemul").attr('disabled', true);
                 $("#compilationmodal").addClass("is-active");

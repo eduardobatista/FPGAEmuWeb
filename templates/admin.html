@@ -62,6 +62,20 @@
 
         <div class="box">
 
+            <h2 class="title is-4">Recaptcha Info</h2>
+
+            <div class="form-group">
+                <textarea class="textarea is-small" id="recaptchaInfo" rows="5">{{recaptchainfo}}</textarea>
+            </div>
+
+            <button class="button is-info is-small mt-1" onclick="saveRecaptchaInfo();">Save</button>
+            <div class="block is-size-7 mx-2 mt-1" id="recaptcharesponse">                
+            </div>
+
+        </div>
+
+        <div class="box">
+
             <h2 class="title is-4">Email Info and Credentials</h2>
 
             <div class="form-group">
@@ -221,6 +235,12 @@
             function saveEmailInfo() {
                 $.post("/saveemailinfo",{"info":$("textarea#emailInfo").val()}).done( function (data) {
                     $('#emailresponse').html(data);
+                });
+            }
+
+            function saveRecaptchaInfo() {
+                $.post("/saverecaptchainfo",{"info":$("textarea#recaptchaInfo").val()}).done( function (data) {
+                    $('#recaptcharesponse').html(data);
                 });
             }
 

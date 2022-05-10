@@ -9,6 +9,9 @@ from pathlib import Path
 import random
 import string
 import time
+import re
+import requests
+import json
 from datetime import datetime,timedelta
 from sqlalchemy import Table,MetaData,create_engine
 # from .funcs import checkLogin,clearLoginAttempt,getLoginInfo
@@ -25,6 +28,13 @@ def checkCeleryOn():
         celeryon = False
         current_app.logger.error(err)
     return celeryon
+
+def verifyCaptcha(captcha_response):
+    secret = current_app.config['RECAPTCHA_SECRET_KEY']
+    payload = {'response':captcha_response, 'secret':secret}
+    response = requests.post("https://www.google.com/recaptcha/api/siteverify", payload)
+    response_text = json.loads(response.text)
+    return response_text['success']
 
 @auth.route('/login')
 def login():
@@ -119,22 +129,37 @@ def login_post():
         session["logindata"] = (email,password,resp)
         return "AlreadyDone"
 
-    
-
-
 @auth.route('/signup')
 def signup():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))
-    return render_template('signup.html')
+    return render_template('signup.html',recaptchaOn = current_app.config['RECAPTCHA_SITE_KEY'] if current_app.config['RECAPTCHA_SITE_KEY'] != "" else None)
 
 @auth.route('/signup', methods=['POST'])
 def signup_post():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))
+    recaptchaOn = True if current_app.config['RECAPTCHA_SITE_KEY'] != "" else False
+    if recaptchaOn:
+        captcha_response = request.form['g-recaptcha-response']
+        if not verifyCaptcha(captcha_response):
+            flash(f"Recaptcha validation failed.")
+            return redirect(url_for('auth.login'))
     email = request.form.get('email').strip()
+    if re.search(r"[^@a-zA-Z0-9_\.\-]", email):
+        flash(f"Invalid email address: {email}.")
+        return redirect(url_for('auth.login'))
+    if len(email) > 40:
+        flash(f"Email address is too long: {len(email)} characters.") 
+        return redirect(url_for('auth.login'))
     name = request.form.get('name').strip()
+    if len(name) > 50:
+        flash(f"Name address is too long: {len(name)} characters.")  
+        return redirect(url_for('auth.login'))
     password = request.form.get('password')
+    if len(password) > 30:
+        flash(f"Name address is too long: {len(password)} characters.")  
+        return redirect(url_for('auth.login'))
     role = "Student"
     viewAs = ""
     topLevelEntity = "usertop"
@@ -161,7 +186,7 @@ def signup_post():
     elif current_app.clouddb is not None:
         try:             
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData())
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 if clouddata.first() is not None:
                     flash('Email address already exists (cloud).')
@@ -186,7 +211,7 @@ def signup_post():
                         'role': role, 'viewAs': viewAs, 'lastPassRecovery': None, 'topLevelEntity': topLevelEntity, 'testEntity': testEntity}
         try:             
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData())
                 clouddata = conncloud.execute(table1.select())
                 cloudusers = [row['email'] for row in clouddata]
                 if email not in cloudusers:

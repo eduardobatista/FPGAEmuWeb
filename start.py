@@ -1,5 +1,5 @@
 # from . import create_app, socketio
-import subprocess,os
+import subprocess,os,json
 from pathlib import Path
 from appp import create_app, socketio, db
 from main.models import User
@@ -64,8 +64,20 @@ if not Path(MAINPATH,"db.sqlite").exists():
 debugopt = False
 if "debug" in sys.argv:
     debugopt = True
-    
-app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl)
+
+recaptchakeys = {'RECAPTCHA_SITE_KEY':"",'RECAPTCHA_SECRET_KEY':""}
+recaptchafile = WORKDIR / "recaptcha.json"
+if recaptchafile.exists():
+    with open(recaptchafile,"r") as ff:
+        info = ff.read()
+        try:
+            data = json.loads(info)        
+            recaptchakeys['RECAPTCHA_SITE_KEY'] = data['RECAPTCHA_SITE_KEY']
+            recaptchakeys['RECAPTCHA_SECRET_KEY'] = data['RECAPTCHA_SECRET_KEY']
+        except Exception as e:
+            app.logger.error('Failed loading recaptcha info at startup.')    
+
+app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl,recaptchakeys=recaptchakeys)
 
 with app.app_context():
     try:        

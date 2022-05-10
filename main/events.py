@@ -1,4 +1,4 @@
-import subprocess,time,os,select,threading,traceback
+import time,os,traceback,re
 from pathlib import Path
 from flask import session, current_app, request
 from flask_socketio import send, emit, disconnect, join_room, leave_room
@@ -29,7 +29,14 @@ def getfile(filename):
     if checklogged():
         try:
             sessionpath = getuserpath()
-            # print(filename)
+
+            sepidx = filename.index("/")
+            projname = filename[:sepidx]
+            fname = filename[sepidx+1:]
+            if re.search(r'[^a-zA-Z0-9_\.]',fname) or (fname.count('.') > 1) or (fname == ".vhd"):
+                emit("error",f"<strong>Invalid filename: {fname}.</strong><br>Please remove any unusual characters, such as spaces, slashs, extra dots, etc.")
+                return
+
             fname = Path(sessionpath,filename)   
             
             data = open(fname,'r').read()
@@ -102,8 +109,8 @@ def createproject(dataa):
         if dataa['projectname'] == "_OldFiles":
             emit("error","Project name not allowed.")
             return
-        if " " in dataa['projectname']:
-            emit("error","Project name cannot contain spaces.")
+        if re.search(r'[^a-zA-Z0-9_]',dataa['projectname']):
+            emit("error","Project name must contain only letters, numbers or underline characters.")
             return
         newproject = Path(sessionpath,dataa['projectname'])
         if newproject.suffix != "":
@@ -124,12 +131,17 @@ def savefile(dataa):
         if not dataa['filename'].endswith(".vhd"):
             emit("error","Only .vhd files are allowed.")
             return
+        filename = dataa['filename']
+        sepidx = filename.index("/")
+        projname = filename[:sepidx]
+        fname = filename[sepidx+1:]
+        # Checking filename:
+        if re.search(r'[^a-zA-Z0-9_\.]',fname) or (fname.count('.') > 1) or (fname == ".vhd"):
+            emit("error",f"<strong>Invalid filename: {fname}.</strong><br>Please remove any unusual characters, such as spaces, slashs, extra dots, etc.")
+            return
         sessionpath = getuserpath()
         if not sessionpath.exists():
             sessionpath.mkdir(parents=True,exist_ok=True)
-        if " " in dataa['filename']:
-            emit("error","File name cannot contain spaces.")
-            return
         try:             
             fname = Path(sessionpath,dataa['filename'])
             if not fname.parent.exists():

@@ -118,9 +118,11 @@ def deleteEmuLogs():
 def admin():
     if current_user.role != "Admin":
         return redirect(url_for('main.sendfiles'))
-
-    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
-    return render_template('admin.html',clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'])
+    recaptchafile = current_app.WORKDIR / "recaptcha.json"
+    recapdata = ""
+    with open(recaptchafile,"r") as ff:
+        recapdata = ff.read()
+    return render_template('admin.html',clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'],recaptchainfo=recapdata)
 
 
 @adm.route('/getuserlist', methods=['POST'])
@@ -135,7 +137,7 @@ def getuserlist():
     if current_app.clouddb and (not listtype):        
         try:
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData())
                 userlist = conncloud.execute(table1.select().order_by(table1.c.role,table1.c.name))
                 rendereduserlist = render_template('userlist.html',userlist=userlist)
                 userlist.close()
@@ -158,7 +160,7 @@ def cloudinfo():
     if current_app.clouddb:
         try: 
             with current_app.clouddb.connect() as conncloud:  
-                table1 = Table('user', MetaData() , autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData())
                 clouddata = conncloud.execute(table1.select())
                 userscloud = [row['email'] for row in clouddata]
                 ret = f"{len(userscloud)} users are registered in the CloudDb.<br>"
@@ -207,6 +209,31 @@ def saveemailinfo():
     except Exception as e:
         return str(e)
     return "Done!"
+
+@adm.route('/saverecaptchainfo', methods=['POST'])
+@login_required
+def saverecaptchainfo():
+    if current_user.role != "Admin":
+        return redirect(url_for('main.sendfiles'))
+    info = request.form.get('info')
+    recaptchafile = current_app.WORKDIR / "recaptcha.json"
+    with open(recaptchafile,"w") as ff:
+        ff.write(info)
+    try:
+        data = json.loads(info) 
+        current_app.recaptcha.site_key = data['RECAPTCHA_SITE_KEY']
+        current_app.recaptcha.secret_key = data['RECAPTCHA_SECRET_KEY']
+        current_app.config["RECAPTCHA_SITE_KEY"] = data['RECAPTCHA_SITE_KEY']
+        current_app.config["RECAPTCHA_SECRET_KEY"] = data['RECAPTCHA_SECRET_KEY']
+        current_app.recaptcha.is_enabled = True
+    except Exception as e:
+        current_app.recaptcha.site_key = ""
+        current_app.recaptcha.secret_key = ""
+        current_app.config["RECAPTCHA_SITE_KEY"] = "";
+        current_app.config["RECAPTCHA_SECRET_KEY"] = "";
+        current_app.recaptcha.is_enabled = True
+        return str(e)
+    return "Done!"
     
 
 @adm.route('/deleteuser', methods=['POST']) 
@@ -225,7 +252,7 @@ def deleteuser():
         if current_app.clouddb is not None:
             try:
                 with current_app.clouddb.connect() as conncloud:     
-                    table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                    table1 = Table('user', MetaData())
                     clouddata = conncloud.execute(table1.delete().where(table1.c.email==email))
                     clouddata.close()
             except OperationalError as err:
@@ -257,7 +284,7 @@ def changerole():
     if current_app.clouddb is not None:
         try:
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData())
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 usercloud = clouddata.first()
                 if usercloud is not None:

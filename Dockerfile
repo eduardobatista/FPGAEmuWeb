@@ -6,7 +6,7 @@ COPY ./ fpgaemuweb/
 
 VOLUME ["/home/fpgaemuweb/work"]
 
-RUN pip install flask flask_socketio flask_migrate flask_login flask_sqlalchemy yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
+RUN pip install flask flask_socketio flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 EXPOSE 5000
 EXPOSE 6379
 
@@ -20,6 +20,6 @@ RUN touch /home/stdout.err
 ENTRYPOINT ["/usr/bin/supervisord","-c","/home/fpgaemuweb/supervisord.conf"]
 # ENTRYPOINT /usr/local/bin/gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -b :5000 -w 1 --chdir /home/fpgaemuweb start:app
 
-# CMD cd /home/fpgaemuweb && python3 start.py
+# ENTRYPOINT cd /home/fpgaemuweb && python3 start.py debug
 
 # ENTRYPOINT ["/bin/sh"]

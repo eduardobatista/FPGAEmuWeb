@@ -20,7 +20,7 @@ celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://12
 # celery.autodiscover_tasks()
 
 
-def create_app(debug=False,mainpath="",workdir="",localdburl=""):
+def create_app(debug=False,mainpath="",workdir="",localdburl="",recaptchakeys=None):
     """Create an application."""    
     app = Flask(__name__)
     app.debug = debug
@@ -79,6 +79,8 @@ def create_app(debug=False,mainpath="",workdir="",localdburl=""):
             app.config['CLOUDDBINFO'] = ''
             app.clouddb = None
     
+    app.config['RECAPTCHA_SITE_KEY'] = recaptchakeys['RECAPTCHA_SITE_KEY']
+    app.config['RECAPTCHA_SECRET_KEY'] = recaptchakeys['RECAPTCHA_SECRET_KEY']
     # logging.basicConfig(filename=Path(mainpath,'activity.log'), level=logging.INFO)
 
     login_manager = LoginManager()

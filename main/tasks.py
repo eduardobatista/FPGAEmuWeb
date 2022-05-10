@@ -15,24 +15,16 @@ def doLogin(userexists,email,password,clouddburl,loginkey):
 
     if (clouddburl is not None) and (clouddburl != ''):
         try:
-            clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
-            with clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+            clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5}, pool_size=1, max_overflow=1)
+            with clouddb.connect(close_with_result=True) as conncloud:     
+                table1 = Table('user', MetaData())
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))       
                 usercloud = clouddata.first() 
                 if usercloud:
                     if not userexists:
                         retorno = {'status': 'NewUser', 'email': email, 'name': usercloud.name, 'password': usercloud.password, 'role': usercloud.role}
                     else:
-                        retorno = {'status': 'Pass', 'password': usercloud.password } 
-                # for row in clouddata:
-                #     if email == row['email']:
-                #         if not userexists:
-                #             # new_user = User(email=email, name=row['name'], password=row['password'], role=row['role'], viewAs=email, 
-                #             #             lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
-                #             retorno = {'status': 'NewUser', 'email': email, 'name': row['name'], 'password': row['password'], 'role': row['role']}
-                #         else:
-                #             retorno = {'status': 'Pass', 'password': row['password'] }                     
+                        retorno = {'status': 'Pass', 'password': usercloud.password }                     
                 clouddata.close()
         except OperationalError as err:
             return {'status':"Error", 'message':f"OperationalError: {err}." }
@@ -50,8 +42,8 @@ def doChangePass(email,newpass,name,role,clouddburl):
     if (clouddburl is not None) and (clouddburl != ''):
         try:
             clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
-            with clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+            with clouddb.connect(close_with_result=True) as conncloud:     
+                table1 = Table('user', MetaData())
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 usercloud = clouddata.first()                
                 if usercloud is not None:
@@ -81,8 +73,8 @@ def doPassRecovery(email,randompasshash,clouddburl):
 
     try:
         clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
-        with clouddb.connect() as conncloud:     
-            table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+        with clouddb.connect(close_with_result=True) as conncloud:     
+            table1 = Table('user', MetaData())
             clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
             usercloud = clouddata.first()  
             if usercloud is not None:

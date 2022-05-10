@@ -158,13 +158,19 @@
             window.socketOn = true;
             window.socket.on('portlist', function(dataa){
                 msg = dataa[0];
-                if (msg === "Error: ports not found in usertop.") {
-                    $("#portmap").html("No ports in entity.");
-                    $("#bSave").prop('disabled', true);
-                    return;
+                if (typeof msg === 'string' || msg instanceof String) {
+                    if (msg === "Error: ports not found in usertop.") {
+                        $("#portmap").html("<strong>No ports in entity.</strong>");
+                        $("#bSave").prop('disabled', true);
+                        return;
+                    } else {
+                        $("#portmap").html("<strong>" + msg + "</strong>");
+                        $("#bSave").prop('disabled', true);
+                        return;
+                    }
                 } else {
                     $("#bSave").prop('disabled', false);
-                }
+                }                
                 msg2 = dataa[1];
                 var plist = new Array(); 
                 window.lastportdata = msg;
