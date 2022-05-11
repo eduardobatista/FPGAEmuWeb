@@ -202,6 +202,18 @@
             }
         };
         $(document).ready(function() {
+            $(window).bind('beforeunload',function() {
+                var val = $("#fileselect").children("option:selected").val();
+                if ((val != 0) && (window.filechanged)) {
+                    if (!window.socketOn) { openSocket(); }
+                    window.autosave = 3;
+                    window.socket.emit("savefile",{filename: val, data:editor.getValue()});  
+                    bulmaToast.toast({ message: window.lastselected + ' saved automatically.', 
+                                    type: "is-danger", position: "top-center", 
+                                    opacity: 0.8, dismissible: true });
+                }
+                return undefined;
+            });
             var arq = getUrlParameter("file");
             if (arq != undefined) {
                 $('#fileselect').val(arq);
