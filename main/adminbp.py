@@ -120,8 +120,9 @@ def admin():
         return redirect(url_for('main.sendfiles'))
     recaptchafile = current_app.WORKDIR / "recaptcha.json"
     recapdata = ""
-    with open(recaptchafile,"r") as ff:
-        recapdata = ff.read()
+    if recaptchafile.exists():
+        with open(recaptchafile,"r") as ff:
+            recapdata = ff.read()
     return render_template('admin.html',clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'],recaptchainfo=recapdata)
 
 
@@ -221,17 +222,11 @@ def saverecaptchainfo():
         ff.write(info)
     try:
         data = json.loads(info) 
-        current_app.recaptcha.site_key = data['RECAPTCHA_SITE_KEY']
-        current_app.recaptcha.secret_key = data['RECAPTCHA_SECRET_KEY']
         current_app.config["RECAPTCHA_SITE_KEY"] = data['RECAPTCHA_SITE_KEY']
         current_app.config["RECAPTCHA_SECRET_KEY"] = data['RECAPTCHA_SECRET_KEY']
-        current_app.recaptcha.is_enabled = True
     except Exception as e:
-        current_app.recaptcha.site_key = ""
-        current_app.recaptcha.secret_key = ""
         current_app.config["RECAPTCHA_SITE_KEY"] = "";
         current_app.config["RECAPTCHA_SECRET_KEY"] = "";
-        current_app.recaptcha.is_enabled = True
         return str(e)
     return "Done!"
     
