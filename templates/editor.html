@@ -266,6 +266,9 @@
                     window.autosave = 0;
                     fpgaCompile2(true);
                     return;
+                } else if (window.autosave == 3) {
+                    window.autosave = 0;
+                    return;
                 }
                 $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
                 $("#centralModalSm").addClass("is-active");   
@@ -323,8 +326,12 @@
         function openfile() {  
 
             var val = $("#fileselect").children("option:selected").val();
-            if ((val != window.lastselected) && (window.filechanged)) {
-                bulmaToast.toast({ message: 'Hello There' });
+            if ((window.lastselected != "") && (val != window.lastselected) && (window.filechanged)) {
+                window.autosave = 3;
+                window.socket.emit("savefile",{filename: window.lastselected, data:editor.getValue()});  
+                bulmaToast.toast({ message: window.lastselected + ' saved automatically.', 
+                                   type: "is-danger", position: "top-center", 
+                                   opacity: 0.8, dismissible: true });
             } 
             if (val != 0) {
                 if (!window.socketOn) {
@@ -396,6 +403,14 @@
         }
 
         function newfile() {
+            var val = $("#fileselect").children("option:selected").val();
+            if ((val != 0) && (window.filechanged)) {
+                window.autosave = 3;
+                window.socket.emit("savefile",{filename: val, data:editor.getValue()});  
+                bulmaToast.toast({ message: window.lastselected + ' saved automatically.', 
+                                   type: "is-danger", position: "top-center", 
+                                   opacity: 0.8, dismissible: true });
+            } 
             window.isnewfile = true;
             if ('{{currentproject}}' != "") {
                 $("#projectselect").val("{{currentproject}}");
