@@ -186,7 +186,7 @@ def signup_post():
     elif current_app.clouddb is not None:
         try:             
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData())
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 if clouddata.first() is not None:
                     flash('Email address already exists (cloud).')
@@ -211,7 +211,7 @@ def signup_post():
                         'role': role, 'viewAs': viewAs, 'lastPassRecovery': None, 'topLevelEntity': topLevelEntity, 'testEntity': testEntity}
         try:             
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData())
+                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select())
                 cloudusers = [row['email'] for row in clouddata]
                 if email not in cloudusers:
