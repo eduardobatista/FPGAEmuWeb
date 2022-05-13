@@ -662,3 +662,11 @@ def getghwsignals(username,mainpath,filename,groups):
                 vcds[gg].append(val)
 
     return vcds
+
+
+def isTraversalSecure(filepath,mandatoryparent):
+    try:
+        filepath.resolve().relative_to(mandatoryparent.resolve())        
+        return True
+    except ValueError as ve:
+        return False

@@ -30,14 +30,14 @@ def getfile(filename):
         try:
             sessionpath = getuserpath()
 
-            sepidx = filename.index("/")
-            projname = filename[:sepidx]
-            fname = filename[sepidx+1:]
-            if re.search(r'[^a-zA-Z0-9_\.]',fname) or (fname.count('.') > 1) or (fname == ".vhd"):
-                emit("error",f"<strong>Invalid filename: {fname}.</strong><br>Please remove any unusual characters, such as spaces, slashs, extra dots, etc.")
-                return
+            fname = Path(sessionpath,filename).resolve()
 
-            fname = Path(sessionpath,filename)   
+            if not isTraversalSecure(fname, sessionpath):
+                emit("error","Invalid path for file.")
+                return
+            if (fname.suffix != ".vhd"):
+                emit("error","Only vhd files can be opened.")
+                return
             
             data = open(fname,'r').read()
             
@@ -53,6 +53,9 @@ def getfile(filename):
 def getmap(filename):
     if checklogged():
         sessionpath = getuserpath()
+        if not isTraversalSecure(Path(filename), sessionpath):
+            emit("error","Invalid path for file.")
+            return
         data = getportlist(sessionpath=sessionpath,file=filename)
         data2 = getexistingportmap(sessionpath=sessionpath,file=filename)
         emit("portlist",[data,data2])
@@ -64,6 +67,9 @@ def savemap(dataa):
             emit("error","Not allowed while viewing as a different user.")
             return
         sessionpath = getuserpath()
+        if not isTraversalSecure(Path(dataa['filename']+".map"), sessionpath):
+            emit("error","Invalid path for file.")
+            return
         with open(sessionpath / (dataa['filename']+".map"),'w') as ff:
             ff.write(dataa['data'])
         emit("mapsavesuccess","ok!")
@@ -80,6 +86,9 @@ def renamefile(dataa):
             return
         filetorename = Path(sessionpath,dataa['filename'])
         filenameto = Path(sessionpath,dataa['filenameto'])
+        if (not isTraversalSecure(filetorename, sessionpath)) or (not isTraversalSecure(filenameto, sessionpath)):
+            emit("error","Invalid path for file.")
+            return
         if not filetorename.exists():
             emit("error","File to rename not found.")
             return
@@ -109,12 +118,15 @@ def createproject(dataa):
         if dataa['projectname'] == "_OldFiles":
             emit("error","Project name not allowed.")
             return
-        if re.search(r'[^a-zA-Z0-9_]',dataa['projectname']):
-            emit("error","Project name must contain only letters, numbers or underline characters.")
+        if len(dataa['projectname']) > 30:
+            emit("error","Project name must have at most 30 characters.")
             return
         newproject = Path(sessionpath,dataa['projectname'])
-        if newproject.suffix != "":
-            emit("error","Project name cannot have a suffix or extension.")
+        if not isTraversalSecure(newproject, sessionpath):
+            emit("error","Invalid path for project.")
+            return
+        if re.search(r'[^a-zA-Z0-9_]',dataa['projectname']):
+            emit("error","Project name must contain only letters, numbers or underline characters.")
             return
         if newproject.exists():
             emit("error","Project already exists.")
@@ -128,9 +140,15 @@ def savefile(dataa):
         if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
             emit("error","Not allowed while viewing as a different user.")
             return
-        if not dataa['filename'].endswith(".vhd"):
+        sessionpath = getuserpath()
+        filepath = Path(sessionpath,dataa['filename']).resolve()
+        if not isTraversalSecure(filepath, sessionpath):
+            emit("error","Invalid file path.")
+            return
+        if (filepath.suffix != ".vhd") or (filepath.name == ".vhd"):
             emit("error","Only .vhd files are allowed.")
             return
+
         filename = dataa['filename']
         sepidx = filename.index("/")
         projname = filename[:sepidx]
@@ -139,14 +157,11 @@ def savefile(dataa):
         if re.search(r'[^a-zA-Z0-9_\.]',fname) or (fname.count('.') > 1) or (fname == ".vhd"):
             emit("error",f"<strong>Invalid filename: {fname}.</strong><br>Please remove any unusual characters, such as spaces, slashs, extra dots, etc.")
             return
-        sessionpath = getuserpath()
-        if not sessionpath.exists():
-            sessionpath.mkdir(parents=True,exist_ok=True)
-        try:             
-            fname = Path(sessionpath,dataa['filename'])
-            if not fname.parent.exists():
-                fname.parent.mkdir(parents=True,exist_ok=True)      
-            data = open(fname,'w').write(dataa['data'])
+
+        try:
+            if not filepath.parent.exists():
+                filepath.parent.mkdir(parents=True,exist_ok=True)      
+            data = open(filepath,'w').write(dataa['data'])
             emit("filesaved",dataa['filename'])
         except Exception as ex:
             emit("error","File could not be saved. Check file name.")
@@ -161,6 +176,9 @@ def deletefile(filename):
         #     return
         sessionpath = getuserpath()
         fpath = Path(sessionpath,filename)
+        if not isTraversalSecure(fpath, sessionpath):
+            emit("error","Invalid file path.")
+            return
         if (fpath.suffix == ".vhd"):
             try:                
                 fpath.unlink()                
@@ -198,6 +216,9 @@ def deleteallfiles(pname):
         try:
             sessionpath = getuserpath()
             fpath = sessionpath / pname
+            if not isTraversalSecure(fpath, sessionpath):
+                emit("error","Invalid path.")
+                return
             aux = list(fpath.glob("*.vhd"))
             for ff in aux:
                 ff.unlink()
@@ -216,7 +237,10 @@ def exportproject(projname):
             emit("error","Top level entity not in current project. Please set an entity in current project as top level.")
         emit("message",f"Top Level entity is <strong style='color:red;'>{current_user.topLevelEntity}</strong>.")
         sessionpath = getuserpath()
-        projpath = sessionpath / projname        
+        projpath = sessionpath / projname
+        if not isTraversalSecure(projpath, sessionpath):
+            emit("error","Invalid path.")
+            return     
         pexp = ProjectExporter(projname, current_user.topLevelEntity)
         projfiles = getvhdfilelist(projpath)
         pexp.addFiles(projfiles)
@@ -233,15 +257,21 @@ def exportproject(projname):
         return
     emit("error","User not logged.")
     return
-        
+
 
 @socketio.on('Analyze', namespace='/stream')
 def analyze(filename):
     if checklogged():
-        socketio.start_background_task(analyzefile,getuserpath(),current_app.MAINPATH,filename,current_user.email)
+        sessionpath = getuserpath()
+        if not isTraversalSecure(sessionpath / filename, sessionpath):
+            emit("error","Invalid path.")
+            return
+        socketio.start_background_task(analyzefile,sessionpath,current_app.MAINPATH,filename,current_user.email)
+
 
 @socketio.on('Simulate', namespace='/stream')
 def simulate(stoptime,testentity="usertest.vhd"):
+    # TODO: Traversal check!
     if checklogged():
         current_user.testEntity = testentity[:-4]
         db.session.commit()

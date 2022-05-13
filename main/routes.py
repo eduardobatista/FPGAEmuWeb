@@ -91,6 +91,8 @@ def openproject(pname):
         abort(404)
     sessionpath = getuserpath()
     pdir = sessionpath / pname
+    if not isTraversalSecure(pdir, sessionpath):
+        abort(404)
     if pdir.exists() and pdir.is_dir():
         session["CurrentProject"] = pname
         configfile = pdir / ".config"
@@ -118,11 +120,13 @@ def closeproject():
 @main.route('/settoplevel',methods=['POST'])
 @login_required
 def settoplevel():
-    toplevelfile = request.form.get('toplevelfile')    
+    sessionpath = getuserpath()
+    toplevelfile = request.form.get('toplevelfile')
+    if not isTraversalSecure(sessionpath / toplevelfile, sessionpath):
+        abort(404)
     if current_user.topLevelEntity != toplevelfile:
         current_user.topLevelEntity = toplevelfile
-        db.session.commit()
-        sessionpath = getuserpath()
+        db.session.commit()        
         cfgpath =  (sessionpath / getcurrentproject(sessionpath)) / ".config"
         with open(cfgpath,"w") as cfile:
             cfile.write(Path(toplevelfile).name)
@@ -197,6 +201,8 @@ def mapper():
 def downloadproject(pname):
     temppath = Path(current_app.MAINPATH,'temp',current_user.email)
     pzip = temppath / f'{pname}.zip'
+    if not isTraversalSecure(pzip, temppath):
+        return abort(404)
     if not pzip.exists():
         return abort(404)
     return send_from_directory(temppath, f'{pname}.zip', as_attachment=True, cache_timeout=-1)
@@ -222,6 +228,8 @@ def downloadafile():
     fname = request.args.get('file')
     sessionpath = getuserpath()
     fpath = Path(sessionpath,fname)
+    if not isTraversalSecure(fpath, sessionpath):
+        abort(404)
     if not fpath.exists():
         abort(404)
     if fpath.is_dir():
