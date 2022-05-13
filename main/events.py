@@ -53,9 +53,9 @@ def getfile(filename):
 def getmap(filename):
     if checklogged():
         sessionpath = getuserpath()
-        if not isTraversalSecure(Path(filename), sessionpath):
-            emit("error","Invalid path for file.")
-            return
+        # if not isTraversalSecure(Path(filename), sessionpath):
+        #     emit("error","Invalid path for file.")
+        #     return
         data = getportlist(sessionpath=sessionpath,file=filename)
         data2 = getexistingportmap(sessionpath=sessionpath,file=filename)
         emit("portlist",[data,data2])
@@ -67,9 +67,9 @@ def savemap(dataa):
             emit("error","Not allowed while viewing as a different user.")
             return
         sessionpath = getuserpath()
-        if not isTraversalSecure(Path(dataa['filename']+".map"), sessionpath):
-            emit("error","Invalid path for file.")
-            return
+        # if not isTraversalSecure(Path(dataa['filename']+".map"), sessionpath):
+        #     emit("error","Invalid path for file.")
+        #     return
         with open(sessionpath / (dataa['filename']+".map"),'w') as ff:
             ff.write(dataa['data'])
         emit("mapsavesuccess","ok!")
