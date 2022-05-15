@@ -300,6 +300,7 @@ def changerole():
 
 
 @adm.route('/workbackup')
+@login_required
 def workbackup():    
     if current_user.role != "Admin":
         return "Error! Not an Admin."
@@ -311,6 +312,39 @@ def workbackup():
     except BaseException as ex:
         return (str(ex))
     return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, cache_timeout=-1)
+
+
+@adm.route('/workcleanup')
+@login_required
+def workcleanup():    
+    if current_user.role != "Admin":
+        return "Error! Not an Admin."
+    cleanuplogs = ["Starting cleanup..."]
+    workdir = Path(current_app.WORKDIR)
+    try:
+        for dd in workdir.iterdir():
+            if dd.is_dir() and (dd != workdir):
+                is_empty = not any(dd.iterdir())
+                if is_empty:
+                    dd.rmdir()
+                    cleanuplogs.append(f"Directory removed: {dd}.")
+                else:
+                    for ff in dd.rglob("*"):
+                        if (not ff.is_dir()) and (ff.suffix not in [".vhd",".map"]):
+                            ff.unlink()
+                            cleanuplogs.append(f"File removed: {ff}.")
+    except BaseException as ex:
+        cleanuplogs.append(str(ex))
+    cleanuplogs.append("Cleanup finished successfully.")
+    return "<br>".join(cleanuplogs)
+    
+        
+
+    # for ff in workdir.rglob("*"):
+    #     if (ff.suffix == "") or (ff.suffix == ".o") or (ff.name == "activity.log") or (ff.name == "fpgatest.aux") or (ff.name == "output.ghw") or (ff.suffix == ".cf") or (ff.suffix == ".zip"):
+    #         if ff.name != "seckey":
+    #             if not ff.is_dir():
+    #                 ff.unlink()
     
     
 

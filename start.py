@@ -47,13 +47,6 @@ subprocess.Popen(
 
 WORKDIR = Path(MAINPATH) / "work"
 
-# Workdir cleanup (can be removed in the future):
-for ff in WORKDIR.rglob("*"):
-    if (ff.suffix == "") or (ff.suffix == ".o") or (ff.name == "activity.log") or (ff.name == "fpgatest.aux") or (ff.name == "output.ghw") or (ff.suffix == ".cf") or (ff.suffix == ".zip"):
-        if ff.name != "seckey":
-            if not ff.is_dir():
-                ff.unlink()
-
 # If db.sqlite does not exist, erase seckey:
 localdburl = 'sqlite:///db.sqlite'  # WARNING: do not put local database in other place without changing the seckey.
 if not Path(MAINPATH,"db.sqlite").exists():
