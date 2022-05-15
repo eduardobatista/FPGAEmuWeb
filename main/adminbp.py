@@ -330,16 +330,13 @@ def workcleanup():
                     cleanuplogs.append(f"Directory removed: {dd}.")
                 else:
                     for ff in dd.rglob("*"):
-                        if (not ff.is_dir()) and (ff.suffix not in [".vhd",".map"]):
+                        if (not ff.is_dir()) and (ff.suffix not in [".vhd",".map"]) and (ff.name != ".config"):
                             ff.unlink()
                             cleanuplogs.append(f"File removed: {ff}.")
     except BaseException as ex:
         cleanuplogs.append(str(ex))
     cleanuplogs.append("Cleanup finished successfully.")
     return "<br>".join(cleanuplogs)
-    
-        
-
     # for ff in workdir.rglob("*"):
     #     if (ff.suffix == "") or (ff.suffix == ".o") or (ff.name == "activity.log") or (ff.name == "fpgatest.aux") or (ff.name == "output.ghw") or (ff.suffix == ".cf") or (ff.suffix == ".zip"):
     #         if ff.name != "seckey":
