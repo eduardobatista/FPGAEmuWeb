@@ -118,6 +118,10 @@ def createproject(dataa):
         if dataa['projectname'] == "_OldFiles":
             emit("error","Project name not allowed.")
             return
+        nprojects = sum([(1 if a.is_dir() else 0) for a in sessionpath.iterdir()])
+        if nprojects >= 25:
+            emit("error","Maximum of 25 projects reached. Please cleanup before creating a new one.")
+            return
         if len(dataa['projectname']) > 30:
             emit("error","Project name must have at most 30 characters.")
             return
@@ -140,6 +144,9 @@ def savefile(dataa):
         if (current_user.viewAs != '') and (current_user.viewAs != current_user.email):
             emit("error","Not allowed while viewing as a different user.")
             return
+        if len(dataa['data']) > 100000:
+            emit("error","Maximum file size is 100 kbytes.")
+            return
         sessionpath = getuserpath()
         filepath = Path(sessionpath,dataa['filename']).resolve()
         if not isTraversalSecure(filepath, sessionpath):
@@ -159,8 +166,12 @@ def savefile(dataa):
             return
 
         try:
-            if not filepath.parent.exists():
-                filepath.parent.mkdir(parents=True,exist_ok=True)      
+            # if not filepath.parent.exists():
+            #     filepath.parent.mkdir(parents=True,exist_ok=True)  
+            if not filepath.exists():
+                if len(list(filepath.parent.glob("*.vhd"))) >= 100:
+                    emit("error","Maximum of 100 files reached for this project.")
+                    return
             data = open(filepath,'w').write(dataa['data'])
             emit("filesaved",dataa['filename'])
         except Exception as ex:

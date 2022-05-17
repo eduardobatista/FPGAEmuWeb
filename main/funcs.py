@@ -319,9 +319,10 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
 
 
 def analyzefile(sessionpath,mainpath,filename,userid):
+    temppath = Path(mainpath,"temp",userid)
     compilerpath = Path(mainpath,'backend','analyze.sh')
     proc = subprocess.Popen(
-                [compilerpath,sessionpath,filename],
+                [compilerpath,temppath,Path(sessionpath,filename).absolute()],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
@@ -333,6 +334,7 @@ def analyzefile(sessionpath,mainpath,filename,userid):
         socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=userid)
         socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
+        errstring = errstring.replace(str(Path(sessionpath,filename).parent) + "/","")
         if errstring != "":            
             socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Analysis of {filename} with errors.")
