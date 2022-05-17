@@ -320,6 +320,7 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
 
 def analyzefile(sessionpath,mainpath,filename,userid):
     temppath = Path(mainpath,"temp",userid)
+    temppath.mkdir(parents=True,exist_ok=True)
     compilerpath = Path(mainpath,'backend','analyze.sh')
     proc = subprocess.Popen(
                 [compilerpath,temppath,Path(sessionpath,filename).absolute()],
