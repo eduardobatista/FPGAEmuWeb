@@ -21,7 +21,6 @@
 
 {% block content %}
 
-
     <div class="container is-fullwidth px-4 py-1 mt-3">
 
         <button id="gotoemul" type="button" class="button is-info m-0 is-small" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
@@ -44,7 +43,10 @@
                 </div>
 
                 <div class="container is-block m-0 p-0">
-                    <div id="plotsvg" class="m-0 p-0" >                        
+                    
+                    <div id="plotsvg2" class="m-0 p-0">                        
+                    </div>
+                    <div id="plotsvg" class="m-0 p-0">                        
                     </div>
                 </div>                
 
@@ -125,8 +127,8 @@
 
         
         $( document ).ready(function() {  
-            window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','relative');
-            window.wdraw = window.draw.nested().addTo('#plotsvg').size(500, 200).css('position','absolute');   
+            window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','absolute');  // changed from relative
+            window.wdraw = window.draw.nested().addTo('#plotsvg2').size(500, 200).css('position','absolute');   
             requestghwdata();
             $("#slider-range").slider({
                 range: true,
@@ -217,10 +219,10 @@
 
             if (sinais.length == 0) { return; }
             
-            var compwidth = $('#plotsvg').width()-20;  
+            var compwidth = $('#plotsvg').width()-5;  
             var compheight = (sinais.length+1)*rowheight+5;
             draw.size(compwidth,compheight);
-            draw.css('left',10);
+            // draw.css('left',10);
 
             var vcddata = window.data[window.plotlist[sinais[0]]];
             
@@ -234,8 +236,10 @@
             }
             maxtextsize = maxtextsize + 5;
 
-            wdraw.size(compwidth-maxtextsize,compheight);
-            wdraw.css('left',maxtextsize+10);
+            wdraw.size(compwidth,compheight);
+            var maxtextsizewdraw = maxtextsize;
+            // wdraw.css('left',maxtextsize+10);
+            // wdraw.move(100,100);
             
             var maxtime = vcddata[vcddata.length-2];
             if (typeof tmax == 'undefined') { tmax = maxtime; }
@@ -266,7 +270,7 @@
                 txt.move(j*scalex*timestep+maxtextsize-1-txt.length(),2*margintb+fontsize/2);
                 draw.line(0,0,0,compheight).stroke(strokedata)
                         .move(j*scalex*timestep+maxtextsize,0);
-            }
+            }            
 
             maxtextsize = 0;
             var flagvec = false;
@@ -285,7 +289,7 @@
                 var lastval = 'U';
                 
                 for (var i = 0; i < vcddata.length-2; i = i + 2) {                    
-                    var val = vcddata[i+1].replaceAll("'","");                    
+                    var val = vcddata[i+1].replace(/'/g,''); //.replaceAll("'","");                    
                     if (flagslvec) {
                         draw_others(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1),flagslvec);
                     } else if (flagvec) {
@@ -294,8 +298,13 @@
                         draw_std_logic(wdraw,val,lastval,(vcddata[i]-mintime)*scalex,(vcddata[i+2]-mintime)*scalex,fontsize/2+rowheight*(j+1));    
                     }                    
                     lastval = val;
-                }                          
+                }    
+                                    
             }
+            wdraw.each(function(i, children) {
+                this.dx(maxtextsizewdraw);
+            })
+            wdraw.rect(maxtextsizewdraw-2,compheight-rowheight-4).fill({ color: '#ffffff' }).dy(rowheight+2);
 
         }
 

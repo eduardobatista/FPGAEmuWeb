@@ -269,6 +269,9 @@ def passrecstatus(nocelery=False,resp=None):
         
         return "Failed"
 
+    else:
+        return "Failed"
+
 
 
 
