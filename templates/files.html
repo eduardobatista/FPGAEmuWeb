@@ -456,7 +456,8 @@
             });
             window.socket.on('exportsuccess',function(msg){
                 $("#myspinner").hide();
-                $('#status').append("<br><br><strong>Success! File download will begin soon...<strong>")
+                $('#status').append("<br><br><strong>Success! File download will begin soon or</strong><br>");
+                $('#status').append('<strong><a href="/downloadproject/' + msg +  '">click here</a> to download manually</strong>.');
                 // location.href = '/downloadproject/' + msg;
                 window.open('/downloadproject/' + msg,'_blank');
             });

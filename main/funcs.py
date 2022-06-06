@@ -386,6 +386,7 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curpr
             hasError = True
             errmsgs = outstring
         else:
+            outstring = outstring.replace(str(Path(filenames[0]).parent) + "/","")
             socketio.emit("message",outstring,namespace="/stream",room=userid)
             socketio.sleep(0.1)
         errstring = errs.decode('unicode_escape').replace('\n','\n<br>')

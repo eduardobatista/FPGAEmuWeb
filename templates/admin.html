@@ -181,8 +181,10 @@
 
             function checkLogs() {
                 $.post("/checklogs",{}).done( function (data) {
-                        $("#psinfo").show();
-                        $("#psinfo").html(data);
+                        let psi = document.getElementById('psinfo');
+                        psi.style.display = "block";
+                        psi.innerHTML = data;
+                        psi.scrollTop = psi.scrollHeight;
                     });
             }
 
