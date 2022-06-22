@@ -83,17 +83,21 @@ class ProjectExporter:
                         vari,auxmapi = aux.strip().split(":")
                         mapi = auxmapi.split(",")
                         if mapi[0].startswith("CLK"):
-                            hasClock = True
+                            hasClock = True                          
                         for k in range(1,len(mapi)):
-                            mapi[k] = int(mapi[k])                        
+                            mapi[k] = int(mapi[k]) if (mapi[k] != '') else 0                       
                         if len(mapi) == 3:
                             messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]} downto {mapi[2]})</strong>" )
                             for k in range(mapi[1]-mapi[2]+1):
                                 qsfdatamod = qsfdatamod.replace(f"{mapi[0]}[{mapi[2]+k}]",f"{vari}[{k}]")
                             pmapwithclock.append(f"{vari} => {mapi[0]}({mapi[1]} downto {mapi[2]})")
                         else:
-                            messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]})</strong>" )
-                            qsfdatamod = qsfdatamod.replace(f"{mapi[0]}[{mapi[1]}]",f"{vari}")
+                            if mapi[0].startswith("CLK"):
+                                messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}</strong>" )
+                                qsfdatamod = qsfdatamod.replace(f"{mapi[0]}",f"{vari}")
+                            else:
+                                messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]})</strong>" )
+                                qsfdatamod = qsfdatamod.replace(f"{mapi[0]}[{mapi[1]}]",f"{vari}")
                             pmapwithclock.append(
                                 f"{vari} => {mapi[0]}({mapi[1]})" if (not mapi[0].startswith("CLK")) else
                                 f"{vari} => {mapi[0]}"
