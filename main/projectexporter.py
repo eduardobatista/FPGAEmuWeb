@@ -1,7 +1,8 @@
 from pathlib import Path
 from datetime import datetime
 from zipfile import ZipFile
-
+import re
+from .funcs import getportlist
 
 class ProjectExporter:
 
@@ -18,25 +19,48 @@ class ProjectExporter:
         
     def clearFileList(self):
         self.filelist = []
+    
+    def extractTopLevelComponent(self,projdir):
+        tlevelfile = projdir / (self.toplevel + ".vhd")
+        with open(tlevelfile,"r") as ff:
+            tldata = ff.read();
+            entitydecl = re.search("entity([^\r]+?end)",tldata)
+            if not entitydecl:
+                return ["Error: entity not found in top level file."]
+            entitydecl = entitydecl[1]
+            return "component " + entitydecl + " component;"
 
+
+    # def extractPorts(self,entitydecl):
+    #     plist = []
+    #     print(entitydecl)
+    #     portsdecl = re.search(r"port([^\r]+)\)",entitydecl)
+    #     if not portsdecl:
+    #         raise BaseException("Ports not found.")
+    #     portsdecl = re.search(r"\(([^\r]+)",portsdecl[1])[1]
+    #     portsdecl = re.sub(r"\n","",portsdecl)
+    #     portsdecl = re.sub(r"[\s]+"," ",portsdecl)        
+    #     for pt in portsdecl.split(";"):
+    #         pname = re.search(r"(.*?):", pt.strip())[1]
+    #         plist.append(pname)
+    #     return plist
+
+        
     def generateProject(self,projdir,outputdir):
         messages = []
         outputdir = Path(outputdir)
+        if not outputdir.exists():
+            outputdir.mkdir(parents=True,exist_ok=True)
         datecreatedtext = datetime.now().strftime("%H:%M:%S  %B %-d, %Y")
         qpfdata = ProjectExporter.qpftemplate.replace("{{PROJNAME}}", f"{self.projname}")
-        qpfdata = qpfdata.replace("{{DATECREATED}}", datecreatedtext)
+        qpfdata = qpfdata.replace("{{DATECREATED}}", datecreatedtext)       
         qpffile = outputdir / f"{self.projname}.qpf"
         if qpffile.exists():
             qpffile.unlink()
         qpffile.touch()
         with open(qpffile,"wt") as ff:
-            ff.write(qpfdata)
-        vhdfilestext = ""
-        for ff in self.filelist:
-            vhdfilestext += ProjectExporter.vhdlfilerowDE1SOC.replace("{{FILENAME}}", ff.name) + "\n"
-        qsfdata = ProjectExporter.qsftemplateDE1SOC.replace("{{VHDLFILESINPROJECT}}",vhdfilestext)
-        qsfdata = qsfdata.replace("{{DATECREATED}}", datecreatedtext)
-        qsfdata = qsfdata.replace("{{TOPLEVELENTITY}}",self.toplevel)
+            ff.write(qpfdata)        
+        qsfdata = ProjectExporter.qsftemplateDE1SOC.replace("{{DATECREATED}}", datecreatedtext)        
         # Defining location assigments (TODO: to be improved)
         locaassig = []
         for pair in ProjectExporter.locassigtableDE1SOC:
@@ -45,27 +69,75 @@ class ProjectExporter:
             locaassig.append(aux)
         qsfdata = qsfdata.replace("{{LOCATIONASSIGNMENTS}}","\n".join(locaassig))
         mapfile = projdir / (self.toplevel + ".vhd.map")
+        
+        hasClock = False
+        additionalFiles = []
         if mapfile.exists():
+            qsfdatamod = qsfdata
             with open(mapfile,"r") as ff:
-                aux = ff.readline()
-                if len(aux) > 2:  # If first line has more than two bytes, map is active.
+                auxx = ff.read().split("\n")
+                if len(auxx[0]) > 2:  # If first line has more than two bytes, map is active.
                     messages.append("<strong style='color:red;'>Mapper configuration is active:</strong>")
-                    aux = ff.readline()
-                    while aux:
+                    pmapwithclock = []
+                    for aux in auxx[1:]:
                         vari,auxmapi = aux.strip().split(":")
                         mapi = auxmapi.split(",")
                         if mapi[0].startswith("CLK"):
-                            return ["Error: exporting projects with mapped clock inputs not allowed yet."]
+                            hasClock = True
                         for k in range(1,len(mapi)):
                             mapi[k] = int(mapi[k])                        
                         if len(mapi) == 3:
                             messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]} downto {mapi[2]})</strong>" )
                             for k in range(mapi[1]-mapi[2]+1):
-                                qsfdata = qsfdata.replace(f"{mapi[0]}[{mapi[2]+k}]",f"{vari}[{k}]")
+                                qsfdatamod = qsfdatamod.replace(f"{mapi[0]}[{mapi[2]+k}]",f"{vari}[{k}]")
+                            pmapwithclock.append(f"{vari} => {mapi[0]}({mapi[1]} downto {mapi[2]})")
                         else:
                             messages.append( f"- <strong>{vari}</strong> to <strong>{mapi[0]}({mapi[1]})</strong>" )
-                            qsfdata = qsfdata.replace(f"{mapi[0]}[{mapi[1]}]",f"{vari}")
-                        aux = ff.readline()
+                            qsfdatamod = qsfdatamod.replace(f"{mapi[0]}[{mapi[1]}]",f"{vari}")
+                            pmapwithclock.append(
+                                f"{vari} => {mapi[0]}({mapi[1]})" if (not mapi[0].startswith("CLK")) else
+                                f"{vari} => {mapi[0]}"
+                            )
+                
+                if not hasClock:
+                    qsfdata = qsfdatamod
+                
+
+        else:
+            portlist = getportlist(projdir,self.toplevel + ".vhd")
+            pmapwithclock = []
+            for pp in portlist:
+                if "CLK" in pp['name']:
+                    hasClock = True
+                if pp['typesize'] > 1:
+                    pmapwithclock.append(f"{pp['name']} => {pp['name']}({pp['typesize']-1} downto 0)")
+                else:
+                    pmapwithclock.append(f"{pp['name']} => {pp['name']}")
+        
+        if hasClock:
+            newtoplevelname = self.toplevel + "WithClock"
+            while (projdir / (newtoplevelname + ".vhd")).exists():
+                newtoplevelname = newtoplevelname + "k"
+            clockgenname = "clockgen"
+            while (projdir / (clockgenname + ".vhd")).exists():
+                clockgenname = clockgenname + "n"
+            newtoplevelcode = ProjectExporter.usertopwithclock
+            substs = [ ["{{USERTOPNAME}}", newtoplevelname],
+                        ["{{MYCOMPONENTNAME}}", self.toplevel],
+                        ["{{MYCOMPONENTPORTMAP}}", ", ".join(pmapwithclock)],
+                        ["{{MYCOMPONENTDECLARATION}}", self.extractTopLevelComponent(projdir)],
+                        ["{{CLOCKGENENTITY}}", clockgenname] ]                   
+            for ss in substs:
+                newtoplevelcode = newtoplevelcode.replace(ss[0],ss[1])
+            clockgencode = ProjectExporter.clockgenvhd.replace("{{CLOCKGENENTITY}}", clockgenname)
+            self.toplevel = newtoplevelname
+            additionalFiles = [outputdir / (newtoplevelname + ".vhd"), outputdir / (clockgenname + ".vhd")]
+        
+        vhdfilestext = ""
+        for ff in (self.filelist + additionalFiles):
+            vhdfilestext += ProjectExporter.vhdlfilerowDE1SOC.replace("{{FILENAME}}", ff.name) + "\n"
+        qsfdata = qsfdata.replace("{{VHDLFILESINPROJECT}}",vhdfilestext)
+        qsfdata = qsfdata.replace("{{TOPLEVELENTITY}}",self.toplevel)
         qsffile = outputdir / f"{self.projname}.qsf"
         if qsffile.exists():
             qsffile.unlink()
@@ -79,7 +151,16 @@ class ProjectExporter:
         zipobj.write(qpffile,qpffile.relative_to(outputdir))
         zipobj.write(qsffile,qsffile.relative_to(outputdir))
         for f in self.filelist:
-            zipobj.write(f,f.relative_to(projdir))    
+            zipobj.write(f,f.relative_to(projdir))  
+        if hasClock:
+            newtlevelfile = outputdir / (self.toplevel + ".vhd")
+            with open(newtlevelfile,"w") as ff:
+                ff.write(newtoplevelcode)
+            zipobj.write(newtlevelfile,newtlevelfile.relative_to(outputdir))
+            clockgenfile = outputdir / (clockgenname + ".vhd")
+            with open(clockgenfile,"w") as ff:
+                ff.write(clockgencode)  
+            zipobj.write(clockgenfile,clockgenfile.relative_to(outputdir))            
         zipobj.close()
         return messages
 
@@ -198,3 +279,81 @@ set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_
                             ("PIN_AC9", "SW[7]"),
                             ("PIN_AD10", "SW[8]"),
                             ("PIN_AE12", "SW[9]")]
+    
+    usertopwithclock = '''
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity {{USERTOPNAME}} is
+port( KEY: in std_logic_vector(3 downto 0);
+    CLOCK_50: in std_logic;
+    SW: in std_logic_vector(9 downto 0);
+    LEDR: out std_logic_vector(9 downto 0);
+    HEX0,HEX1,HEX2,HEX3,HEX4,HEX5 : out std_logic_vector(6 downto 0) );
+end {{USERTOPNAME}};
+
+architecture rtl of {{USERTOPNAME}} is
+
+    signal CLK_1Hz,CLK_10Hz,CLK_500Hz: std_logic;
+
+    -- My top level component:
+    {{MYCOMPONENTDECLARATION}}
+    
+    -- Clock generator:
+    component {{CLOCKGENENTITY}} is
+    port( clk_50MHz: in std_logic;
+    	  clk_1Hz, clk_10Hz, clk_500Hz: out std_logic );
+    end component;
+
+begin
+    
+    comp885: {{MYCOMPONENTNAME}} port map ( {{MYCOMPONENTPORTMAP}} );
+    
+    comp995: {{CLOCKGENENTITY}} port map (CLOCK_50, CLK_1Hz, CLK_10Hz, CLK_500Hz);
+
+end rtl;
+
+    '''
+    
+    clockgenvhd = '''
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+
+entity {{CLOCKGENENTITY}} is
+port( clk_50MHz: in std_logic;
+	clk_1Hz, clk_10Hz, clk_500Hz: out std_logic	);
+end {{CLOCKGENENTITY}};
+
+architecture rtl of {{CLOCKGENENTITY}} is
+    signal ct1, ct10, ct500: std_logic_vector(27 downto 0) := x"0000000";
+    signal clk_1Hz_s, clk_10Hz_s, clk_500Hz_s: std_logic := '0'; 
+begin
+    clk_1Hz <= clk_1Hz_s;
+    clk_10Hz <= clk_10Hz_s;
+    clk_500Hz <= clk_500Hz_s;
+    process(clk_50MHz)
+    begin
+        if clk_50MHz'event and clk_50MHz = '1' then
+            if ct1 = x"17D783F" then -- x"000000F" then -- Count up to 24999999
+                clk_1Hz_s <= not clk_1Hz_s;
+                ct1 <= x"0000000";
+            else
+                ct1 <= ct1 + '1';
+            end if;
+            if ct10 = x"026259F" then -- x"0000007" then -- Count up to 2499999
+                clk_10Hz_s <= not clk_10Hz_s;
+                ct10 <= x"0000000";
+            else
+                ct10 <= ct10 + '1';
+            end if;
+            if ct500 = x"000C34F" then -- x"000001F" then -- Count up to 49999
+                clk_500Hz_s <= not clk_500Hz_s;
+                ct500 <= x"0000000";
+            else
+                ct500 <= ct500 + '1';
+            end if;
+        end if;
+    end process;
+end rtl;
+    '''
