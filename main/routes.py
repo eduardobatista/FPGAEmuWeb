@@ -200,6 +200,8 @@ def mapper():
 @login_required
 def downloadproject(pname):
     temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+    if not temppath.exists():
+        temppath.mkdir(parents=True,exist_ok=True)
     pzip = temppath / f'{pname}.zip'
     if not isTraversalSecure(pzip, temppath):
         return abort(404)
@@ -234,6 +236,8 @@ def downloadafile():
         abort(404)
     if fpath.is_dir():
         temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+        if not temppath.exists():
+            temppath.mkdir(parents=True,exist_ok=True)
         zipname = Path(temppath,f'{fname}.zip')
         if zipname.exists(): 
             zipname.unlink()

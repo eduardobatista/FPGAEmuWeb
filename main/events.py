@@ -241,7 +241,9 @@ def deleteallfiles(pname):
             emit("error","Error deleting all files.")
 
 @socketio.on('exportproject', namespace='/stream')
-def exportproject(projname):
+def exportproject(dataa):
+    projname = dataa['projname']
+    target = dataa['target']
     if checklogged():
         # socketio.start_background_task(analyzefile,getuserpath(),current_app.MAINPATH,filename,current_user.email)
         if projname not in current_user.topLevelEntity:
@@ -252,7 +254,10 @@ def exportproject(projname):
         if not isTraversalSecure(projpath, sessionpath):
             emit("error","Invalid path.")
             return     
-        pexp = ProjectExporter(projname, current_user.topLevelEntity)
+        if target not in ["DE1SOC","DE2"]:
+            emit("error","Invalid target.")
+            return   
+        pexp = ProjectExporter(projname, current_user.topLevelEntity,target=target)
         projfiles = getvhdfilelist(projpath)
         pexp.addFiles(projfiles)
         temppath = Path(current_app.MAINPATH,'temp',current_user.email)

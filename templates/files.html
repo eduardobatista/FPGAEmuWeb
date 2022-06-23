@@ -56,8 +56,11 @@
                         </div>
                         <div class="dropdown-menu" id="dropdown-menu3" role="menu">
                           <div class="dropdown-content">
-                            <a class="dropdown-item" onclick="exportProject();">
+                            <a class="dropdown-item" onclick="exportProject('DE1SOC');">
                               DE1-SoC/Quartus II
+                            </a>
+                            <a class="dropdown-item" onclick="exportProject('DE2');">
+                              DE2/Quartus II
                             </a>
                           </div>
                         </div>
@@ -604,7 +607,7 @@
             window.socket.send("Compile");           
         }
 
-        function exportProject() {
+        function exportProject(target) {
             $("#status").html("");
             $("#myspinner").show();
             $("#gotoemul").hide();
@@ -613,7 +616,7 @@
             $('#status').append("<strong style='color: red;'>Warning</strong>: DE1-SoC has only 10 LEDRs, 10 SWs and 6 HEX displays. Thus, outputs to LEDR, SW and HEX may be truncated.")
             $('#exportdropdown').removeClass('is-active');
             if (!window.socketOn) { openSocket(); }
-            window.socket.emit("exportproject","{{currentproject}}");
+            window.socket.emit("exportproject",{projname: "{{currentproject}}", target: target});
         }
 
         function toggleExportList() {
