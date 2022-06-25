@@ -215,19 +215,24 @@ def downloadfile():
     sessionpath = getuserpath()
     aux = getvhdfilelist(sessionpath,recursive=True)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # filenames = [x.name for x in aux]
-    zipname = Path(sessionpath,'VHDLFiles.zip')
+    temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+    if not temppath.exists():
+        temppath.mkdir(parents=True,exist_ok=True)
+    zipname = Path(temppath,'VHDLFiles.zip')
     if zipname.exists(): 
         zipname.unlink()
     zipobj = ZipFile(zipname, 'w')
     for f in aux:
         zipobj.write(f,f.relative_to(sessionpath))    
     zipobj.close()
-    return send_from_directory(sessionpath, 'VHDLFiles.zip', as_attachment=True, cache_timeout=-1)
+    return send_from_directory(temppath, 'VHDLFiles.zip', as_attachment=True, cache_timeout=-1)
 
 @main.route("/downloadafile", methods=['GET', 'POST']) 
 @login_required
 def downloadafile():
     fname = request.args.get('file')
+    if len(fname) > 100:
+        abort(404)
     sessionpath = getuserpath()
     fpath = Path(sessionpath,fname)
     if not isTraversalSecure(fpath, sessionpath):
@@ -272,7 +277,13 @@ def upload():
         f = request.files.getlist("fileToUpload")
         cproj = request.form.get('currentproject') 
         for ff in f:
-            thefile = Path(sessionpath, cproj, secure_filename(ff.filename))            
+            if len(ff.filename) > 100:
+                return "Fail: too large a filename."
+            thefile = Path(sessionpath, cproj, secure_filename(ff.filename))  
+            if thefile.suffix != ".vhd":
+                return "Fail: only vhd files are allowed."
+            if not isTraversalSecure(thefile, sessionpath):
+                return "Fail: system crash!"
             if thefile.exists():
                 thefile.unlink()
             themap = Path(sessionpath, cproj, secure_filename(ff.filename)+".map")

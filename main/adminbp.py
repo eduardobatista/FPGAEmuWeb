@@ -337,11 +337,6 @@ def workcleanup():
         cleanuplogs.append(str(ex))
     cleanuplogs.append("Cleanup finished successfully.")
     return "<br>".join(cleanuplogs)
-    # for ff in workdir.rglob("*"):
-    #     if (ff.suffix == "") or (ff.suffix == ".o") or (ff.name == "activity.log") or (ff.name == "fpgatest.aux") or (ff.name == "output.ghw") or (ff.suffix == ".cf") or (ff.suffix == ".zip"):
-    #         if ff.name != "seckey":
-    #             if not ff.is_dir():
-    #                 ff.unlink()
     
     
 
