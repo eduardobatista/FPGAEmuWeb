@@ -289,7 +289,16 @@ def analyze(filename):
 def simulate(stoptime,testentity="usertest.vhd"):
     # TODO: Traversal check!
     if checklogged():
-        current_user.testEntity = testentity[:-4]
+        if not (getuserpath() / testentity).exists():
+            emit("error","Test entity does not exist.")
+            return
+        if "ns" not in stoptime:
+            emit("error","Stop time must be in nano seconds.")
+            return
+        if len(stoptime) > 10:
+            emit("error","Stop time text is invalid (too many characters).")
+            return
+        current_user.testEntity = testentity[:-4] + "|" + stoptime
         db.session.commit()
         if ("/" not in testentity):
             curproject = ""

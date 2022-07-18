@@ -162,11 +162,16 @@ def simular():
     else:
         aux = getvhdfilelist(sessionpath,recursive=True)
     filenames = [str(x.relative_to(sessionpath)) for x in aux]
-    tentity = f"{current_user.testEntity}.vhd"
+    if current_user.testEntity:
+        auxx = current_user.testEntity.split("|")
+        tentity = f"{auxx[0]}.vhd"
+        stoptime = auxx[1] if (len(auxx) > 1) else "200 ns"
+    else:
+        stoptime = "200 ns"
     if tentity not in filenames:
-        tentity = "usertest.vhd"
+        tentity = "usertest.vhd"    
     return render_template('simulation.html',username=current_user.email,
-                    socketiofile=getsocketiofile(),filenames=filenames,testentity=tentity)
+                    socketiofile=getsocketiofile(),filenames=filenames,testentity=tentity,stoptime=stoptime)
 
 @main.route('/editor')
 @login_required

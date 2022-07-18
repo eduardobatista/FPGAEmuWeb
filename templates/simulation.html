@@ -44,7 +44,7 @@
 
                     <div class="block mt-2 mb-0">
                         <h6 class="title is-6 is-inline">Stop time:</h6>
-                        <input type="text" id="stoptime" class="input is-small" value="200 ns">                        
+                        <input type="text" id="stoptime" class="input is-small" value="{{stoptime}}" maxlength="10">                        
                     </div>
     
                     <div class="block mt-2">
@@ -83,6 +83,22 @@
               </footer>
             </div>
           </div>
+
+          <div class="modal is-clipped" id="modalError">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title">Error</p>
+                <button class="delete" aria-label="close" onclick="document.querySelector('#modalError').classList.remove('is-active');"></button>
+              </header>
+              <section class="modal-card-body">
+                <p id="errorMessage">Modal body text goes here.</p>
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-danger is-small" onclick="document.querySelector('#modalError').classList.remove('is-active');">Close</button>
+              </footer>
+            </div>
+          </div> 
 
 
 {% endblock %}
@@ -133,9 +149,16 @@
                 $("#myspinner").hide();
             });
             window.socket.on('error',function(msg){
-                alert("Error: " + String(msg));
+                errorMessage(msg);
             });
       
+        }
+
+        function errorMessage(msg) {
+            $("#simulationmodal").removeClass("is-active");
+            $("#errorMessage").html(msg);
+            $("#modalError").addClass("is-active");
+            $('#bcloseerr').focus();
         }
 
 
@@ -147,7 +170,6 @@
             $("#simulationmodal").addClass("is-active");
             if (!window.socketOn) { openSocket(); }
             var selectedfile = $("#fileselect").children("option:selected").val();
-            // alert($("#stoptime").val());
             window.socket.emit("Simulate",$("#stoptime").val(),selectedfile);    
         }
         

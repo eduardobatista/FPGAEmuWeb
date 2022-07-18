@@ -18,11 +18,11 @@ rm -fr output.ghw
 if [ -x "$(command -v ghdl)" ]; then
     ghdl -a -fexplicit --ieee=synopsys ${@:4}
     ghdl -e -fexplicit --ieee=synopsys $3
-    ghdl -r $3 --wave=output.ghw --stop-time=$2
+    ghdl -r $3 --wave=output.ghw --stop-time=$2 --asserts=disable-at-0
 else 
     /opt/local/bin/ghdl -a -fexplicit --ieee=synopsys ${@:4}
     /opt/local/bin/ghdl -e -fexplicit --ieee=synopsys $3
-    /opt/local/bin/ghdl -r $3 --wave=output.ghw --stop-time=$2
+    /opt/local/bin/ghdl -r $3 --wave=output.ghw --stop-time=$2 --asserts=disable-at-0
 fi
 
 
