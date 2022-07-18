@@ -292,6 +292,7 @@
             window.socket.on('filecontent', function(msg){
                 editor.setValue(msg);                
                 window.filechanged = false;
+                editor.getSession().getUndoManager().reset();
                 editor.moveCursorTo(0,0);
                 editor.focus();
             });
@@ -356,6 +357,7 @@
             } else {
                 window.lastselected = "";
                 editor.setValue("");
+                editor.getSession().getUndoManager().reset();
                 $("#toplevelbtn").text('Set Top Level');
                 $("#toplevelbtn").prop('disabled', true);
                 // $('#editor').hide();
