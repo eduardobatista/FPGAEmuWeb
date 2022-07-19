@@ -99,6 +99,8 @@ class ProjectExporter:
 
         else:
             portlist = getportlist(projdir,self.toplevel + ".vhd")
+            if isinstance(portlist,str):
+                return ([portlist] if portlist.startswith("Error:") else ["Error:" + portlist])
             pmapwithclock = []
             for pp in portlist:
                 if "CLK" in pp['name']:
