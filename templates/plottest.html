@@ -23,13 +23,36 @@
 
     <div class="container is-fullwidth px-4 py-1 mt-3">
 
-        <button id="gotoemul" type="button" class="button is-info m-0 is-small" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
+
+        <div class="is-flex">
+            <div class="is-1">
+                <button id="gotoemul" type="button" class="button is-info m-0 is-small" onclick="location.href = '/downloadsimfile'">Download ghw file</button>
+            </div>
+            <div class="is-1 has-text-right ml-4 mr-1 my-0" style="border: 1px solid white;">
+                <span class="is-size-7 has-text-weight-medium">Radix:</span>
+            </div>
+            <div class="is-1">                
+                <div class="select is-small">                    
+                    <select id="radixselect" onchange="changeradix();">
+                        <option value="hex">Hex</option>
+                        <option value="signed">Signed Integer</option>
+                        <option value="unsigned">Unsigned Integer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="">
+
+            </div>
+        </div>
+        
+        
 
         <div class="columns mt-1 is-1">
 
             <div class="column is-narrow" style="border: 1px solid lightgray;">
                 <div id="maintree" class="">
                     <h6 class="pt-3 pl-1 is-6">Instances & Signals</h6>
+                    
                     <hr>
                     <ul class="mb-1 pl-3 pb-2" id="instancelist">
                     </ul>
@@ -82,6 +105,7 @@
         window.plotlist = {}; 
         window.typelist = {};
         window.zoomlimits = [0,100];
+        window.radix = "hex";
 
         function openSocket() {
             if (location.protocol !== 'https:') {
@@ -100,8 +124,9 @@
                 // $('#maintree').mdbTreeview();
                 var tempdata = data[1][Object.keys(data[1])[0]];
                 var maxtime = tempdata[tempdata.length-2]/1000000;
+                window.zoomlimits = [0,maxtime];
                 // console.log(maxtime);
-                $("#slider-range").slider('option',{min: 0, max: maxtime});
+                $("#slider-range").slider('option',{min: 0, max: maxtime, values: [0,maxtime]});
             }); 
             window.socket.on('disconnect', function(msg){
                 window.socketOn = false;
@@ -109,6 +134,11 @@
             window.socket.on('error',function(msg){
                 errorMessage(String(msg));
             });
+        }
+
+        function changeradix() {
+            window.radix = document.querySelector("#radixselect").value;
+            plotselecteddata();
         }
 
         function requestghwsignals() {
@@ -128,7 +158,8 @@
         
         $( document ).ready(function() {  
             window.draw = SVG().addTo('#plotsvg').size(500, 200).css('position','absolute');  // changed from relative
-            window.wdraw = window.draw.nested().addTo('#plotsvg2').size(500, 200).css('position','absolute');   
+            window.wdraw = window.draw.nested().addTo('#plotsvg2').size(500, 200).css('position','absolute');
+            changeradix();   
             requestghwdata();
             $("#slider-range").slider({
                 range: true,
@@ -208,7 +239,7 @@
         const margintb = 2;
         const fontsize = plotheight/2 + 1;
         const fontdef = {family: 'Helvetica', size: fontsize, weight: 'bold', anchor: 'middle', leading: '1em'};
-        function plotselecteddata(tmin=0,tmax) {
+        function plotselecteddata(tmin,tmax) {
 
             var draw = window.draw;
             draw.clear();
@@ -241,10 +272,13 @@
             // wdraw.css('left',maxtextsize+10);
             // wdraw.move(100,100);
             
-            var maxtime = vcddata[vcddata.length-2];
-            if (typeof tmax == 'undefined') { tmax = maxtime; }
-            else { maxtime = tmax*1000000; }            
-            mintime = tmin*1000000;
+            // var maxtime = vcddata[vcddata.length-2];
+            // if (typeof tmin == 'undefined') { tmin = window.zoomlimits[0]; }
+            // else { maxtime = tmin*1000000; }
+            // if (typeof tmax == 'undefined') { tmax = window.zoomlimits[1]; }
+            // else { maxtime = tmax*1000000; }
+            maxtime = window.zoomlimits[1]*1000000;
+            mintime = window.zoomlimits[0]*1000000;
             var scalex = (compwidth-maxtextsize)/(maxtime-mintime);
 
             var nsteps = 10;
@@ -309,21 +343,49 @@
         }
 
         function stdlvec2hex(slvec) {
-            while ( (slvec.length % 4) != 0 ) {
-                slvec = "0" + slvec;
-            }
-            var ret = '';
-            for (var i = 0; i < slvec.length; i = i+4) {
-                var axx = slvec.slice(i,4+i);
-                if (axx.includes('U')) {
-                    ret = ret + 'U';
-                } else if (axx.includes('X')) {
-                    ret = ret + 'X';
+            if (window.radix == "hex") {
+                while ( (slvec.length % 4) != 0 ) {
+                    slvec = "0" + slvec;
+                }
+                var ret = '';
+                for (var i = 0; i < slvec.length; i = i+4) {
+                    var axx = slvec.slice(i,4+i);
+                    if (axx.includes('U')) {
+                        ret = ret + 'U';
+                    } else if (axx.includes('X')) {
+                        ret = ret + 'X';
+                    } else {
+                        ret = ret + parseInt(axx,2).toString(16).toUpperCase();
+                    }                
+                }
+                return ret + 'h';
+            } else if (window.radix == "signed") {
+                if (slvec.includes('U')) {
+                    return 'U';
+                } else if (slvec.includes('X')) {
+                    return 'X';
+                } else if (slvec.charAt(0) == '0') {
+                    return parseInt(slvec,2).toString();
+                } else if (slvec.charAt(0) == '1') {
+                    var val = 1 << (slvec.length);
+                    val = - (val - parseInt(slvec,2));
+                    return val.toString();
                 } else {
-                    ret = ret + parseInt(axx,2).toString(16).toUpperCase();
+                    return slvec;
+                }                
+            } else if (window.radix == "unsigned") {
+                if (slvec.includes('U')) {
+                    return 'U';
+                } else if (slvec.includes('X')) {
+                    return 'X';
+                } else if (slvec.charAt(0) == '0') {
+                    return parseInt(slvec,2).toString();
+                } else if (slvec.charAt(0) == '1') {
+                    return parseInt(slvec,2).toString();
+                } else {
+                    return slvec;
                 }                
             }
-            return ret + 'h';
         }
 
         var slopex = 2;

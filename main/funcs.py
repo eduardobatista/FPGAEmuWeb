@@ -573,7 +573,7 @@ def getghwhierarchy(username,mainpath,filename):
             hierarchy[parentstring][p1[1]] = {'type': p1[0], 'datatype': parts[1], 'idxs': parts[2]}
 
         lastlevel = level
-   
+    
     return hierarchy
         
 
