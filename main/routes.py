@@ -167,6 +167,7 @@ def simular():
         tentity = f"{auxx[0]}.vhd"
         stoptime = auxx[1] if (len(auxx) > 1) else "200 ns"
     else:
+        tentity = "usertest.vhd"
         stoptime = "200 ns"
     if tentity not in filenames:
         tentity = "usertest.vhd"    
