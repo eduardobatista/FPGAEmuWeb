@@ -6,7 +6,13 @@ from sqlalchemy import Table,MetaData
 from sqlalchemy import create_engine
 
 from datetime import datetime,timedelta
+from pathlib import Path
+import shutil
 
+class MyTaskResp:
+    def __init__(self,status,info):
+        self.status = status
+        self.info = info
 
 @celery.task()
 def doLogin(userexists,email,password,clouddburl,loginkey):
@@ -94,4 +100,19 @@ def doPassRecovery(email,randompasshash,clouddburl):
         ret = {"status": "Error", "message":f"Exception: {err}"}
     
     return ret
-        
+
+
+@celery.task()
+def doWorkBackup(workdir,destdir):
+
+    ret = {"status":"Failed"}
+
+    try:        
+        bckfile = Path(destdir,"workbackup.tar")        
+        if bckfile.exists():
+            bckfile.unlink()
+        shutil.make_archive(destdir + "/workbackup", 'tar', Path(workdir))        
+        ret = {"status":"Success"}
+    except BaseException as err:
+        ret = {"status": "Error", "message":f"EException: {err}"}
+    return ret

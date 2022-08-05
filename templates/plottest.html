@@ -367,8 +367,8 @@
                 } else if (slvec.charAt(0) == '0') {
                     return parseInt(slvec,2).toString();
                 } else if (slvec.charAt(0) == '1') {
-                    var val = 1 << (slvec.length);
-                    val = - (val - parseInt(slvec,2));
+                    var val = BigInt(1) << BigInt(slvec.length);
+                    val = - (val - BigInt(parseInt(slvec,2)));
                     return val.toString();
                 } else {
                     return slvec;

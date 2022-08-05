@@ -16,7 +16,7 @@ from datetime import datetime,timedelta
 from sqlalchemy import Table,MetaData,create_engine
 # from .funcs import checkLogin,clearLoginAttempt,getLoginInfo
 
-from .tasks import doLogin,doChangePass,doPassRecovery
+from .tasks import doLogin,doChangePass,doPassRecovery,MyTaskResp
 
 from celery.result import AsyncResult
 
@@ -41,11 +41,6 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))
     return render_template('login.html')
-
-class MyTaskResp:
-    def __init__(self,status,info):
-        self.status = status
-        self.info = info
 
 @auth.route('/login', methods=['POST'])
 def login_post():

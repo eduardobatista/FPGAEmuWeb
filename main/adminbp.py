@@ -14,6 +14,11 @@ import subprocess
 from sqlalchemy.exc import OperationalError
 import shutil
 
+from .tasks import doWorkBackup
+from celery.result import AsyncResult
+
+from .authbp import checkCeleryOn
+
 @adm.route('/profile')
 @login_required
 def profile():    # return f'User {current_user.name} is logged in ({current_user.role} - {current_user.email}).'
@@ -304,14 +309,52 @@ def changerole():
 def workbackup():    
     if current_user.role != "Admin":
         return "Error! Not an Admin."
-    bckfile = Path(current_app.MAINPATH,"workbackup.tar")
-    if bckfile.exists():
-        bckfile.unlink()
-    try: 
-        shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))        
-    except BaseException as ex:
-        return (str(ex))
-    return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, cache_timeout=-1)
+
+    if checkCeleryOn():
+        tempdir = Path(current_app.MAINPATH,"temp")
+        if not tempdir.exists():
+            tempdir.mkdir(parents=True,exist_ok=True)        
+        task = doWorkBackup.delay(str(Path(current_app.MAINPATH,"work")),str(tempdir))        
+        session["workbackup"] = task.id
+        return "Starting"
+    else:
+        bckfile = Path(current_app.MAINPATH,"workbackup.tar")
+        if bckfile.exists():
+            bckfile.unlink()
+        try: 
+            shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))        
+        except BaseException as ex:
+            return (str(ex))
+        return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, cache_timeout=-1)
+
+
+@adm.route('/workbackupstatus')
+def workbackupstatus(nocelery=False,resp=None):
+    if ("workbackup" in session.keys()):       
+        task = doWorkBackup.AsyncResult(session["workbackup"])
+        if task.status == "PENDING":
+            return "Running"
+        elif task.status == "SUCCESS": 
+            if 'workbackup' in session:
+                del session['workbackup']
+            if task.info['status'].startswith("Success"):
+                current_app.logger.info(f"Workdir backup finished successfully.")                
+                return "Success"                
+            elif task.info["status"] == "Error":
+                current_app.logger.info(f"Workdir backup error: {task.info['message']}.")                
+                return "Failed = " + f"Workdir backup error: {task.info['message']}."
+            else:
+                return "Failed"
+    else:
+        return "Workbackup not running."
+
+
+@adm.route('/workbackupdownload')
+def workbackupdownload(nocelery=False,resp=None):
+    if current_user.role != "Admin":
+        return "Error! Not an Admin."
+    temppath = Path(current_app.MAINPATH,"temp")
+    return send_from_directory(temppath, "workbackup.tar", as_attachment=True, cache_timeout=-1)
 
 
 @adm.route('/workcleanup')
