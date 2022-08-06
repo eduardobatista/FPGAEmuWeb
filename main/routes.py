@@ -213,7 +213,7 @@ def downloadproject(pname):
         return abort(404)
     if not pzip.exists():
         return abort(404)
-    return send_from_directory(temppath, f'{pname}.zip', as_attachment=True, cache_timeout=-1)
+    return send_from_directory(temppath, f'{pname}.zip', as_attachment=True, max_age=0)
 
 @main.route("/downloadfile")
 @login_required
@@ -231,7 +231,7 @@ def downloadfile():
     for f in aux:
         zipobj.write(f,f.relative_to(sessionpath))    
     zipobj.close()
-    return send_from_directory(temppath, 'VHDLFiles.zip', as_attachment=True, cache_timeout=-1)
+    return send_from_directory(temppath, 'VHDLFiles.zip', as_attachment=True, max_age=0)
 
 @main.route("/downloadafile", methods=['GET', 'POST']) 
 @login_required
@@ -257,9 +257,9 @@ def downloadafile():
         for f in aux:
             zipobj.write(f,f.relative_to(fpath))    
         zipobj.close()
-        return send_from_directory(temppath, f'{fname}.zip', as_attachment=True, cache_timeout=-1)
+        return send_from_directory(temppath, f'{fname}.zip', as_attachment=True, max_age=0)
     elif fpath.suffix == ".vhd":
-        return send_from_directory(sessionpath, fname, as_attachment=True, cache_timeout=-1)
+        return send_from_directory(sessionpath, fname, as_attachment=True, max_age=0)
     else:
         abort(404)
 
@@ -268,7 +268,7 @@ def downloadafile():
 @login_required
 def downloadsimfile():
     temppath = Path(current_app.MAINPATH,'temp',current_user.email)
-    return send_from_directory(temppath, 'output.ghw', as_attachment=True, cache_timeout=-1)
+    return send_from_directory(temppath, 'output.ghw', as_attachment=True, max_age=0)
 
 @main.route('/upload', methods=['GET', 'POST'])
 @login_required

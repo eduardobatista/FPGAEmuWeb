@@ -1,6 +1,7 @@
 .vscode
 __pycache__
 db.sqlite
+backend/fpgaemu_c.o
 work/
 work/1234/e~fpgatest.o
 work/1234/fpgatest
@@ -18,4 +19,4 @@ workbackup.zip
 temp/
 workbackup.tar
 dump.rdb
-backend/fpgaemu_c.o
+

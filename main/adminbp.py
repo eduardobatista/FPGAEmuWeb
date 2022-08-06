@@ -325,7 +325,7 @@ def workbackup():
             shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))        
         except BaseException as ex:
             return (str(ex))
-        return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, cache_timeout=-1)
+        return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, max_age=0)
 
 
 @adm.route('/workbackupstatus')
@@ -354,7 +354,7 @@ def workbackupdownload(nocelery=False,resp=None):
     if current_user.role != "Admin":
         return "Error! Not an Admin."
     temppath = Path(current_app.MAINPATH,"temp")
-    return send_from_directory(temppath, "workbackup.tar", as_attachment=True, cache_timeout=-1)
+    return send_from_directory(temppath, "workbackup.tar", as_attachment=True, max_age=0)
 
 
 @adm.route('/workcleanup')
