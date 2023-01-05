@@ -18,7 +18,7 @@
               {% endif %}
             {% endwith %}
 
-            <article class="message is-info ">
+            <article class="message is-info">
                 <div class="message-body py-2">
                     User is <strong>{{ username }}</strong>.
                     {% if (current_user.role == 'Admin') or (current_user.role == 'Professor') %}
@@ -142,7 +142,6 @@
                 </div>
             </div>
         {% endif %}        
-
 
         <div class="modal is-clipped" id="compilationmodal">
             <div class="modal-background"></div>
