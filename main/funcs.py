@@ -1,6 +1,4 @@
-import re,socket,time,subprocess,select,os,shutil
-from datetime import datetime
-from random import randrange
+import re,time,subprocess,select,os,shutil
 from pathlib import Path
 import pkg_resources
 
@@ -252,7 +250,6 @@ def getvhdfilelist(sessionpath, sort=True, recursive=False):
         else:
             return list(sessionpath.glob("*.vhd"))
 
-
 def cleanfilelist(sessionpath,toplevelfile,filelist):
     filesleft = [toplevelfile]
     foundcomponents = [toplevelfile[:-4]]
@@ -271,11 +268,19 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
             filelist.pop(k) 
     # print(filelist)
 
+def gettemppath(mainpath,userid,clear=True):
+    temppath = Path(mainpath,"temp",userid)
+    if temppath.exists():
+        shutil.rmtree(temppath)
+    temppath.mkdir(parents=True,exist_ok=True)
+    return temppath
+
 def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
     socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=userid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     curproject = ""
-    temppath = Path(mainpath,"temp",userid)
+    # temppath = Path(mainpath,"temp",userid)
+    temppath = gettemppath(mainpath,userid)
     if "/" in toplevelentity:
         aux = toplevelentity.split("/")
         toplevelentity = aux[1]
@@ -297,7 +302,7 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
-    rline = 'start'
+    # rline = 'start'
     socketio.emit("message",'Compiling...',namespace="/stream",room=userid)
     socketio.sleep(0.1)
     try:
@@ -319,15 +324,15 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
 
 
 def analyzefile(sessionpath,mainpath,filename,userid):
-    temppath = Path(mainpath,"temp",userid)
-    temppath.mkdir(parents=True,exist_ok=True)
+    # temppath = Path(mainpath,"temp",userid)
+    # temppath.mkdir(parents=True,exist_ok=True)
+    temppath = gettemppath(mainpath,userid)
     compilerpath = Path(mainpath,'backend','analyze.sh')
     proc = subprocess.Popen(
                 [compilerpath,temppath,Path(sessionpath,filename).absolute()],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
         )
-    rline = 'start'
     socketio.emit("message",'Analyzing...',namespace="/stream",room=userid)
     socketio.sleep(0.1)
     try:
@@ -351,10 +356,12 @@ def analyzefile(sessionpath,mainpath,filename,userid):
 def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curproject=""):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
     if curproject == "":
-        temppath = Path(mainpath,"temp",userid)
+        # temppath = Path(mainpath,"temp",userid)
+        temppath = gettemppath(mainpath,userid)
     else:
-        temppath = Path(mainpath,"temp",userid,curproject)
-    temppath.mkdir(parents=True,exist_ok=True)
+        # temppath = Path(mainpath,"temp",userid,curproject)
+        temppath = gettemppath(mainpath,userid) / curproject
+        temppath.mkdir(parents=True,exist_ok=True)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
         return    

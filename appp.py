@@ -9,7 +9,7 @@ from flask_migrate import Migrate
 from sqlalchemy import create_engine
 from celery import Celery
 
-socketio = SocketIO(async_mode="gevent")
+socketio = SocketIO(async_mode="gevent",cors_allowed_origins='*')
 db = SQLAlchemy()  # Database
 logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
