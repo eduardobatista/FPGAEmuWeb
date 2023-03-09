@@ -5,7 +5,7 @@ WORKDIR /home
 
 # RUN apt-get install -y python3 python3-pip
 
-RUN pip install flask flask_socketio flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
+RUN pip install SQLAlchemy==1.4.46 flask flask_socketio flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 EXPOSE 5000
 EXPOSE 6379
 
