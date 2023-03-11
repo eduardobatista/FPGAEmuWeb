@@ -2,12 +2,10 @@
 import subprocess,os,json
 from pathlib import Path
 from appp import create_app, socketio, db
-from main.models import User
-import logging
+from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
+from main.models import User
 from werkzeug.security import generate_password_hash
-from datetime import datetime
-import signal
 import sys
 from time import sleep
 
@@ -48,11 +46,12 @@ subprocess.Popen(
 WORKDIR = Path(MAINPATH) / "work"
 
 # If db.sqlite does not exist, erase seckey:
-localdburl = 'sqlite:///db.sqlite'  # WARNING: do not put local database in other place without changing the seckey.
+localdburl = 'sqlite:///' + str(Path(MAINPATH,'db.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
 if not Path(MAINPATH,"db.sqlite").exists():
     seckeyfile = Path(MAINPATH,"seckey")
     if seckeyfile.exists():
         seckeyfile.unlink()
+
 
 debugopt = False
 if "debug" in sys.argv:
@@ -68,7 +67,9 @@ if recaptchafile.exists():
             recaptchakeys['RECAPTCHA_SITE_KEY'] = data['RECAPTCHA_SITE_KEY']
             recaptchakeys['RECAPTCHA_SECRET_KEY'] = data['RECAPTCHA_SECRET_KEY']
         except Exception as e:
-            app.logger.error('Failed loading recaptcha info at startup.')    
+            # app.logger.error('Failed loading recaptcha info at startup.') 
+            print('Failed loading recaptcha info at startup.')
+            pass   
 
 app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl,recaptchakeys=recaptchakeys)
 
