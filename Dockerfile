@@ -6,7 +6,7 @@ WORKDIR /home
 # RUN apt-get install -y python3 python3-pip
 
 RUN apt-get update \
-    && apt-get install -y supervisor nginx redis-server ghdl-llvm gtkwave \
+    && apt-get install -y supervisor nginx redis-server ghdl-llvm gtkwave rsync cron \
     && pip install SQLAlchemy flask flask_socketio flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 
 EXPOSE 5000
@@ -22,16 +22,11 @@ COPY ./ fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 
-VOLUME ["/home/fpgaemuweb/work"]
+VOLUME ["/home/fpgaemuweb/persistentwork"]
 
-RUN mkdir /home/work
+RUN mkdir /home/fpgaemuweb/work
 RUN touch /home/stdout.log
 RUN touch /home/stdout.err
 
-# CMD ["sudo service nginx start"]
-ENTRYPOINT ["/usr/bin/supervisord","-c","/home/fpgaemuweb/supervisord.conf"]
-# ENTRYPOINT /usr/local/bin/gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -b :5000 -w 1 --chdir /home/fpgaemuweb start:app
-
-# ENTRYPOINT cd /home/fpgaemuweb && python3 start.py debug
-
-# ENTRYPOINT ["/bin/sh"]
+# ENTRYPOINT ["/usr/bin/supervisord","-c","/home/fpgaemuweb/supervisord.conf"]
+ENTRYPOINT [ "/home/fpgaemuweb/entrypoint.sh" ]
