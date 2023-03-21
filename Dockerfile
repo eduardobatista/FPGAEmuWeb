@@ -7,7 +7,7 @@ WORKDIR /home
 
 RUN apt-get update \
     && apt-get install -y supervisor nginx redis-server ghdl-llvm gtkwave \
-    && pip install SQLAlchemy==1.4.46 flask flask_socketio flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
+    && pip install SQLAlchemy flask flask_socketio flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 
 EXPOSE 5000
 EXPOSE 80

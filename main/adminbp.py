@@ -143,7 +143,7 @@ def getuserlist():
     if current_app.clouddb and (not listtype):        
         try:
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                 userlist = conncloud.execute(table1.select().order_by(table1.c.role,table1.c.name))
                 rendereduserlist = render_template('userlist.html',userlist=userlist)
                 userlist.close()
@@ -166,12 +166,14 @@ def cloudinfo():
     if current_app.clouddb:
         try: 
             with current_app.clouddb.connect() as conncloud:  
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
-                clouddata = conncloud.execute(table1.select())
-                userscloud = [row['email'] for row in clouddata]
+                table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
+                clouddata = conncloud.execute(table1.select())   
+                userscloud = [row[0] for row in clouddata.columns('email')]
+                print(userscloud)
                 ret = f"{len(userscloud)} users are registered in the CloudDb.<br>"
                 ret += f"User list is: {userscloud}"
                 conncloud.close()
+                
                 return ret
         except BaseException as err:
             return f"Could not reach the cloud database.<br>{str(err)}"
@@ -252,7 +254,7 @@ def deleteuser():
         if current_app.clouddb is not None:
             try:
                 with current_app.clouddb.connect() as conncloud:     
-                    table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                    table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                     clouddata = conncloud.execute(table1.delete().where(table1.c.email==email))
                     clouddata.close()
             except OperationalError as err:
@@ -284,7 +286,7 @@ def changerole():
     if current_app.clouddb is not None:
         try:
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 usercloud = clouddata.first()
                 if usercloud is not None:

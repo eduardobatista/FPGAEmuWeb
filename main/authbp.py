@@ -140,20 +140,20 @@ def signup_post():
         if not verifyCaptcha(captcha_response):
             flash(f"Recaptcha validation failed.")
             return redirect(url_for('auth.login'))
-    email = request.form.get('email').strip()
+    email = request.form.get('email').strip().lower()
     if re.search(r"[^@a-zA-Z0-9_\.\-]", email):
         flash(f"Invalid email address: {email}.")
         return redirect(url_for('auth.login'))
     if len(email) > 40:
-        flash(f"Email address is too long: {len(email)} characters.") 
+        flash(f"Email address is too long: {len(email)} characters. Max length is 40 characters.") 
         return redirect(url_for('auth.login'))
     name = request.form.get('name').strip()
     if len(name) > 50:
-        flash(f"Name address is too long: {len(name)} characters.")  
+        flash(f"Name is too long: {len(name)} characters. Max length is 50 characters.")  
         return redirect(url_for('auth.login'))
     password = request.form.get('password')
     if len(password) > 30:
-        flash(f"Name address is too long: {len(password)} characters.")  
+        flash(f"Password is too long: {len(password)} characters. Max length is 30 characters.")  
         return redirect(url_for('auth.login'))
     role = "Student"
     viewAs = ""
@@ -181,7 +181,7 @@ def signup_post():
     elif current_app.clouddb is not None:
         try:             
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 if clouddata.first() is not None:
                     flash('Email address already exists (cloud).')
@@ -206,7 +206,7 @@ def signup_post():
                         'role': role, 'viewAs': viewAs, 'lastPassRecovery': None, 'topLevelEntity': topLevelEntity, 'testEntity': testEntity}
         try:             
             with current_app.clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=current_app.clouddb)
+                table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select())
                 cloudusers = [row['email'] for row in clouddata]
                 if email not in cloudusers:
@@ -274,7 +274,7 @@ def passrecstatus(nocelery=False,resp=None):
 def passrecovery():
     if current_app.yag is None:
         return "Password recovery not working in this machine. Please contact the system administrator."
-    email = request.form.get('email').strip()
+    email = request.form.get('email').strip().lower()
     if email == "admin@fpgaemu":
         return "Can't recover password for this user."
     letters = string.ascii_lowercase

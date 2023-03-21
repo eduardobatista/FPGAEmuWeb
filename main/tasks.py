@@ -23,7 +23,7 @@ def doLogin(userexists,email,password,clouddburl,loginkey):
         try:
             clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
             with clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+                table1 = Table('user', MetaData(), autoload_with=clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))       
                 usercloud = clouddata.first() 
                 if usercloud:
@@ -49,7 +49,7 @@ def doChangePass(email,newpass,name,role,clouddburl):
         try:
             clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
             with clouddb.connect() as conncloud:     
-                table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+                table1 = Table('user', MetaData(), autoload_with=clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 usercloud = clouddata.first()                
                 if usercloud is not None:
@@ -80,7 +80,7 @@ def doPassRecovery(email,randompasshash,clouddburl):
     try:
         clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
         with clouddb.connect() as conncloud:     
-            table1 = Table('user', MetaData(), autoload=True, autoload_with=clouddb)
+            table1 = Table('user', MetaData(), autoload_with=clouddb)
             clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
             usercloud = clouddata.first()  
             if usercloud is not None:
