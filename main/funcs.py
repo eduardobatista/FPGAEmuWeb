@@ -79,75 +79,48 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
     if fpgatestfile.exists(): fpgatestfile.unlink()
 
     try:
+
+        portlist = getportlist(sessionpath,toplevelentity + ".vhd")
+        if type(portlist) == str:
+            return portlist
+        elif type(portlist) != list:
+            return "Error: ports could not be identified in {toplevelentity}.vhd."
+        
+        existingpmap = getexistingportmap(sessionpath,toplevelentity + ".vhd")
+        print(portlist)
+        print(existingpmap)
     
         portmaptxt = None
         mapfile = Path(sessionpath,toplevelentity + ".vhd.map")
-        if mapfile.exists():
+        if existingpmap[0] != "nomap": #mapfile.exists():
+            # Checking portmap coherence: 
+            if (len(existingpmap)-1) != len(portlist):
+                return "Error: incoherent port mapping, use the Mapper to review."
+            for port in portlist:
+                portok = False
+                for emap in existingpmap[1:]:
+                    if port['name'].upper() == emap[0].upper():
+                        if (port['typesize'] == 1) and (len(emap) == 3):
+                            portok = True
+                        if (port['typesize'] > 1 ) and (len(emap) == 4):
+                            if (int(emap[2])-int(emap[3])+1) == port['typesize']:  
+                               portok = True
+                        break
+                if not portok:
+                    return f"Error: incoherent port mapping for port {port['name']}."
             ff = open(mapfile,'r')
             portmap = ff.readline()
             if len(portmap) > 2:
                 portmaptxt = "port map(" + portmap + ");"
 
         if not portmaptxt:
-            toplevel = open(toplevel, 'r')    
-            data = toplevel.read()
-            data = re.sub("--.*?\n|\n"," ",data)
-            data = re.sub("\s+"," ",data)
-            data = re.sub("\s+;",";",data)
-            toplevel.close()
-            entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
-            if entityname is None: 
-                return f"Error: entity not found in {toplevelentity}.vhd."
-            entityname = entityname.group(1)
-            aux = re.search(rf"entity {entityname} is(.*?)end entity;|entity {entityname} is(.*?)end {entityname};",data,re.IGNORECASE)
-            if aux is None:
-                return f"Error: entity not found in {toplevelentity}.vhd."
-            aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
-            if aux is None:
-                return f"Error: ports not found in {toplevelentity}.vhd."
-            aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
-            sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
-            sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
-            sepspace = re.compile(r"\s+")
-            validportkeys = validports.keys()
-            foundports = []
-            foundsizes = []
-            founddifs = []
-            try:
-                for item in aux2:
-                    aux3 = sepdots.split(item)
-                    if len(aux3) != 2:
-                        continue
-                    dirtype = sepspace.split(aux3[1].strip(),maxsplit=1)
-                    typesize = 1
-                    if "std_logic_vector" in dirtype[1].lower():
-                        auxx = re.search(r"(\d+)\s.*?\s(\d+)",dirtype[1])
-                        if (auxx is None) or (len(auxx.groups()) < 2):
-                            return "Error: Fail parsing " + dirtype[1] + "."
-                        typesize = int(auxx.group(1)) - int(auxx.group(2)) 
-                        if typesize < 0: typesize = -typesize
-                        typesize = typesize+1
-                    aux4 = sepcomma.split(aux3[0])
-                    for pp in aux4:
-                        ppp = pp.strip().upper()
-                        if ppp not in validportkeys:
-                            return f"Error: {pp} is not a valid port for a top level entity. You have to use the Mapper or SW, LEDR, KEY, HEX0, HEX1, etc as port names."
-                        if validports[ppp][1] < typesize:
-                            return f"Error: Port {pp} has more bits than the corresponding Emulator port length."
-                        foundports.append(ppp)
-                        foundsizes.append(typesize)
-                        founddifs.append(validports[ppp][1]-typesize)
-            except:
-                return "Error parsing usertop ports."
-            if len(foundports) == 0:
-                return "Error: ports not found."
             portmaptxt = "port map("
-            for port,tsize,dif in zip(foundports,foundsizes,founddifs):
-                
-                if (tsize == 1) or (dif == 0):
-                    portmaptxt = portmaptxt + f"{port} => {port},"
-                else:              
-                    portmaptxt = portmaptxt + f'{port}({tsize-1} downto 0) => {port}({tsize-1} downto 0),'
+            for port in portlist:
+                dif = validports[port["name"].strip().upper()][1] - port["typesize"]
+                if (port['typesize'] == 1) or (dif == 0):
+                    portmaptxt = portmaptxt + f" {port['name']} => {port['name']},"
+                else:
+                    portmaptxt = portmaptxt + f" {port['name']}({port['typesize']-1} downto 0) => {port['name']}({port['typesize']-1} downto 0),"
             portmaptxt = portmaptxt[:-1] + ");"
 
         fpgatest = open(fpgatestfile, 'w')
