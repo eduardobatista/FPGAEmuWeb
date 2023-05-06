@@ -87,15 +87,13 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
             return "Error: ports could not be identified in {toplevelentity}.vhd."
         
         existingpmap = getexistingportmap(sessionpath,toplevelentity + ".vhd")
-        print(portlist)
-        print(existingpmap)
     
         portmaptxt = None
         mapfile = Path(sessionpath,toplevelentity + ".vhd.map")
         if existingpmap[0] != "nomap": #mapfile.exists():
             # Checking portmap coherence: 
             if (len(existingpmap)-1) != len(portlist):
-                return "Error: incoherent port mapping, use the Mapper to review."
+                return "Error: incoherent port mapping, use the Mapper to fix it."
             for port in portlist:
                 portok = False
                 for emap in existingpmap[1:]:
@@ -116,6 +114,8 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
         if not portmaptxt:
             portmaptxt = "port map("
             for port in portlist:
+                if port["name"].strip().upper() not in validports.keys():
+                    return f"Error: Port {port['name']} cannot be mapped automatically. Mapper is required."
                 dif = validports[port["name"].strip().upper()][1] - port["typesize"]
                 if (port['typesize'] == 1) or (dif == 0):
                     portmaptxt = portmaptxt + f" {port['name']} => {port['name']},"

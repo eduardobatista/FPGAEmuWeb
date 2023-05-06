@@ -1,5 +1,5 @@
 # FROM ghdl/vunit:llvm
-FROM python:3.10.10
+FROM python:3.10
 
 WORKDIR /home
 
