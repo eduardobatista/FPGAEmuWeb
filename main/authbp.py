@@ -211,6 +211,7 @@ def signup_post():
                 cloudusers = [row['email'] for row in clouddata]
                 if email not in cloudusers:
                     conncloud.execute(table1.insert(), ndict)
+                    conncloud.commit()
                     conncloud.close()
                 clouddata.close()
         except OperationalError as err:
