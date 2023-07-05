@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+# FROM ubuntu:focal
+FROM python:3.10-slim-bookworm
+
+# ADD ./ghdl-3.0.0 /home/ghdl-3.0.0
+
+ADD https://github.com/ghdl/ghdl/archive/refs/tags/v3.0.0.tar.gz /home
+
+RUN apt-get update && apt-get install -y clang llvm libz-dev gcc make gnat
+
+WORKDIR /home
+
+RUN tar -xvf v3.0.0.tar.gz > /dev/null && \
+    rm v3.0.0.tar.gz && \
+    cd /home/ghdl-3.0.0 && \
+    ./configure --prefix=/home/ghdl/local --with-llvm-config && \
+    make && \
+    make install && \
+    cd /home && \
+    rm /home/v3.0.0 -rf && \
+    cd /home/ghdl/local && \
+    tar -zcvf /home/builtghdl3.tar.gz . > /dev/null && \
+    apt-get remove -y clang libz-dev make gnat && \
+    apt-get autoremove -y && \
+    apt-get clean
+
+WORKDIR /home

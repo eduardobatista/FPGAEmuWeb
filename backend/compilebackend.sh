@@ -4,8 +4,15 @@ BASEDIR=$(dirname "$0")
 cd "$BASEDIR"
 
 rm fpgacompileweb
-cp fpgacompileweb.sh fpgacompileweb
-chmod 755 fpgacompileweb
+if [[ $(ghdl --version | grep 'GHDL 3.') == *GHDL* ]]; then
+    echo "GHDL 3.0.0 found."
+    cp fpgacompileweb3.sh fpgacompileweb
+    chmod 755 fpgacompileweb
+else
+    echo "GHDL version is not 3.0.0."
+    cp fpgacompileweb1.sh fpgacompileweb
+    chmod 755 fpgacompileweb
+fi
 
 rm fpgaemu_c.o
 

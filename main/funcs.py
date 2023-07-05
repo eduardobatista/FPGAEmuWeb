@@ -270,6 +270,7 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [str(x) for x in aux]
+    print(filenames)
     proc = subprocess.Popen(
                 [compilerpath,temppath] + filenames + ['fpgatest.aux'],
                 stdout=subprocess.PIPE,
@@ -385,8 +386,12 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curpr
                 shutil.move(temppath / "output.ghw", destfile)
             socketio.emit("success","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful simulation of {simentity}.")
+    except subprocess.TimeoutExpired as ex:
+        socketio.emit("errors",str(ex),namespace="/stream",room=userid)
+        logger.info(f"{userid}: Simulation of {simentity} with errors.")
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=userid)
+        logger.info(f"{userid}: Simulation of {simentity} with errors.")    
     proc.kill()
     outs, errs = proc.communicate()
 
