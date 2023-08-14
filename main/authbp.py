@@ -207,10 +207,10 @@ def signup_post():
         try:             
             with current_app.clouddb.connect() as conncloud:     
                 table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
-                clouddata = conncloud.execute(table1.select())
+                clouddata = conncloud.execute(table1.select()).mappings().all()
                 cloudusers = [row['email'] for row in clouddata]
                 if email not in cloudusers:
-                    conncloud.execute(table1.insert(), ndict)
+                    conncloud.execute(table1.insert().values(ndict))
                     conncloud.commit()
                     conncloud.close()
                 clouddata.close()

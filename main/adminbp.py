@@ -257,6 +257,7 @@ def deleteuser():
                 with current_app.clouddb.connect() as conncloud:     
                     table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                     clouddata = conncloud.execute(table1.delete().where(table1.c.email==email))
+                    conncloud.commit()
                     clouddata.close()
             except OperationalError as err:
                 current_app.logger.error(err)
