@@ -1,0 +1,10 @@
+version: "3.3"  # optional since v1.27.0
+services:
+  web:
+    build: .
+    # image: fpgaemuweb
+    ports:
+      - "8000:80"
+    volumes:
+      - ./work:/home/fpgaemuweb/persistentwork
+
