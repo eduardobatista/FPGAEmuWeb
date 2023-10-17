@@ -1,8 +1,11 @@
 version: "3.3"  # optional since v1.27.0
 services:
   web:
-    build: .
-    # image: fpgaemuweb
+    # Warning!: fpgaemubase image must have been built in advance.
+    image: fpgaemuopi
+    build:
+      context: .
+      dockerfile: DockerfileOpiServer
     ports:
       - "8000:80"
     volumes:
