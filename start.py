@@ -46,8 +46,8 @@ subprocess.Popen(
 WORKDIR = Path(MAINPATH) / "work"
 
 # If db.sqlite does not exist, erase seckey:
-localdburl = 'sqlite:///' + str(Path(WORKDIR,'db.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
-if not Path(WORKDIR,"db.sqlite").exists():
+localdburl = 'sqlite:///' + str(Path(WORKDIR,'db2.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
+if not Path(WORKDIR,"db2.sqlite").exists():
     seckeyfile = Path(WORKDIR,"seckey")
     if seckeyfile.exists():
         seckeyfile.unlink()

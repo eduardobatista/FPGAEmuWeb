@@ -1,4 +1,4 @@
-# FPGAEmuWEb - A web-based GHDL-based VHDL/FPGA Emulator/Simulator
+# FPGAEmuWeb - A web-based GHDL-based VHDL/FPGA Emulator/Simulator
 
 Emulation:
 
@@ -11,3 +11,4 @@ Simulation:
 Code editor with syntax highlighting ([Ace Editor](https://ace.c9.io/)!):
 
 ![screenshot3](./imgs/screenshotcode.png)
+
