@@ -36,6 +36,8 @@ void set_input(char idx);
 void switch_input(char idxx, char val);
 void writeinmem(int idx, char mybyte);
 
+const int WATCHDOG_TIMEOUT = CLOCKS_PER_SEC * 3 * 60; // 3 minutes
+
 int fifoout, fifoin;
 char fifoarr[80];
 
@@ -46,6 +48,8 @@ char outmem[12] = {0xFF, 0xFF, 0xFF, 0x00,0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x0
 
 char ckmem[2] = {0,0};
 
+clock_t actualclock, watchdogoverflow;
+
 //void *updatee(void *arg)
 void *updatee()
 {
@@ -55,7 +59,7 @@ void *updatee()
    int currentbyte, comparebyte,currentbit;
    int i,j;
    clock_t t1, t2;
-   clock_t t1hz, t10hz, actualclock;
+   clock_t t1hz, t10hz;
    double elapsedTime;
    double clocksperhalfsec = (double)(CLOCKS_PER_SEC >> 1);
    double clocksper50ms = clocksperhalfsec / 10.0;
@@ -64,10 +68,12 @@ void *updatee()
    t1hz = clock();
    t10hz = clock();
    t1 = clock();
+   watchdogoverflow = t1 + WATCHDOG_TIMEOUT; // 3 minutes
    
    while (1) {
 
       actualclock = clock();
+      if (actualclock > watchdogoverflow) { break; }
       if ( ((double)(actualclock-t1hz)) >= clocksperhalfsec ) {
          t1hz = clock();
          if ((ckmem[0] & 0x02) == 0) {
@@ -128,13 +134,15 @@ void *updatee()
       usleep(1000);
    }
    
-   return NULL;
+   exit(0);
+   //return NULL;
 }
 
 int managereads() {
    int forcedwrite = 0, finished = 0;
    while (!finished) {
-      read(fifoin,fifoarr,4);
+      ssize_t nbytes = read(fifoin,fifoarr,4);
+      if (nbytes > 0) { watchdogoverflow = actualclock + WATCHDOG_TIMEOUT; }
       if (fifoarr[0] != 0) {
          if (fifoarr[0] == 'k') {
             if (fifoarr[2] == 'p') {
@@ -190,7 +198,7 @@ void init_gui()
    writeinmem(0,0x00);
    writeinmem(1,0x00);
    writeinmem(2,0xF0);
-    // Criando FIFOs
+   // Criando FIFOs
    // char cwd[100];
    // if (getcwd(cwd, sizeof(cwd)) != NULL) {
    //     printf("Current working dir: %s\n", cwd);
