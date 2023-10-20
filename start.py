@@ -45,13 +45,6 @@ subprocess.Popen(
 
 WORKDIR = Path(MAINPATH) / "work"
 
-# If db.sqlite does not exist, erase seckey:
-localdburl = 'sqlite:///' + str(Path(WORKDIR,'db.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
-if not Path(WORKDIR,"db.sqlite").exists():
-    seckeyfile = Path(WORKDIR,"seckey")
-    if seckeyfile.exists():
-        seckeyfile.unlink()
-
 
 debugopt = False
 if "debug" in sys.argv:
@@ -71,7 +64,7 @@ if recaptchafile.exists():
             print('Failed loading recaptcha info at startup.')
             pass   
 
-app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,localdburl=localdburl,recaptchakeys=recaptchakeys)
+app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,recaptchakeys=recaptchakeys)
 
 with app.app_context():
     try:        

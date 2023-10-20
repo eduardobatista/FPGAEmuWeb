@@ -40,6 +40,17 @@ def setViewAs():
     session["CurrentProject"] = ""
     return redirect(url_for('main.sendfiles')) 
 
+@adm.route('/killproc/<int:pid>', methods=['GET'])
+@login_required
+def killProc(pid):
+    if (current_user.role == "Admin"):
+        try:
+            psutil.Process(pid).kill()
+        except Exception as err:
+            return str(err)
+        return "Done."
+    else:
+        return "User not allowed."
 
 @adm.route('/serverprocs', methods=['POST'])
 @login_required
@@ -48,7 +59,8 @@ def serverProcs():
         ret = """
             <table class='table is-striped'>
             <thead>
-            <tr><th>Name</th><th>Status</th><th>CPU Use</th><th>Memory Usage</th><th>Memory RSS</th><th>Start Time</th>
+            <tr><th>pid</th><th>Name</th><th>Status</th><th>CPU Use</th><th>Memory Usage</th><th>Memory RSS</th><th>Start Time</th>
+            <th>Action</th>
             </thead>
             <tbody>
         """
@@ -56,8 +68,9 @@ def serverProcs():
             try:
                 ppp = psutil.Process(pp)
                 ctime = datetime.fromtimestamp(ppp.create_time()).strftime("%Y-%m-%d %H:%M:%S")
-                ret = ret + f"<tr><td>{ppp.name()}</td><td>{ppp.status()}</td><td>{ppp.cpu_percent(interval=0.1)}</td>"
+                ret = ret + f"<tr><td>{pp}</td><td>{ppp.name()}</td><td>{ppp.status()}</td><td>{ppp.cpu_percent(interval=0.1)}</td>"
                 ret = ret + f"<td>{ppp.memory_percent():.3f}%</td><td>{ppp.memory_info()[0]/(2**20):.2f} MB</td><td>{ctime}</td>\n"
+                ret = ret + f"<td><button class='button is-danger is-small' onclick='killProc({pp});' style='height: 16px;'><i class='far fa-trash-alt'></button></td></tr>\n"
             except psutil.Error as err:
                 current_app.logger.error(f"Psutil Error: {str(err)}.")
             except Exception as ex:

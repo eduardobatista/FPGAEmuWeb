@@ -1,4 +1,4 @@
-import re,time,subprocess,select,os,shutil
+import re,time,subprocess,select,os,shutil,sys
 from pathlib import Path
 import pkg_resources
 
@@ -270,7 +270,7 @@ def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
     aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     # cleanfilelist(sessionpath,'usertop.vhd',aux)
     filenames = [str(x) for x in aux]
-    print(filenames)
+    # print(filenames)
     proc = subprocess.Popen(
                 [compilerpath,temppath] + filenames + ['fpgatest.aux'],
                 stdout=subprocess.PIPE,
@@ -470,11 +470,13 @@ def doEmulation(username,mainpath,curproject="",toplevelentity=""):
         logger.error("Unexpected error:", sys.exc_info()[0])
     closeEmul(username)
     socketio.emit('status','Parado',namespace="/emul", room=username)
-    poller.unregister(fiforead)
+    if poller:
+        poller.unregister(fiforead)
     if username in fifowrite.keys():
         os.close(fifowrite[username])
         del fifowrite[username]
-    os.close(fiforead)
+    if fiforead:
+        os.close(fiforead)
     # socketio.disconnect(namespace="/emul",room=username)
 
 def stopEmulation(username):

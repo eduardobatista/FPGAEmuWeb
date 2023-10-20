@@ -246,6 +246,13 @@
                 });
             }
 
+            function killProc(pid) {
+                $.get("/killproc/" + pid).done( function (data) {
+                    $("#psinfo").show();
+                    $("#psinfo").html(data);
+                });
+            }
+
             
 
         </script>

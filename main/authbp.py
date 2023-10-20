@@ -234,7 +234,7 @@ def passrecstatus(nocelery=False,resp=None):
         else:        
             task = doChangePass.AsyncResult(session["passrecoverydata"][2])
 
-        print(task.status)
+        # print(task.status)
         if task.status == "PENDING":
             return "Running"
 

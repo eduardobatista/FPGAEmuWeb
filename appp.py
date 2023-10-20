@@ -21,7 +21,7 @@ celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://12
 # celery.autodiscover_tasks()
 
 
-def create_app(debug=False,mainpath="",workdir="",localdburl="",recaptchakeys=None):
+def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     """Create an application."""    
     app = Flask(__name__)
     app.debug = debug
@@ -46,7 +46,14 @@ def create_app(debug=False,mainpath="",workdir="",localdburl="",recaptchakeys=No
     app.config['CELERY_BROKER_URL'] = 'redis://127.0.0.1:6379/0',
     app.config['CELERY_RESULT_BACKEND'] ='redis://127.0.0.1:6379/0'
 
-    seckeyfile = Path(app.WORKDIR,"seckey")  # WARNING: do not put seckey in other place.
+    # If db.sqlite does not exist, erase seckey:
+    localdburl = 'sqlite:///' + str(Path(workdir,'dba.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
+    if not Path(workdir,"dba.sqlite").exists():
+        seckeyfile = Path(workdir,"seckeya")
+        if seckeyfile.exists():
+            seckeyfile.unlink()
+
+    seckeyfile = Path(app.WORKDIR,"seckeya")  # WARNING: do not put seckey in other place.
     if seckeyfile.exists():
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
