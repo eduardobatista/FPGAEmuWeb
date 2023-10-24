@@ -12,14 +12,7 @@ from time import sleep
 '''
     TODO:
         - settings file
-        - Melhorar Logging
         - Templates.
-
-        - Compilar só arquivos que importam (i.e., pegar usertop e components lá declarados)
-        - Melhorar Timeouts: fazer inactivity para entrada e saída diferentes.
-        nn Matar outro processo do usuário na criação de um novo.
-        nn Controlar melhor processos de emulação.
-        nn Desabilitar botões e chaves quando simulação não estiver rodando?
         - Melhorar gerenciamento de usuários.
 '''
 
@@ -44,7 +37,6 @@ subprocess.Popen(
 # print('Backend compiled.\nStarting server...')
 
 WORKDIR = Path(MAINPATH) / "work"
-
 
 debugopt = False
 if "debug" in sys.argv:

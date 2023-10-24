@@ -9,7 +9,7 @@ RUN apt-get update \
 
 EXPOSE 5000
 EXPOSE 80
-EXPOSE 6379
+# EXPOSE 6379
 
 COPY ./ fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf

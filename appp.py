@@ -39,7 +39,7 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     if not debug:
         app.logger = logger
 
-    migrate = Migrate(app, db)
+    # migrate = Migrate(app, db)
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -47,13 +47,14 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     app.config['CELERY_RESULT_BACKEND'] = celery.conf.result_backend
 
     # If db.sqlite does not exist, erase seckey:
-    localdburl = 'sqlite:///' + str(Path(mainpath,'dbb.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
-    if not Path(mainpath,"dbb.sqlite").exists():
-        seckeyfile = Path(mainpath,"seckeyb")
+    localdbfile = Path(workdir,"dbb.sqlite")
+    localdburl = 'sqlite:///' + str(localdbfile) # WARNING: do not put local database in other place without changing the seckey.
+    seckeyfile = Path(workdir,"seckeyb")  # WARNING: do not put seckey in other place.
+    
+    if not localdbfile.exists():
         if seckeyfile.exists():
             seckeyfile.unlink()
 
-    seckeyfile = Path(mainpath,"seckeyb")  # WARNING: do not put seckey in other place.
     if seckeyfile.exists():
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()
