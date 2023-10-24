@@ -47,9 +47,9 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     app.config['CELERY_RESULT_BACKEND'] = celery.conf.result_backend
 
     # If db.sqlite does not exist, erase seckey:
-    localdbfile = Path(workdir,"dbb.sqlite")
+    localdbfile = Path(mainpath,"dbb.sqlite")
     localdburl = 'sqlite:///' + str(localdbfile) # WARNING: do not put local database in other place without changing the seckey.
-    seckeyfile = Path(workdir,"seckeyb")  # WARNING: do not put seckey in other place.
+    seckeyfile = Path(mainpath,"seckeyb")  # WARNING: do not put seckey in other place.
     
     if not localdbfile.exists():
         if seckeyfile.exists():

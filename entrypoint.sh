@@ -16,7 +16,9 @@
 
 # rsync -a /home/fpgaemuweb/persistentwork/ /home/fpgaemuweb/work
 
-# crontab /home/fpgaemuweb/crontask
-# cron start
+cp /home/fpgaemuweb/work/dbb.sqlite /home/fpgaemuweb/work/seckeyb /home/fpgaemuweb/
+
+crontab /home/fpgaemuweb/crontask
+cron start
 
 /usr/bin/supervisord -c /home/fpgaemuweb/supervisord.conf

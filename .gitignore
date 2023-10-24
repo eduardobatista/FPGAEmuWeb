@@ -12,6 +12,7 @@ work/1234/usertop.vhd
 work/1234/work-obj93.cf
 *.pyc
 seckey
+seckeyb
 oauth2_creds.*
 clouddb.conf
 *.Identifier
