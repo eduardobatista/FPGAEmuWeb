@@ -1,8 +1,22 @@
 #!/bin/sh
 
-rsync -a /home/fpgaemuweb/persistentwork/ /home/fpgaemuweb/work
+# if ${ENV_BCKSERVER+"false"} 
+# then
+#   echo "ENV_BCKSERVER is empty."
+# else
+#   echo "00 * * * * rsync -a /home/fpgaemuweb/work/ $ENV_BCKSERVER" >> /home/fpgaemuweb/crontask
+# fi
 
-crontab /home/fpgaemuweb/crontask
-cron start
+
+# if [[ -v "${ENV_BCKPASS}" ]]; then
+#   echo "ENV_BCKPASS is empty."
+# else
+#   echo $ENV_BCKPASS > /home/fpgaemuweb/bckpass.txt
+# fi
+
+# rsync -a /home/fpgaemuweb/persistentwork/ /home/fpgaemuweb/work
+
+# crontab /home/fpgaemuweb/crontask
+# cron start
 
 /usr/bin/supervisord -c /home/fpgaemuweb/supervisord.conf

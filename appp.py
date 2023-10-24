@@ -16,8 +16,8 @@ logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
 
 celery = Celery('main.tasks', include=["main.tasks"])
-celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
-celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/0")
+celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
 # celery.autodiscover_tasks()
 
 
@@ -43,17 +43,17 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    app.config['CELERY_BROKER_URL'] = 'redis://127.0.0.1:6379/0',
-    app.config['CELERY_RESULT_BACKEND'] ='redis://127.0.0.1:6379/0'
+    app.config['CELERY_BROKER_URL'] = celery.conf.broker_url
+    app.config['CELERY_RESULT_BACKEND'] = celery.conf.result_backend
 
     # If db.sqlite does not exist, erase seckey:
-    localdburl = 'sqlite:///' + str(Path(workdir,'dba.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
-    if not Path(workdir,"dba.sqlite").exists():
-        seckeyfile = Path(workdir,"seckeya")
+    localdburl = 'sqlite:///' + str(Path(mainpath,'dbb.sqlite')) # WARNING: do not put local database in other place without changing the seckey.
+    if not Path(mainpath,"dbb.sqlite").exists():
+        seckeyfile = Path(mainpath,"seckeyb")
         if seckeyfile.exists():
             seckeyfile.unlink()
 
-    seckeyfile = Path(app.WORKDIR,"seckeya")  # WARNING: do not put seckey in other place.
+    seckeyfile = Path(mainpath,"seckeyb")  # WARNING: do not put seckey in other place.
     if seckeyfile.exists():
         f = open(seckeyfile,"rb")
         app.config['SECRET_KEY'] = f.read()

@@ -2,6 +2,7 @@ version: "3.3"  # optional since v1.27.0
 services:
   web:
     # Warning!: fpgaemubase image must have been built in advance.
+    restart: always
     image: fpgaemuopi
     build:
       context: .
@@ -9,5 +10,5 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./work:/home/fpgaemuweb/persistentwork
+      - ./work:/home/fpgaemuweb/work
 

@@ -2,8 +2,9 @@ FROM eduardobatista/fpgaemubase
 
 WORKDIR /home
 
+# TODO: Remover celery e redis:
 RUN apt-get update \
-    && apt-get install -y supervisor nginx redis-server rsync cron \
+    && apt-get install -y supervisor nginx rsync cron \
     && pip install SQLAlchemy flask==2.2.2 Werkzeug==2.2.2 flask_socketio==5.3.2 flask_migrate flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 
 EXPOSE 5000
@@ -13,6 +14,11 @@ EXPOSE 6379
 COPY ./ fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
+
+ARG BCKSERVER 
+ENV ENV_BCKSERVER ${BCKSERVER}
+ARG BCKPASS
+ENV ENV_BCKPASS ${BCKPASS} 
 
 VOLUME ["/home/fpgaemuweb/persistentwork"]
 

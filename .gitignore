@@ -1,6 +1,6 @@
 .vscode
 __pycache__
-db.sqlite
+*.sqlite
 backend/fpgaemu_c.o
 work/
 work/1234/e~fpgatest.o
@@ -22,3 +22,4 @@ dump.rdb
 bulmasetup/node_modules
 bulmasetup/package-lock.json
 builtghdl3.tar.gz
+
