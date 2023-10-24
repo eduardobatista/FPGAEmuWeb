@@ -1,5 +1,19 @@
 version: "3.3"  # optional since v1.27.0
 services:
+  redis:
+    restart: always
+    image: redis:alpine
+  celery: 
+    restart: always
+    image: fpgaemuopi
+    working_dir: /home/fpgaemuweb
+    entrypoint: ['/bin/bash','-c']
+    command: ["celery -A appp.celery worker --concurrency=5"]
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./work:/home/fpgaemuweb/work
   web:
     # Warning!: fpgaemubase image must have been built in advance.
     restart: always

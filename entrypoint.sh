@@ -14,8 +14,6 @@
 #   echo $ENV_BCKPASS > /home/fpgaemuweb/bckpass.txt
 # fi
 
-# rsync -a /home/fpgaemuweb/persistentwork/ /home/fpgaemuweb/work
-
 cp /home/fpgaemuweb/work/dbb.sqlite /home/fpgaemuweb/work/seckeyb /home/fpgaemuweb/
 
 crontab /home/fpgaemuweb/crontask

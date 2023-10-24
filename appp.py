@@ -5,7 +5,6 @@ from flask import Flask
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy # Database
 from flask_login import LoginManager
-from flask_migrate import Migrate
 from sqlalchemy import create_engine
 from celery import Celery
 
@@ -38,8 +37,6 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     logger.handlers = [fhandler]
     if not debug:
         app.logger = logger
-
-    # migrate = Migrate(app, db)
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
