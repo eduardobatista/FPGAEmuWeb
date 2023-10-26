@@ -1,2 +1,2 @@
 # At each ten minutes, synchronizes...
-00,10,20,30,40,50 * * * * cp /home/fpgaemuweb/dbb.sqlite /home/fpgaemuweb/seckeyb /home/fpgaemuweb/work/
+# 00,10,20,30,40,50 * * * * cp /home/fpgaemuweb/dbb.sqlite /home/fpgaemuweb/seckeyb /home/fpgaemuweb/work/

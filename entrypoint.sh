@@ -14,7 +14,17 @@
 #   echo $ENV_BCKPASS > /home/fpgaemuweb/bckpass.txt
 # fi
 
-cp /home/fpgaemuweb/work/dbb.sqlite /home/fpgaemuweb/work/seckeyb /home/fpgaemuweb/
+# echo ${ENVCACHEDWORK}
+if [ ${ENVCACHEDWORK} = "True" ]; 
+then
+  echo "ENVCACHEDWORK is true.";
+  rsync -a /home/fpgaemuweb/work/ /home/fpgaemuweb/cachedwork/;
+  echo "00,10,20,30,40,50 * * * * rsync -a --delete /home/fpgaemuweb/cachedwork/ /home/fpgaemuweb/work/" >> /home/fpgaemuweb/crontask;
+else
+  echo "ENVCACHEDWORK is false.";
+fi
+
+# cp /home/fpgaemuweb/work/dbb.sqlite /home/fpgaemuweb/work/seckeyb /home/fpgaemuweb/
 
 crontab /home/fpgaemuweb/crontask
 cron start

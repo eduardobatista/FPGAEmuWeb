@@ -36,7 +36,11 @@ subprocess.Popen(
             )
 # print('Backend compiled.\nStarting server...')
 
-WORKDIR = Path(MAINPATH) / "work"
+cwork = os.environ.get("ENVCACHEDWORK", "False")
+if (cwork == "False") or (cwork == ""):
+    WORKDIR = Path(MAINPATH) / "work"
+else:
+    WORKDIR = Path(MAINPATH) / "cachedwork"
 
 debugopt = False
 if "debug" in sys.argv:

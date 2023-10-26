@@ -15,6 +15,8 @@ COPY ./ fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 
+ARG CACHEDWORK
+ENV ENVCACHEDWORK ${CACHEDWORK}
 ARG BCKSERVER 
 ENV ENV_BCKSERVER ${BCKSERVER}
 ARG BCKPASS

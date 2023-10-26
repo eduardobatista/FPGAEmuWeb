@@ -10,7 +10,7 @@ build:
   only:
     - master
   script:
-    - docker build . -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME" --no-cache 
+    - docker build . -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME" --no-cache --build-arg CACHEDWORK="True"
     - docker login $CI_REGISTRY -u $CI_REGISTRY_USER  -p $CI_REGISTRY_PASSWORD
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
 
