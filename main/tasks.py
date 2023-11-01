@@ -111,7 +111,7 @@ def doWorkBackup(workdir,destdir):
 
     ret = {"status":"Failed"}
 
-    try:        
+    try:
         bckfile = Path(destdir,"workbackup.tar")        
         if bckfile.exists():
             bckfile.unlink()

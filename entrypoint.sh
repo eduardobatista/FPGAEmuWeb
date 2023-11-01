@@ -18,8 +18,11 @@
 if [ ${ENVCACHEDWORK} = "True" ]; 
 then
   echo "ENVCACHEDWORK is true.";
-  rsync -a /home/fpgaemuweb/work/ /home/fpgaemuweb/cachedwork/;
-  echo "00,10,20,30,40,50 * * * * rsync -a --delete /home/fpgaemuweb/cachedwork/ /home/fpgaemuweb/work/" >> /home/fpgaemuweb/crontask;
+  mkdir -p /home/fpgaemuweb/cachedwork;
+  rm /home/fpgaemuweb/work/workbackup.tar
+  cp -r /home/fpgaemuweb/work/* /home/fpgaemuweb/cachedwork/;
+  rm /home/fpgaemuweb/crontask;
+  echo "00,10,20,30,40,50 * * * * rsync -a /home/fpgaemuweb/cachedwork/ /home/fpgaemuweb/work/" >> /home/fpgaemuweb/crontask;
 else
   echo "ENVCACHEDWORK is false.";
 fi

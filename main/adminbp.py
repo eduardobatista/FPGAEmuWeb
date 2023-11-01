@@ -326,20 +326,22 @@ def changerole():
 def workbackup():    
     if current_user.role != "Admin":
         return "Error! Not an Admin."
+    
+    workdir = Path(current_app.MAINPATH) / "work"
+    bckfile = workdir / "workbackup.tar"
+    if bckfile.exists():
+        bckfile.unlink()
 
     if checkCeleryOn():
-        tempdir = Path(current_app.MAINPATH,"temp")
-        if not tempdir.exists():
-            tempdir.mkdir(parents=True,exist_ok=True)        
-        task = doWorkBackup.delay(str(Path(current_app.MAINPATH,"work")),str(tempdir))        
+        # tempdir = Path(current_app.MAINPATH,"temp")
+        # if not tempdir.exists():
+        #     tempdir.mkdir(parents=True,exist_ok=True)        
+        task = doWorkBackup.delay(str(workdir),str(workdir))        
         session["workbackup"] = task.id
         return "Starting"
     else:
-        bckfile = Path(current_app.MAINPATH,"workbackup.tar")
-        if bckfile.exists():
-            bckfile.unlink()
         try: 
-            shutil.make_archive("workbackup", 'tar', Path(current_app.MAINPATH,"work"))        
+            shutil.make_archive("workbackup", 'tar', workdir)        
         except BaseException as ex:
             return (str(ex))
         return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, max_age=0)
@@ -370,8 +372,9 @@ def workbackupstatus(nocelery=False,resp=None):
 def workbackupdownload(nocelery=False,resp=None):
     if current_user.role != "Admin":
         return "Error! Not an Admin."
-    temppath = Path(current_app.MAINPATH,"temp")
-    return send_from_directory(temppath, "workbackup.tar", as_attachment=True, max_age=0)
+    # temppath = Path(current_app.MAINPATH,"temp")
+    workdir = Path(current_app.MAINPATH) / "work"
+    return send_from_directory(workdir, "workbackup.tar", as_attachment=True, max_age=0)
 
 
 @adm.route('/workcleanup')
