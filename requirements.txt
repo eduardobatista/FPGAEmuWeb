@@ -1,0 +1,14 @@
+SQLAlchemy
+flask==2.2.2
+Werkzeug==2.2.2
+flask_socketio==5.3.2
+flask_login
+flask_sqlalchemy
+requests
+yagmail
+psycopg2-binary
+gevent
+gevent-websocket
+psutil
+gunicorn
+celery[redis]

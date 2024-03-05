@@ -1,4 +1,5 @@
 .vscode
+pythonenv
 __pycache__
 *.sqlite
 backend/fpgaemu_c.o

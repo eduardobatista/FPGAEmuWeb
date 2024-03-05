@@ -42,6 +42,9 @@ if (cwork == "False") or (cwork == ""):
 else:
     WORKDIR = Path(MAINPATH) / "cachedwork"
 
+if not WORKDIR.exists():
+    WORKDIR.mkdir()
+
 debugopt = False
 if "debug" in sys.argv:
     debugopt = True
