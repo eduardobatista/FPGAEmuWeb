@@ -2,7 +2,7 @@
 # FROM python:3.10
 FROM python:3.10-slim-bookworm
 
-ADD ./builtghdl3.tar.gz /usr/local
+ADD ./builtghdl4.tar.gz /usr/local
 
 WORKDIR /home
 
