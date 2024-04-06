@@ -25,4 +25,9 @@ services:
       - "8000:80"
     volumes:
       - ./work:/home/fpgaemuweb/work
+    networks:
+      - tunnelnetwork
 
+networks:
+  tunnelnetwork:
+    external: true

@@ -16,7 +16,7 @@ COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 
 VOLUME ["/home/fpgaemuweb/work"]
 
-RUN mkdir /home/fpgaemuweb/work
+RUN mkdir -p /home/fpgaemuweb/work
 RUN touch /home/stdout.log
 RUN touch /home/stdout.err
 
