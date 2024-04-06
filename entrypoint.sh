@@ -14,8 +14,8 @@
 #   echo $ENV_BCKPASS > /home/fpgaemuweb/bckpass.txt
 # fi
 
-# echo ${ENVCACHEDWORK}
-if [ ${ENVCACHEDWORK} = "True" ]; 
+echo ${ENVCACHEDWORK}
+if [ "${ENVCACHEDWORK}" = "True" ];
 then
   echo "ENVCACHEDWORK is true.";
   mkdir -p /home/fpgaemuweb/cachedwork;
