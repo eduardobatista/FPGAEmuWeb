@@ -43,6 +43,19 @@
 
         <div class="box">
 
+            <h2 class="title is-4">Data Backup</h2>
+
+            <button class="button is-info is-small" onclick="performBackup();">Start Backup...</button>
+            <button id="btndbackup" class="button is-info is-small" onclick="downloadBackup();" disabled>Download File</button>
+
+            <i id="bckrunning" class="fa fa-cog fa-spin fa-2x fa-fw" style="display: none; margin-top: 5px;"></i>
+            <div class="mb-2 mt-1 mx-2 is-size-7" id="bckinfo" style="height: 5vh; overflow-y:auto; margin-top: 5px;">        
+            </div>
+
+        </div>
+
+        <div class="box">
+
             <h2 class="title is-4">Cloud Database Info</h2>
 
             <div class=" container is-flex mb-2" >
@@ -135,6 +148,46 @@
                         $("#userlist").html(data);
                     });
             });
+
+            function performBackup() {
+                $("#bckinfo").hide();
+                $("#bckrunning").css("display", "block");
+                $("#btndbackup").prop('disabled', true);
+                $.post("/workbackup",{}).done( function (data) {
+                    if (data == "Starting") {                        
+                        $("#bckinfo").show();
+                        $("#bckinfo").html("Starting...");
+                        checkBackupStatus();
+                    }                    
+                });
+            }
+
+            function downloadBackup() {
+                window.open("/workbackupdownload", '_blank');
+            }            
+
+            function checkBackupStatus() {
+                setTimeout(function(){
+                    $.get("/workbackupstatus",{}).done( function (data) {
+                        if (data == "Running") {                        
+                            $("#bckinfo").show();
+                            $("#bckinfo").html("Running...");
+                            $("#downloadbackup")
+                            $("#btndbackup").prop('disabled', true);
+                        } else if (data == "Success") {
+                            $("#bckinfo").show();
+                            $("#bckinfo").html("Success! You can download the file now.");
+                            $("#bckrunning").css("display", "none");
+                            $("#btndbackup").prop('disabled', false);
+                        } else {
+                            $("#bckinfo").show();
+                            $("#bckinfo").html("Error: " + data);
+                            $("#bckrunning").css("display", "none");
+                            $("#btndbackup").prop('disabled', true);
+                        }
+                    });
+                }, 1000);
+            }
 
             function getLocalList() {
                 $("#CloudTab").removeClass("is-active")

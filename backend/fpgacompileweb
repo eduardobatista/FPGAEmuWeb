@@ -12,7 +12,7 @@ rm -fr fpgatest
 # echo "${@:2}"
 
 if [ -x "$(command -v ghdl)" ]; then
-    ghdl -a -fexplicit --ieee=synopsys -Wno-elaboration $BASEDIR/fpgaemu.vhd ${@:2}
+    ghdl -a -fexplicit --ieee=synopsys $BASEDIR/fpgaemu.vhd ${@:2}
     ghdl -e -fexplicit --ieee=synopsys -Wl,-pthread -Wl,$BASEDIR/fpgaemu_c.o fpgatest
 else 
     /opt/local/bin/ghdl -a -fexplicit --ieee=synopsys $BASEDIR/fpgaemu.vhd ${@:2}

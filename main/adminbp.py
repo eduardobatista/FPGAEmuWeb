@@ -321,7 +321,7 @@ def changerole():
     return "Role changed!"
 
 
-@adm.route('/workbackup')
+@adm.route('/workbackup', methods=['POST'])
 @login_required
 def workbackup():    
     if current_user.role != "Admin":
