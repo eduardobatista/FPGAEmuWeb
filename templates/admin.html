@@ -169,11 +169,12 @@
             function checkBackupStatus() {
                 setTimeout(function(){
                     $.get("/workbackupstatus",{}).done( function (data) {
-                        if (data == "Running") {                        
+                        if (data == "Running") {  
                             $("#bckinfo").show();
                             $("#bckinfo").html("Running...");
                             $("#downloadbackup")
                             $("#btndbackup").prop('disabled', true);
+                            checkBackupStatus();
                         } else if (data == "Success") {
                             $("#bckinfo").show();
                             $("#bckinfo").html("Success! You can download the file now.");
