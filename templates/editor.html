@@ -26,50 +26,55 @@
 
         {%- if filenames is defined -%}
         <div class="container is-max-desktop mt-3 px-3">
-            <div class="select is-small">
-                <select id="fileselect" onchange="openfile()" style="min-width: 180px;">
-                    <option selected value="0">Choose file...</option>
-                    {% for fname in filenames %}
-                        <option value="{{fname}}">{{fname}}</option>
-                    {% endfor %}
-                </select>
+            <div class="columns">
+                <div class="column is-narrow">
+                    <div class="fixed-grid has-1-cols">
+                    <div class="cell">
+                        <div class="select is-small mr-1">
+                            <select id="fileselect" onchange="openfile()" style="min-width: 180px;">
+                                <option selected value="0">Choose file...</option>
+                                {% for fname in filenames %}
+                                    <option value="{{fname}}">{{fname}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button class="button is-info is-small mr-1" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>                       
+                    </div><div class="cell mt-1">
+                        <button class="button is-info is-small" onclick="savefile(0);">Save (Ctrl+S)</button> 
+                        <button class="button is-info is-small mr-1" onclick="savefileas()">Save As...</button>                        
+                        <button class="button is-info is-small ml-1" onclick="newfile();">New File</button>                        
+                    </div></div>
+                </div>
+                <!-- <div class="column"></div> -->
+                <div class="column has-text-right">
+                    <div class="fixed-grid has-1-cols"><div class="cell">
+                        <button class="button is-link is-small mr-1" onclick="gotomapper()">Map Ports for Current File</button>
+                        <div class="dropdown ml-1" id="tdropdown">
+                            <div class="dropdown-trigger">
+                            <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
+                                <span>Templates</span>
+                                <span class="icon is-small">
+                                <i class="fas fa-angle-down" aria-hidden="true"></i>
+                                </span>
+                            </button>
+                            </div>
+                            <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                            <div class="dropdown-content">
+                                <a href="#" class="dropdown-item" onclick="fillWithUsertop();">
+                                    usertop.vhd
+                                </a>
+                                <a class="dropdown-item" onclick="fillWithUsertest();">
+                                    usertest.vhd
+                                </a>                    
+                            </div>
+                            </div>
+                        </div>
+                    </div><div class="cell mt-1">
+                        <button class="button is-warning is-small ml-1" onclick="analyze()">Analyze Current File</button>
+                        <button class="button is-danger is-small ml-1" onclick="fpgaCompile()">Compile Project</button><br>
+                    </div></div>
+                </div>
             </div>
-            <button class="button is-info is-small" onclick="savefile(0);">Save</button>
-            <button class="button is-info is-small" onclick="savefileas()">Save As...</button>
-            <button class="button is-info is-small" onclick="newfile();">New</button>
-            <button class="button is-info is-small" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>
-            <div class="dropdown" id="tdropdown">
-                <div class="dropdown-trigger">
-                  <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
-                    <span>Templates</span>
-                    <span class="icon is-small">
-                      <i class="fas fa-angle-down" aria-hidden="true"></i>
-                    </span>
-                  </button>
-                </div>
-                <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                  <div class="dropdown-content">
-                    <a href="#" class="dropdown-item" onclick="fillWithUsertop();">
-                        usertop.vhd
-                    </a>
-                    <a class="dropdown-item" onclick="fillWithUsertest();">
-                        usertest.vhd
-                    </a>                    
-                  </div>
-                </div>
-            </div>
-
-            <!-- <div class="dropdown d-inline">
-                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Templates
-                </button>
-                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <a class="dropdown-item" href="#" onclick="fillWithUsertop();">usertop.vhd</a>
-                    <a class="dropdown-item" href="#" onclick="fillWithUsertest();">usertest.vhd</a>
-                </div>
-            </div>              -->
-            <button class="button is-warning is-small" onclick="analyze()">Analyze Current File</button>
-            <button class="button is-danger is-small" onclick="fpgaCompile()">Compile</button><br>
         </div>
         
         <div class="container is-max-desktop mt-1 px-4">
@@ -284,12 +289,15 @@
                     window.autosave = 0;
                     return;
                 }
-                $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
-                $("#centralModalSm").addClass("is-active");   
-                $("#filesavedbutton").focus();
+                // $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
+                // $("#centralModalSm").addClass("is-active");   
+                // $("#filesavedbutton").focus();
+                bulmaToast.toast({ message: 'File ' + String(msg) + " saved successfully!", 
+                                    type: "is-primary", position: "top-center", 
+                                    opacity: 0.8, dismissible: true, duration: 2000 }); 
                 if (window.lastfilesaveopt >= 1) {
-                    location.href = "/editor?file=" + String(msg);
-                }                
+                   location.href = "/editor?file=" + String(msg);
+                }
             }); 
             window.socket.on('filecontent', function(msg){
                 editor.setValue(msg);                
@@ -336,6 +344,13 @@
             window.socket.on('notlogged',function(msg){
                 location.href = '/login';
             });
+        }
+
+        function gotomapper() {
+            var val = $("#fileselect").children("option:selected").val();
+            if (val != 0) {
+                location.href = '/mapper?file=' + val;
+            }
         }
 
         function openfile() {  
