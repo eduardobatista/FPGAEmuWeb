@@ -38,18 +38,13 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <button class="button is-info is-small mr-1" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>                       
+                        <button class="button is-info is-small mr-1" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button> 
+                        <button class="button is-info is-small mr-1" id="inmapperbtn" onclick="gotomapper()" disabled>in Mapper&nbsp;<i class="fas fa-arrow-circle-right"></i></button>                      
                     </div><div class="cell mt-1">
-                        <button class="button is-info is-small mr-1" onclick="savefile(0);">Save (Ctrl+S)</button> 
+                        <button class="button is-info is-small mr-1" onclick="savefile(0);">Save&nbsp;<span class="has-text-weight-bold">Ctrl+S</span></button> 
                         <button class="button is-info is-small mr-1" onclick="savefileas()">Save As...</button>                        
-                        <button class="button is-info is-small mr-1" onclick="newfile();">New File</button>                        
-                    </div></div>
-                </div>
-                <!-- <div class="column"></div> -->
-                <div class="column has-text-right">
-                    <div class="fixed-grid has-1-cols"><div class="grid is-flex"><div class="cell is-flex-grow-1 is-flex-shrink-1">
-                        <button class="button is-info is-small mr-1" onclick="gotomapper()">Mapper for Current File</button>
-                        <div class="dropdown ml-1" id="tdropdown">
+                        <button class="button is-info is-small mr-1" onclick="newfile();">New File</button>
+                        <div class="dropdown ml-1" id="tdropdown"">
                             <div class="dropdown-trigger">
                             <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
                                 <span>Templates</span>
@@ -58,7 +53,7 @@
                                 </span>
                             </button>
                             </div>
-                            <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                            <div class="dropdown-menu " id="dropdown-menu" role="menu">
                             <div class="dropdown-content">
                                 <a href="#" class="dropdown-item" onclick="fillWithUsertop();">
                                     usertop.vhd
@@ -68,11 +63,15 @@
                                 </a>                    
                             </div>
                             </div>
-                        </div>
-                    </div><div class="cell mt-1 is-flex-grow-1 is-flex-shrink-1">
-                        <button class="button is-warning is-small ml-1" onclick="analyze()">Analyze Current File</button>
-                        <button class="button is-danger is-small ml-1" onclick="fpgaCompile()">Compile Project</button><br>
-                    </div></div></div>
+                        </div>                        
+                    </div></div>
+                </div>
+                <div class="column"></div>
+                <div class="column is-narrow has-text-right">
+                    <button class="button is-warning is-small" onclick="analyze()">
+                        Analyze Current File&nbsp;<span class="has-text-weight-bold">Ctrl+Shift+A</span></button><br>
+                    <button class="button is-danger is-small mt-1" onclick="fpgaCompile()">
+                        Compile Project&nbsp;<span class="has-text-weight-bold">Ctrl+Shift+C</span></button>
                 </div>
             </div>
         </div>
@@ -100,7 +99,8 @@
                 </div> 
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="$('#compilationmodal').removeClass('is-active');">Close</button>
+                <button class="button is-danger is-small" id="closecompbtn" 
+                        onclick="$('#compilationmodal').removeClass('is-active'); editor.focus();">Close</button>
                 <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
               </footer>
             </div>
@@ -256,6 +256,22 @@
             },
             readOnly: false // false if this command should not apply in readOnly mode
         });
+        editor.commands.addCommand({
+            name: 'AnalyzeFile',
+            bindKey: {win: 'Ctrl-Shift-A',  mac: 'Command-Shift-S'},
+            exec: function(editor) {
+                analyze();
+            },
+            readOnly: false // false if this command should not apply in readOnly mode
+        });
+        editor.commands.addCommand({
+            name: 'CompileProject',
+            bindKey: {win: 'Ctrl-Shift-C',  mac: 'Command-Shift-C'},
+            exec: function(editor) {
+                fpgaCompile();
+            },
+            readOnly: false // false if this command should not apply in readOnly mode
+        });
         editor.session.on('change', function(delta) {
             // delta.start, delta.end, delta.lines, delta.action
             window.filechanged = true;
@@ -325,6 +341,7 @@
                     </span>
                 `);
                 $("#gotoemul").attr('disabled', false);
+                $("#gotoemul").focus();
                 $("#myspinner").hide();
             });
             window.socket.on('asuccess',function(msg){
@@ -368,6 +385,7 @@
                 window.lastselected = val;
                 window.socket.emit("getfile",val);
                 checktoplevel(val);
+                $("#inmapperbtn").prop('disabled', false);
                 window.history.replaceState({}, null, '/editor?file=' + val);
                 // $('#editor').show();            
             } else {
@@ -376,6 +394,7 @@
                 editor.getSession().getUndoManager().reset();
                 $("#toplevelbtn").text('Set Top Level');
                 $("#toplevelbtn").prop('disabled', true);
+                $("#inmapperbtn").prop('disabled', true);
                 window.history.replaceState({}, null, '/editor');
                 // $('#editor').hide();
             }           
@@ -480,6 +499,7 @@
                 openSocket();
             }
             window.socket.send("Compile")
+            $("#closecompbtn").focus();
         }
 
         function analyze() {
@@ -510,6 +530,7 @@
                     openSocket();
                 }
                 window.socket.emit("Analyze",val)
+                $("#closecompbtn").focus();
             }
         }
 
