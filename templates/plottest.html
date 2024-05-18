@@ -184,8 +184,9 @@
             htmldata = "";
             var insts = Object.keys(hie);
             insts.forEach(inst => {
-                var activeornot = (inst == insts[0]) ? "active" : "";
-                htmldata = htmldata + `<li><i class="fas fa-angle-right toggler"></i> 
+                var activeornot = (inst == insts[0]) ? "activeitem" : "";
+                var auxtoggler = (inst == insts[0]) ? "fa-rotate-90" : "";
+                htmldata = htmldata + `<li><i class="fas fa-angle-right toggler ${auxtoggler}"></i> 
                               <span><i class="fas fa-cube ic-w mx-1"></i>${inst}</span>
                               <ul class="nesteditem ${activeornot}">`;
                 var sigs = Object.keys(hie[inst]);
@@ -215,6 +216,12 @@
                     this.classList.toggle("fa-rotate-90");
                 });
             }
+
+            var sigstop = Object.keys(hie[insts[0]]);
+            sigstop.forEach(sig => {
+                document.getElementById("check"+insts[0]+"."+sig).checked = true;
+                changecheck(insts[0],sig,true);
+            });
 
         }
 

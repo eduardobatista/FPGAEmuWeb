@@ -349,12 +349,11 @@
                                    opacity: 0.8, dismissible: true });
             } 
             if (val != 0) {
-                if (!window.socketOn) {
-                    openSocket();
-                }
+                if (!window.socketOn) { openSocket(); }
                 window.lastselected = val;
                 window.socket.emit("getfile",val);
                 checktoplevel(val);
+                window.history.replaceState({}, null, '/editor?file=' + val);
                 // $('#editor').show();            
             } else {
                 window.lastselected = "";
@@ -362,6 +361,7 @@
                 editor.getSession().getUndoManager().reset();
                 $("#toplevelbtn").text('Set Top Level');
                 $("#toplevelbtn").prop('disabled', true);
+                window.history.replaceState({}, null, '/editor');
                 // $('#editor').hide();
             }           
 

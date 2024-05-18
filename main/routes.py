@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash, abort
+from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash, abort, Response
 from werkzeug.utils import secure_filename
 from zipfile import ZipFile
 from . import main
@@ -186,8 +186,10 @@ def editor():
     else:
         aux = getvhdfilelist(sessionpath / curproject)
     filenames = [x.relative_to(sessionpath) for x in aux]
-    return render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile(),
-                            toplevel=current_user.topLevelEntity,projectnames=projectnames,currentproject=curproject)
+    resp = Response(render_template('editor.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile(),
+                            toplevel=current_user.topLevelEntity,projectnames=projectnames,currentproject=curproject))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 @main.route('/mapper')
 @login_required
