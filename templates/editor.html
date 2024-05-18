@@ -40,15 +40,15 @@
                         </div>
                         <button class="button is-info is-small mr-1" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>                       
                     </div><div class="cell mt-1">
-                        <button class="button is-info is-small" onclick="savefile(0);">Save (Ctrl+S)</button> 
+                        <button class="button is-info is-small mr-1" onclick="savefile(0);">Save (Ctrl+S)</button> 
                         <button class="button is-info is-small mr-1" onclick="savefileas()">Save As...</button>                        
-                        <button class="button is-info is-small ml-1" onclick="newfile();">New File</button>                        
+                        <button class="button is-info is-small mr-1" onclick="newfile();">New File</button>                        
                     </div></div>
                 </div>
                 <!-- <div class="column"></div> -->
                 <div class="column has-text-right">
-                    <div class="fixed-grid has-1-cols"><div class="cell">
-                        <button class="button is-link is-small mr-1" onclick="gotomapper()">Map Ports for Current File</button>
+                    <div class="fixed-grid has-1-cols"><div class="grid is-flex"><div class="cell is-flex-grow-1 is-flex-shrink-1">
+                        <button class="button is-info is-small mr-1" onclick="gotomapper()">Mapper for Current File</button>
                         <div class="dropdown ml-1" id="tdropdown">
                             <div class="dropdown-trigger">
                             <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
@@ -69,10 +69,10 @@
                             </div>
                             </div>
                         </div>
-                    </div><div class="cell mt-1">
+                    </div><div class="cell mt-1 is-flex-grow-1 is-flex-shrink-1">
                         <button class="button is-warning is-small ml-1" onclick="analyze()">Analyze Current File</button>
                         <button class="button is-danger is-small ml-1" onclick="fpgaCompile()">Compile Project</button><br>
-                    </div></div>
+                    </div></div></div>
                 </div>
             </div>
         </div>
