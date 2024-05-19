@@ -14,6 +14,7 @@
         margin-top: 5px;
     }
   </style>
+  <link href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-tooltip@1.2.0/dist/bulma-tooltip.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -26,8 +27,8 @@
 
         {%- if filenames is defined -%}
         <div class="container is-max-desktop mt-3 px-3">
-            <div class="columns">
-                <div class="column is-narrow">
+            <div class="columns is-mobile">
+                <div class="column">
                     <div class="fixed-grid has-1-cols">
                     <div class="cell">
                         <div class="select is-small mr-1">
@@ -41,10 +42,11 @@
                         <button class="button is-info is-small mr-1" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button> 
                         <button class="button is-info is-small mr-1" id="inmapperbtn" onclick="gotomapper()" disabled>in Mapper&nbsp;<i class="fas fa-arrow-circle-right"></i></button>                      
                     </div><div class="cell mt-1">
-                        <button class="button is-info is-small mr-1" onclick="savefile(0);">Save&nbsp;<span class="has-text-weight-bold">Ctrl+S</span></button> 
+                        <button class="button is-info is-small mr-1 has-tooltip-arrow has-tooltip-right has-tooltip-info" 
+                             onclick="savefile(0);" data-tooltip="Ctrl+S">Save</button> 
                         <button class="button is-info is-small mr-1" onclick="savefileas()">Save As...</button>                        
                         <button class="button is-info is-small mr-1" onclick="newfile();">New File</button>
-                        <div class="dropdown ml-1" id="tdropdown"">
+                        <div class="dropdown ml-1" id="tdropdown">
                             <div class="dropdown-trigger">
                             <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
                                 <span>Templates</span>
@@ -53,7 +55,7 @@
                                 </span>
                             </button>
                             </div>
-                            <div class="dropdown-menu " id="dropdown-menu" role="menu">
+                            <div class="dropdown-menu" id="dropdown-menu" role="menu">
                             <div class="dropdown-content">
                                 <a href="#" class="dropdown-item" onclick="fillWithUsertop();">
                                     usertop.vhd
@@ -66,12 +68,14 @@
                         </div>                        
                     </div></div>
                 </div>
-                <div class="column"></div>
+                <!-- <div class="column"></div> -->
                 <div class="column is-narrow has-text-right">
-                    <button class="button is-warning is-small" onclick="analyze()">
-                        Analyze Current File&nbsp;<span class="has-text-weight-bold">Ctrl+Shift+A</span></button><br>
-                    <button class="button is-danger is-small mt-1" onclick="fpgaCompile()">
-                        Compile Project&nbsp;<span class="has-text-weight-bold">Ctrl+Shift+C</span></button>
+                    <button class="button is-warning is-small has-tooltip-arrow has-tooltip-left has-tooltip-warning" 
+                        onclick="analyze()" data-tooltip="Ctrl+Shift+A">
+                        Analyze Current File</button><br>
+                    <button class="button is-danger is-small mt-1 has-tooltip-arrow has-tooltip-left has-tooltip-danger" 
+                        onclick="fpgaCompile()" data-tooltip="Ctrl+Shift+C">
+                        Compile Project</button>
                 </div>
             </div>
         </div>
