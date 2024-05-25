@@ -69,11 +69,27 @@
                     </div></div>
                 </div>
                 <!-- <div class="column"></div> -->
+                <div class="column is-narrow has-text-right" style="border-right: 1px solid lightgray; border-left: 1px solid lightgray;">
+                    <button class="button is-dark is-small is-fullwidth has-tooltip-arrow has-tooltip-left has-tooltip-dark" 
+                        onclick="runSimulation();" data-tooltip="Ctrl+Shift+S">
+                        Simulate</button> 
+                        <div class="select is-info is-fullwidth is-small mt-1">
+                            <select id="stoptime" class="">
+                                <option value="200 ns" {{'selected' if stoptime == 200 else ''}}>200 ns</option>
+                                <option value="400 ns" {{'selected' if stoptime == 400 else ''}}>400 ns</option>
+                                <option value="600 ns" {{'selected' if stoptime == 600 else ''}}>600 ns</option>
+                                <option value="800 ns" {{'selected' if stoptime == 800 else ''}}>800 ns</option>
+                                <option value="1000 ns" {{'selected' if stoptime == 1000 else ''}}>1000 ns</option>
+                                <option value="2000 ns" {{'selected' if stoptime == 2000 else ''}}>2000 ns</option>
+                                <option value="3000 ns" {{'selected' if stoptime == 3000 else ''}}>3000 ns</option>
+                            </select>
+                        </div>
+                </div>
                 <div class="column is-narrow has-text-right">
                     <button class="button is-warning is-small has-tooltip-arrow has-tooltip-left has-tooltip-warning" 
                         onclick="analyze()" data-tooltip="Ctrl+Shift+A">
                         Analyze Current File</button><br>
-                    <button class="button is-danger is-small mt-1 has-tooltip-arrow has-tooltip-left has-tooltip-danger" 
+                    <button class="button is-danger is-fullwidth is-small mt-1 has-tooltip-arrow has-tooltip-left has-tooltip-danger" 
                         onclick="fpgaCompile()" data-tooltip="Ctrl+Shift+C">
                         Compile Project</button>
                 </div>
@@ -106,6 +122,7 @@
                 <button class="button is-danger is-small" id="closecompbtn" 
                         onclick="$('#compilationmodal').removeClass('is-active'); editor.focus();">Close</button>
                 <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
+                <button id="gotoplot" type="button" class="button is-info is-small" onclick="location.href = '/simresult'">View Result</button>
               </footer>
             </div>
           </div>
@@ -276,6 +293,14 @@
             },
             readOnly: false // false if this command should not apply in readOnly mode
         });
+        editor.commands.addCommand({
+            name: 'SimulateFile',
+            bindKey: {win: 'Ctrl-Shift-S',  mac: 'Command-Shift-S'},
+            exec: function(editor) {
+                runSimulation();
+            },
+            readOnly: false // false if this command should not apply in readOnly mode
+        });
         editor.session.on('change', function(delta) {
             // delta.start, delta.end, delta.lines, delta.action
             window.filechanged = true;
@@ -287,6 +312,7 @@
         window.lastfilesaveopt = 0;
         window.isnewfile = false;
         window.lastselected = "";
+        window.lastaction = "compilation"
 
         function openSocket() {
             if (location.protocol !== 'https:') {
@@ -307,6 +333,10 @@
                     return;
                 } else if (window.autosave == 3) {
                     window.autosave = 0;
+                    return;
+                } else if (window.autosave == 4) {
+                    window.autosave = 0;
+                    runSimulation2(true);
                     return;
                 }
                 // $("#filesavedmsg").html('File ' + String(msg) + " saved successfully!");
@@ -338,14 +368,25 @@
                 $("#myspinner").hide();
             });
             window.socket.on('success',function(msg){
-                $('#status').append(`
-                    <span style="color:blue;">
-                        Compilation successful!<br>
-                        You can now start your emulation.
-                    </span>
-                `);
-                $("#gotoemul").attr('disabled', false);
-                $("#gotoemul").focus();
+                if (window.lastaction == "compilation") {
+                    $('#status').append(`
+                        <span style="color:blue;">
+                            Compilation successful!<br>
+                            You can now start your emulation.
+                        </span>
+                    `);
+                    $("#gotoemul").attr('disabled', false);
+                    $("#gotoemul").focus();
+                } else {
+                    $('#status').append(`
+                        <span style="color:blue;">
+                            Simulation successful!<br>
+                            Your result is ready for visualization.
+                        </span>
+                    `);
+                    $("#gotoplot").attr('disabled', false);
+                    $("#gotoplot").focus();
+                }
                 $("#myspinner").hide();
             });
             window.socket.on('asuccess',function(msg){
@@ -497,7 +538,10 @@
             }
             $("#myspinner").show();
             $("#gotoemul").attr('disabled', true);
+            $("#gotoemul").show();
+            $("#gotoplot").hide();
             // $("#fullHeightModalRight").modal();
+            window.lastaction = "compilation"
             $("#compilationmodal").addClass("is-active");
             if (!window.socketOn) {
                 openSocket();
@@ -508,10 +552,6 @@
 
         function analyze() {
             if (window.filechanged) {
-                // var r = confirm("The current file is not saved.\nAnalyze anyways?");
-                // if (r == false) {
-                //     return;
-                // }
                 window.autosave = 1;
                 savefile(0);
                 return;
@@ -528,7 +568,8 @@
                     $("#status").html("");
                 }                
                 $("#myspinner").show();
-                $("#gotoemul").attr('disabled', true);
+                $("#gotoemul").hide();
+                $("#gotoplot").hide();
                 $("#compilationmodal").addClass("is-active");
                 if (!window.socketOn) {
                     openSocket();
@@ -560,6 +601,36 @@
                     }
                 );
             }
+        }
+
+        function runSimulation() {
+            if (window.filechanged) {
+                window.autosave = 4;
+                savefile(0);
+                return;
+            }
+            runSimulation2(false);      
+        }
+
+        function runSimulation2(autosave) {
+            var val = $("#fileselect").children("option:selected").val();
+            if (val != 0) {
+                if (autosave) {
+                    $("#status").html("<strong>File saved automatically.</strong><br>");
+                } else {
+                    $("#status").html("");
+                }
+                window.lastaction = "simulation";
+                $("#status").append("<span style='color: red; font-weight:bold;'>Warning: if current file is not a testbench, simulation will return empty!</span>");
+                $("#myspinner").show();
+                $("#gotoemul").hide();
+                $("#gotoplot").show();
+                $("#gotoplot").attr('disabled', true);
+                $("#compilationmodal").addClass("is-active");
+                if (!window.socketOn) { openSocket(); }
+                var selectedfile = $("#fileselect").children("option:selected").val();
+                window.socket.emit("Simulate",$('#stoptime').find(":selected").val(),selectedfile);
+            }    
         }
 
         var usertoptemplate = `library ieee;

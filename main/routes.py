@@ -316,6 +316,6 @@ def compilar():
         return Response(events(), content_type='text/event-stream')
     return "Error: Event stream not accepted."
 
-@main.route('/plottest') 
+@main.route('/simresult') 
 def plottest():
-    return render_template('plottest.html',socketiofile=getsocketiofile(),currentproject=getcurrentproject(getuserpath()))
+    return render_template('simresult.html',socketiofile=getsocketiofile(),currentproject=getcurrentproject(getuserpath()))

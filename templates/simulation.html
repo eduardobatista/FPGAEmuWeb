@@ -44,13 +44,24 @@
 
                     <div class="block mt-2 mb-0">
                         <h6 class="title is-6 is-inline">Stop time:</h6>
-                        <input type="text" id="stoptime" class="input is-small" value="{{stoptime}}" maxlength="10">                        
+                        <!-- <input type="text" id="stoptime" class="input is-small" value="{{stoptime}}" maxlength="10">                         -->
+                        <div class="select is-info is-fullwidth is-small">
+                            <select id="stoptime" class="">
+                                <option value="200 ns" {{'selected' if stoptime == 200 else ''}}>200 ns</option>
+                                <option value="400 ns" {{'selected' if stoptime == 400 else ''}}>400 ns</option>
+                                <option value="600 ns" {{'selected' if stoptime == 600 else ''}}>600 ns</option>
+                                <option value="800 ns" {{'selected' if stoptime == 800 else ''}}>800 ns</option>
+                                <option value="1000 ns" {{'selected' if stoptime == 1000 else ''}}>1000 ns</option>
+                                <option value="2000 ns" {{'selected' if stoptime == 2000 else ''}}>2000 ns</option>
+                                <option value="3000 ns" {{'selected' if stoptime == 3000 else ''}}>3000 ns</option>
+                            </select>
+                        </div>
                     </div>
     
-                    <div class="block mt-2">
+                    <!-- <div class="block mt-2">
                         <h6 class="title is-6 is-inline">Output file:</h6>
                         <input type="text" id="outputfile" class="input is-small" value="output.ghw" disabled>
-                    </div>
+                    </div> -->
                     
                     </div>
                 </form>
@@ -78,8 +89,7 @@
               </section>
               <footer class="modal-card-foot">
                 <button class="button is-danger is-small" onclick="$('#simulationmodal').removeClass('is-active');">Close</button>
-                <button id="gotoemul" type="button" class="button is-info is-small" onclick="location.href = '/downloadsimfile'">Download file</button>
-                <button id="gotoplot" type="button" class="button is-info is-small" onclick="location.href = '/plottest'">View Online</button>                
+                <button id="gotoplot" type="button" class="button is-info is-small" onclick="location.href = '/simresult'">View Result</button>                
               </footer>
             </div>
           </div>
@@ -170,7 +180,7 @@
             $("#simulationmodal").addClass("is-active");
             if (!window.socketOn) { openSocket(); }
             var selectedfile = $("#fileselect").children("option:selected").val();
-            window.socket.emit("Simulate",$("#stoptime").val(),selectedfile);    
+            window.socket.emit("Simulate",$('#stoptime').find(":selected").val(),selectedfile);    
         }
         
     </script>
