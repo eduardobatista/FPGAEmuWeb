@@ -110,7 +110,7 @@
             <div class="modal-background"></div>
             <div class="modal-card">
               <header class="modal-card-head">
-                <p class="modal-card-title">Compilation</p>
+                <p id="cmodaltitle" class="modal-card-title">Compilation</p>
                 <button class="delete" aria-label="close" onclick="$('#compilationmodal').removeClass('is-active');"></button>
               </header>
               <section class="modal-card-body">
@@ -542,6 +542,7 @@
             $("#gotoplot").hide();
             // $("#fullHeightModalRight").modal();
             window.lastaction = "compilation"
+            $("#cmodaltitle").html("Compilation");
             $("#compilationmodal").addClass("is-active");
             if (!window.socketOn) {
                 openSocket();
@@ -570,6 +571,7 @@
                 $("#myspinner").show();
                 $("#gotoemul").hide();
                 $("#gotoplot").hide();
+                $("#cmodaltitle").html("Analysis");
                 $("#compilationmodal").addClass("is-active");
                 if (!window.socketOn) {
                     openSocket();
@@ -626,6 +628,7 @@
                 $("#gotoemul").hide();
                 $("#gotoplot").show();
                 $("#gotoplot").attr('disabled', true);
+                $("#cmodaltitle").html("Simulation");
                 $("#compilationmodal").addClass("is-active");
                 if (!window.socketOn) { openSocket(); }
                 var selectedfile = $("#fileselect").children("option:selected").val();
