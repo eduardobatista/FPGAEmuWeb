@@ -12,6 +12,10 @@ elif [[ $(ghdl --version | grep 'GHDL 4.') == *GHDL* ]]; then
     echo "GHDL 4.0.0 found."
     cp fpgacompileweb3.sh fpgacompileweb
     chmod 755 fpgacompileweb
+elif [[ $(ghdl --version | grep 'GHDL 5.') == *GHDL* ]]; then
+    echo "GHDL 5 found."
+    cp fpgacompileweb3.sh fpgacompileweb
+    chmod 755 fpgacompileweb
 else
     echo "GHDL version is not 3.0.0."
     cp fpgacompileweb1.sh fpgacompileweb

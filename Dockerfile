@@ -1,4 +1,4 @@
-FROM eduardobatista/fpgaemubase:ghdl4
+FROM eduardobatista/fpgaemubase:ghdl5
 
 WORKDIR /home
 
