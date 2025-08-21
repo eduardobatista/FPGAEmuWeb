@@ -209,8 +209,11 @@
 
     <script src="/static/js/bulma-toast.min.js"></script>
     <!-- <script src="/static/ace/ace.js" type="text/javascript" charset="utf-8"></script> -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/ace.min.js" integrity="sha512-AoJ7+7JIujn4MJewOJzbFHT/6GPrDvQ4yKm7C2r7HGGl4Q6u/yBDCDhTD/SZp5Bxhpe19EPxGg8eXHHTmIbUnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/mode-vhdl.min.js" integrity="sha512-Lzxs40kyt7rSFTtmj10XB2HO+g0Gf/zVCYUtSZhOWvOJ2u7nQ7QPbliENhFaJ7424+p43nXIDPLcNQKBspRC3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/ace.min.js" integrity="sha512-AoJ7+7JIujn4MJewOJzbFHT/6GPrDvQ4yKm7C2r7HGGl4Q6u/yBDCDhTD/SZp5Bxhpe19EPxGg8eXHHTmIbUnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ace.min.js" integrity="sha512-sdeAa6bnaA5ZaOGAM7GhwO8ascBi986gL7z7whljQdiISDOEQZKja2yqe7pD+l5HshKzcJtoxJVxVwHcO5SVAQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/mode-vhdl.min.js" integrity="sha512-Lzxs40kyt7rSFTtmj10XB2HO+g0Gf/zVCYUtSZhOWvOJ2u7nQ7QPbliENhFaJ7424+p43nXIDPLcNQKBspRC3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/mode-vhdl.min.js" integrity="sha512-Lzxs40kyt7rSFTtmj10XB2HO+g0Gf/zVCYUtSZhOWvOJ2u7nQ7QPbliENhFaJ7424+p43nXIDPLcNQKBspRC3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/snippets/vhdl.min.js" integrity="sha512-kUKtgkd83kQ6SlCvsoqjdFwZxsAm+m/KZe0mtqkQp9IZOTLCakCUxrZcBQIe2RyRO1fxQK2me47QghP3x3FNQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script type="text/javascript">
 
@@ -267,7 +270,7 @@
 
         var editor = ace.edit("editor");
         // editor.setTheme("ace/theme/monokai");
-        editor.setTheme("ace/theme/dreamweaver");  
+        editor.setTheme("ace/theme/github_light_default");  
         editor.session.setMode("ace/mode/vhdl");
         editor.commands.addCommand({
             name: 'mySaveFile',
