@@ -20,9 +20,9 @@ Code editor with syntax highlighting ([Ace Editor](https://ace.c9.io/)!):
 
 # Running FPGAEmuWeb
 
-## Locally (Requires GHDL 3.0)
+## Locally (Requires GHDL 3.0 or above)
 
-After installing GHDL 3.0, install Python dependencies using:
+After installing GHDL 3.0 or above, install Python dependencies using:
 ```
 pip install -r requirements.txt
 ```
@@ -34,7 +34,12 @@ Then, FPGAEmuWeb will be accessible via [http://127.0.0.1:5000](http://127.0.0.1
 
 ## Using Docker
 
-Under Construction.
+In x86_64 systems, running the following docker compose commands should be enough for starting a FPGAEmuWeb instance on port 80 (acessible via http://127.0.0.1):
+```
+docker compose build
+docker compose up -d
+```
+The first access must be carried out using username **admin@fpgaemu** and password **admin** (this password should be changed after the first login).
 
 # First Steps
 
