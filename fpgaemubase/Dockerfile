@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # FROM python:3.10
-FROM python:3.10-slim-bookworm
+# FROM python:3.10-slim-bookworm
+FROM debian:bookworm-slim
 
 ADD ./builtghdl5.tar.gz /usr/local
 

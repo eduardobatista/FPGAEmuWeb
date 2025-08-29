@@ -1,1 +1,1 @@
-docker build -t fpgaemubase .
+docker build -t eduardobatista/fpgaemubase:ghdl5 .

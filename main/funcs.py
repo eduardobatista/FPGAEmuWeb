@@ -1,8 +1,13 @@
-import re,time,subprocess,select,os,shutil,sys
+import re
+import time
+import subprocess
+import select
+import os
+import shutil
+import sys
 from pathlib import Path
-# import pkg_resources
 
-from appp import socketio,logger,celery
+from appp import socketio,logger
 
 
 fpgatesttemplate = '''
@@ -140,8 +145,8 @@ def getportlist(sessionpath,file):
         toplevel = open(toplevel, 'r')    
         data = toplevel.read()
         data = re.sub("--.*?\n|\n"," ",data)
-        data = re.sub("\s+"," ",data)
-        data = re.sub("\s+;",";",data)
+        data = re.sub(r"\s+"," ",data)
+        data = re.sub(r"\s+;",";",data)
         toplevel.close()
         entityname = re.search(r"entity (\w+) is",data,re.IGNORECASE)
         if entityname is None: 
@@ -153,7 +158,7 @@ def getportlist(sessionpath,file):
         aux = re.search(rf".*port.*?(\((.+)\))",aux.group(0),re.IGNORECASE)
         if aux is None:
             return "Error: ports not found in entity."
-        aux2 = re.split(";\s+|;",aux.group(1)[1:-1])
+        aux2 = re.split(r";\s+|;",aux.group(1)[1:-1])
         sepdots = re.compile(r"\s+:\s+|\s+:|:\s+|:")
         sepcomma = re.compile(r"\s+,\s+|\s+,|,\s+|,")
         sepspace = re.compile(r"\s+")
@@ -339,7 +344,7 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curpr
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
         return    
-    stoptime = re.sub("\s+","",stoptime)
+    stoptime = re.sub(r"\s+","",stoptime)
     aux = re.sub("ns","",stoptime)
     try:
         if int(aux) > 2000:
