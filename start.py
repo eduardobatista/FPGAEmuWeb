@@ -1,13 +1,15 @@
 # from . import create_app, socketio
-import subprocess,os,json
+import subprocess
+import os
+import json
 from pathlib import Path
 from appp import create_app, socketio, db
-from sqlalchemy import create_engine
-from sqlalchemy.exc import OperationalError
+# from sqlalchemy import create_engine
+# from sqlalchemy.exc import OperationalError
 from main.models import User
 from werkzeug.security import generate_password_hash
 import sys
-from time import sleep
+# from time import sleep
 
 '''
     TODO:
@@ -60,7 +62,7 @@ if recaptchafile.exists():
             recaptchakeys['RECAPTCHA_SECRET_KEY'] = data['RECAPTCHA_SECRET_KEY']
         except Exception as e:
             # app.logger.error('Failed loading recaptcha info at startup.') 
-            print('Failed loading recaptcha info at startup.')
+            print(f'Failed loading recaptcha info at startup: {e}')
             pass   
 
 app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,recaptchakeys=recaptchakeys)
@@ -68,8 +70,8 @@ app = create_app(debug=debugopt,mainpath=MAINPATH,workdir=WORKDIR,recaptchakeys=
 with app.app_context():
     try:        
         user = User.query.filter_by(email='admin@fpgaemu').first()
-    except:# OperationalError as err:  
-        # print('Database does not exist, creating...')
+    except BaseException as ee:# OperationalError as err:  
+        print(f'Error: {ee}')
         app.logger.info('Database does not exist, creating...')
         db.create_all()
         db.session.commit()
