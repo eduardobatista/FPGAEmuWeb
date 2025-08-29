@@ -1,6 +1,6 @@
 import re,time,subprocess,select,os,shutil,sys
 from pathlib import Path
-import pkg_resources
+# import pkg_resources
 
 from appp import socketio,logger,celery
 
@@ -495,9 +495,9 @@ def closeEmul(username):
         del emulprocs[username]
 
 def getsocketiofile():
-    socketiofile = 'socket.io.3.js'
-    if pkg_resources.get_distribution("python-socketio").version.startswith('4'):
-        socketiofile = 'socket.io.js'
+    # socketiofile = 'socket.io.3.js'
+    # if pkg_resources.get_distribution("python-socketio").version.startswith('4'):
+    socketiofile = 'socket.io.js'
     return socketiofile
 
 def getghwhierarchy(username,mainpath,filename):

@@ -4,16 +4,20 @@ WORKDIR /home
 
 # TODO: Remover celery e redis:
 RUN apt-get update \
-    && apt-get install -y supervisor nginx rsync cron \
-    && pip install SQLAlchemy flask==2.2.2 Werkzeug==2.2.2 flask_socketio==5.3.2 flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
+    && apt-get install -y supervisor nginx rsync cron
+    #&& pip install SQLAlchemy flask==2.2.2 Werkzeug==2.2.2 flask_socketio==5.3.2 flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 
 # EXPOSE 5000
 EXPOSE 80
 # EXPOSE 6379
 
+COPY --from=ghcr.io/astral-sh/uv:0.8.14 /uv /uvx /bin/
 COPY ./ fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
+
+WORKDIR /home/fpgaemuweb
+RUN uv sync --locked
 
 ARG CACHEDWORK
 ENV ENVCACHEDWORK ${CACHEDWORK}
