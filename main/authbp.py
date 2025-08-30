@@ -1,24 +1,24 @@
 from flask import current_app, render_template, redirect, url_for, request, flash, session
-from appp import db,socketio,celery
+from appp import db,celery
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import auth
 from flask_login import login_user, logout_user, current_user
 from .models import User
 from sqlalchemy.exc import OperationalError
-from pathlib import Path
 import random
 import string
-import time
 import re
 import requests
 import json
+import hashlib
+import hmac
 from datetime import datetime,timedelta
-from sqlalchemy import Table,MetaData,create_engine
+from sqlalchemy import Table,MetaData
 # from .funcs import checkLogin,clearLoginAttempt,getLoginInfo
 
 from .tasks import doLogin,doChangePass,doPassRecovery,MyTaskResp
 
-from celery.result import AsyncResult
+# from celery.result import AsyncResult
 
 def checkCeleryOn():
     insp = celery.control.inspect(timeout=0.1)   
@@ -56,7 +56,7 @@ def login_post():
         if not user:
             return "User not found in local database (cloud database is offline)."
 
-        if not check_password_hash(user.password, password):  
+        if not check_legacy_werkzeug_password(user.password, password):  
             return "Login failed! Please check your password and try again."
 
         login_user(user, remember=True)
@@ -98,8 +98,16 @@ def login_post():
             else:
                 del session["logindata"]  
                 return "Login failed."
-        
-        if not check_password_hash(user.password, session["logindata"][1]):
+
+        # print("=======")
+        # stored = user.password.split("$",2) 
+        # print(stored)
+        # print(session["logindata"][1])
+        # computed = hashlib.sha256((stored[1] + session["logindata"][1]).encode("utf-8")).hexdigest()
+        # print(user.password)
+        # print("=======")
+        # print(check_legacy_werkzeug_password(session["logindata"][1],user.password))
+        if not check_legacy_werkzeug_password(user.password,session["logindata"][1]): # check_password_hash(user.password, session["logindata"][1]):
             del session["logindata"]  
             return "Login failed! Please check your password and try again."
 
@@ -123,6 +131,30 @@ def login_post():
         resp = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
         session["logindata"] = (email,password,resp)
         return "AlreadyDone"
+
+
+def check_legacy_werkzeug_password(stored_hash,password):
+    """Check password against legacy Werkzeug sha256 format and modern formats"""
+    
+    # First try modern Werkzeug format
+    if stored_hash.startswith(('pbkdf2:', 'scrypt:', 'argon2:')):
+        return check_password_hash(stored_hash, password)
+    
+    # Handle legacy Werkzeug sha256 format: sha256$salt$hash
+    if stored_hash.startswith('sha256$'):
+        try:
+            method, salt, expected_hash = stored_hash.split('$', 2)
+            # Old Werkzeug used HMAC with salt as key
+            computed_hash = hmac.new(
+                salt.encode('utf-8'), 
+                password.encode('utf-8'), 
+                hashlib.sha256
+            ).hexdigest()
+            return hmac.compare_digest(expected_hash, computed_hash)
+        except ValueError:
+            return False
+    
+    return False
 
 @auth.route('/signup')
 def signup():
@@ -193,7 +225,7 @@ def signup_post():
             current_app.logger.error(err)
 
     # create a new user with the form data. Hash the password so the plaintext version isn't saved.
-    new_user = User(email=email, name=name, password=generate_password_hash(password, method='sha256'), 
+    new_user = User(email=email, name=name, password=generate_password_hash(password, method='pbkdf2:sha256'), 
                     role=role, viewAs=viewAs, lastPassRecovery=None, topLevelEntity=topLevelEntity, testEntity=testEntity)
 
     # add the new user to the database
@@ -202,7 +234,7 @@ def signup_post():
 
     # add the new user to the cloud database
     if current_app.clouddb is not None:
-        ndict = {'email': email, 'name': name, 'password': generate_password_hash(password, method='sha256'), 
+        ndict = {'email': email, 'name': name, 'password': generate_password_hash(password, method='pbkdf2:sha256'), 
                         'role': role, 'viewAs': viewAs, 'lastPassRecovery': None, 'topLevelEntity': topLevelEntity, 'testEntity': testEntity}
         try:             
             with current_app.clouddb.connect() as conncloud:     
@@ -280,7 +312,7 @@ def passrecovery():
         return "Can't recover password for this user."
     letters = string.ascii_lowercase
     randompass = ''.join(random.choice(letters) for i in range(6))
-    randompasshash = generate_password_hash(randompass, method='sha256')
+    randompasshash = generate_password_hash(randompass, method='pbkdf2:sha256')
 
     if not current_app.clouddb:
         user = User.query.filter_by(email=email).first()
@@ -351,11 +383,11 @@ def changepass():
 
     user = User.query.filter_by(email=email).first()
     
-    if not check_password_hash(user.password, oldpass):
+    if not check_legacy_werkzeug_password(user.password, oldpass):
         flash("Old password is not correct!")
         return redirect(url_for('adm.profile'))    
 
-    user.password = generate_password_hash(newpass, method='sha256')
+    user.password = generate_password_hash(newpass, method='pbkdf2:sha256')
     db.session.commit()
 
     if current_app.clouddb is None:
@@ -373,11 +405,11 @@ def changepass():
             current_app.logger.error(err)
 
         if celeryon:
-            task = doChangePass.delay(email,generate_password_hash(newpass, method='sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
+            task = doChangePass.delay(email,generate_password_hash(newpass, method='pbkdf2:sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
             session["changepassdata"] = (email,task.id)
             return "Starting"
         else:
-            resp = doChangePass(email,generate_password_hash(newpass, method='sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
+            resp = doChangePass(email,generate_password_hash(newpass, method='pbkdf2:sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
             return changepassstatus(True,resp)
 
 

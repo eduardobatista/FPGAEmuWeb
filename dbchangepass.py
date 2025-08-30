@@ -30,7 +30,8 @@ with engcloud.connect() as conncloud:
         # clouddata = conncloud.execute(table1.select())
         # print(clouddata.all())
         email = "eduardo.batista@ufsc.br"
-        newpass = generate_password_hash("figueira7", method='sha256')
+        newpass = generate_password_hash("testepass", method='sha256', )
+        print(newpass)
 
         # clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
         # usercloud = clouddata.first()

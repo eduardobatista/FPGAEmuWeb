@@ -75,7 +75,7 @@ with app.app_context():
         app.logger.info('Database does not exist, creating...')
         db.create_all()
         db.session.commit()
-        new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='sha256'), role='Admin', viewAs='')
+        new_user = User(email='admin@fpgaemu', name='Admin', password=generate_password_hash('admin', method='scrypt'), role='Admin', viewAs='')
         db.session.add(new_user)
         db.session.commit()
 
