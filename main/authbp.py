@@ -14,11 +14,8 @@ import hashlib
 import hmac
 from datetime import datetime,timedelta
 from sqlalchemy import Table,MetaData
-# from .funcs import checkLogin,clearLoginAttempt,getLoginInfo
 
 from .tasks import doLogin,doChangePass,doPassRecovery,MyTaskResp
-
-# from celery.result import AsyncResult
 
 def checkCeleryOn():
     insp = celery.control.inspect(timeout=0.1)   
@@ -170,7 +167,7 @@ def signup_post():
     if recaptchaOn:
         captcha_response = request.form['g-recaptcha-response']
         if not verifyCaptcha(captcha_response):
-            flash(f"Recaptcha validation failed.")
+            flash("Recaptcha validation failed.")
             return redirect(url_for('auth.login'))
     email = request.form.get('email').strip().lower()
     if re.search(r"[^@a-zA-Z0-9_\.\-]", email):
@@ -202,7 +199,7 @@ def signup_post():
             flash('Too many users in the system. Please contact the administrator.')
             return redirect(url_for('auth.signup'))        
     except OperationalError as err:
-        current_app.logger.error("Database does not exist.")
+        current_app.logger.error(f"Database does not exist. {err}")
         flash("Database does not exist.") 
         return redirect(url_for('auth.login'))
 
