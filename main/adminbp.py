@@ -106,17 +106,22 @@ def checkStdErr():
         return "Only for admins." 
 
 @adm.route('/checklogs', methods=['POST'])
-@login_required
 def checkLogs():
-    if (current_user.role == "Admin"):
-        file = Path(current_app.WORKDIR,"emulogs.log")
-        if file.exists():
-            with open(file,"r") as ff:
-                return ff.read().replace('\n','\n<br>') 
-        else:
-            return "File not found."
+    file = Path(current_app.WORKDIR,"emulogs.log")
+    if file.exists():
+        with open(file,"r") as ff:
+            return ff.read().replace('\n','\n<br>') 
     else:
-        return "Only for admins." 
+        return "File not found."
+    # if (current_user.role == "Admin"):
+    #     file = Path(current_app.WORKDIR,"emulogs.log")
+    #     if file.exists():
+    #         with open(file,"r") as ff:
+    #             return ff.read().replace('\n','\n<br>') 
+    #     else:
+    #         return "File not found."
+    # else:
+    #     return "Only for admins." 
 
 @adm.route('/deleteemulogs', methods=['POST'])
 @login_required
