@@ -21,7 +21,7 @@ def doLogin(userexists,email,password,clouddburl,loginkey):
 
     if (clouddburl is not None) and (clouddburl != ''):
         try:
-            clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
+            clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 10})
             with clouddb.connect() as conncloud:     
                 table1 = Table('user', MetaData(), autoload_with=clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))       
@@ -81,7 +81,7 @@ def doPassRecovery(email,randompasshash,clouddburl):
     ret = {"status":"Failed"}
 
     try:
-        clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 5})
+        clouddb = create_engine(clouddburl,connect_args={'connect_timeout': 10})
         with clouddb.connect() as conncloud:     
             table1 = Table('user', MetaData(), autoload_with=clouddb)
             clouddata = conncloud.execute(table1.select().where(table1.c.email==email))

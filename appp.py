@@ -79,7 +79,7 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
             with open(clouddbfile,'r') as cfile:
                 clouddbconf = cfile.read()
                 app.config['CLOUDDBINFO'] = clouddbconf
-                app.clouddb = create_engine(clouddbconf,connect_args={'connect_timeout': 5})
+                app.clouddb = create_engine(clouddbconf,connect_args={'connect_timeout': 10})
         except Exception as ex:
             app.logger.error(f"Cloud DB Error - {str(ex)}")
             app.config['CLOUDDBINFO'] = ''

@@ -204,7 +204,7 @@ def savecloudinfo():
         with open(current_app.WORKDIR / "clouddb.conf","w") as ff:
             ff.write(info)
             current_app.config['CLOUDDBINFO'] = info
-            current_app.clouddb = create_engine(info, connect_args={'connect_timeout': 5})
+            current_app.clouddb = create_engine(info, connect_args={'connect_timeout': 10})
     except Exception as e:
         return str(e)
         current_app.config['CLOUDDBINFO'] = ''
