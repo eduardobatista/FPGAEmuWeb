@@ -61,12 +61,13 @@ def login_post():
         current_app.logger.info(f"User {user.email} logged in successfully (local database).")
         return "Success"
 
-    insp = celery.control.inspect(timeout=0.1)   
-    try: 
-        celeryon = True if insp.ping() else False
-    except BaseException as err:
-        celeryon = False
-        current_app.logger.error(err) 
+    # insp = celery.control.inspect(timeout=0.1)   
+    # try: 
+    #     celeryon = True if insp.ping() else False
+    # except BaseException as err:
+    #     celeryon = False
+    #     current_app.logger.error(err) 
+    celeryon = False
 
     try:  
         if "logindata" in session.keys():
