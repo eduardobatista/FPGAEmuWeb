@@ -44,6 +44,8 @@ def login_post():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))   
 
+    current_app.logger.info("Login attempt (1).")
+
     # If CloudDb is not defined, use local database only:    
     if not current_app.clouddb:
         email = request.form.get('email').strip()
@@ -61,13 +63,14 @@ def login_post():
         current_app.logger.info(f"User {user.email} logged in successfully (local database).")
         return "Success"
 
-    # insp = celery.control.inspect(timeout=0.1)   
-    # try: 
-    #     celeryon = True if insp.ping() else False
-    # except BaseException as err:
-    #     celeryon = False
-    #     current_app.logger.error(err) 
-    celeryon = False
+    insp = celery.control.inspect(timeout=0.1)   
+    try: 
+        celeryon = True if insp.ping() else False
+    except BaseException as err:
+        celeryon = False
+        current_app.logger.error(err)
+
+    current_app.logger.info("Login attempt (2).")
 
     try:  
         if "logindata" in session.keys():
@@ -76,6 +79,8 @@ def login_post():
                 task = MyTaskResp("SUCCESS", session["logindata"][2])           
             else: 
                 task = doLogin.AsyncResult(session["logindata"][2])
+
+            current_app.logger.info("Login attempt (3).")
     
             # print(task)     
             if task.status == "PENDING":
@@ -97,6 +102,8 @@ def login_post():
                 else:
                     del session["logindata"]  
                     return "Login failed."
+                
+            current_app.logger.info("Login attempt (4).")
 
             # print("=======")
             # stored = user.password.split("$",2) 
@@ -110,6 +117,8 @@ def login_post():
                 del session["logindata"]  
                 return "Login failed! Please check your password and try again."
 
+            current_app.logger.info("Login attempt (5).")
+
             del session["logindata"]                    
             login_user(user, remember=True)
             session["CurrentProject"] = ""
@@ -118,6 +127,8 @@ def login_post():
         
         email = request.form.get('email').strip()
         password = request.form.get('password')
+
+        current_app.logger.info("Login attempt (6).")
 
         userexists = True if User.query.filter_by(email=email).first() else False
 

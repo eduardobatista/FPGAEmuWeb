@@ -139,18 +139,25 @@ def checkLogs():
     # else:
     #     return "Only for admins." 
 
-@adm.route('/deleteemulogs', methods=['POST'])
-@login_required
+# @adm.route('/deleteemulogs', methods=['POST'])
+# @login_required
+@adm.route('/deleteemulogs', methods=['POST','GET'])
 def deleteEmuLogs():
-    if (current_user.role == "Admin"):
-        file = Path(current_app.WORKDIR,"emulogs.log")
-        if file.exists():
-            file.unlink()
-            return "File deleted." 
-        else:
-            return "File not found."
+    file = Path(current_app.WORKDIR,"emulogs.log")
+    if file.exists():
+        file.unlink()
+        return "File deleted." 
     else:
-        return "Only for admins."
+        return "File not found."
+    # if (current_user.role == "Admin"):
+    #     file = Path(current_app.WORKDIR,"emulogs.log")
+    #     if file.exists():
+    #         file.unlink()
+    #         return "File deleted." 
+    #     else:
+    #         return "File not found."
+    # else:
+    #     return "Only for admins."
 
 
 @adm.route('/admin')
