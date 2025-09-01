@@ -44,7 +44,7 @@ def login_post():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))   
 
-    current_app.logger.info("Login attempt (1).")
+    current_app.logger.info(f"Login attempt (1) {session['logindata']}.")
 
     # If CloudDb is not defined, use local database only:    
     if not current_app.clouddb:
@@ -70,10 +70,12 @@ def login_post():
         celeryon = False
         current_app.logger.error(err)
 
-    current_app.logger.info("Login attempt (2).")
+    current_app.logger.info(f"Login attempt (2) {celeryon}.")
 
     try:  
         if "logindata" in session.keys():
+
+            current_app.logger.info("Login attempt (2.5).")
 
             if isinstance(session["logindata"][2],dict):
                 task = MyTaskResp("SUCCESS", session["logindata"][2])           
@@ -132,14 +134,20 @@ def login_post():
 
         userexists = True if User.query.filter_by(email=email).first() else False
 
+        current_app.logger.info("Login attempt (7).")
+
         if celeryon:
             task = doLogin.delay(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
             session["logindata"] = (email,password,task.id)
+            current_app.logger.info("Login attempt (8).")
             return "Starting"
         else:
             resp = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
             session["logindata"] = (email,password,resp)
+            current_app.logger.info("Login attempt (9).")
             return "AlreadyDone"
+        
+       
         
     except BaseException as err:    
         current_app.logger.error(f"Login error: {str(err)}")
