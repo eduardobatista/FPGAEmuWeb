@@ -63,7 +63,7 @@ def login_post():
         current_app.logger.info(f"User {user.email} logged in successfully (local database).")
         return "Success"
 
-    insp = celery.control.inspect(timeout=0.1)   
+    insp = celery.control.inspect(timeout=0.5)
     try: 
         celeryon = True if insp.ping() else False
     except BaseException as err:
@@ -107,14 +107,6 @@ def login_post():
                 
             current_app.logger.info("Login attempt (4).")
 
-            # print("=======")
-            # stored = user.password.split("$",2) 
-            # print(stored)
-            # print(session["logindata"][1])
-            # computed = hashlib.sha256((stored[1] + session["logindata"][1]).encode("utf-8")).hexdigest()
-            # print(user.password)
-            # print("=======")
-            # print(check_legacy_werkzeug_password(session["logindata"][1],user.password))
             if not check_legacy_werkzeug_password(user.password,session["logindata"][1]): # check_password_hash(user.password, session["logindata"][1]):
                 del session["logindata"]  
                 return "Login failed! Please check your password and try again."
