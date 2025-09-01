@@ -68,67 +68,72 @@ def login_post():
         celeryon = False
         current_app.logger.error(err) 
 
-    if "logindata" in session.keys():
+    try:  
+        if "logindata" in session.keys():
 
-        if isinstance(session["logindata"][2],dict):
-            task = MyTaskResp("SUCCESS", session["logindata"][2])           
-        else: 
-            task = doLogin.AsyncResult(session["logindata"][2])
- 
-        # print(task)     
-        if task.status == "PENDING":
-            return "Running"
-        elif task.status == "SUCCESS": 
-            if task.info['status'] == "NotFound":    
-                del session["logindata"]             
-                return "Login failed! Please check your login details and try again." 
-            elif task.info['status'] == "Pass":
-                user = User.query.filter_by(email=session["logindata"][0]).first()
-                user.password = task.info['password']
-                db.session.commit()
-            elif task.info['status'] == "NewUser":
-                new_user = User(email=task.info['email'], name=task.info['name'], password=task.info['password'], role=task.info['role'], viewAs=task.info['email'], 
-                                        lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
-                db.session.add(new_user)
-                db.session.commit()
-                user = User.query.filter_by(email=session["logindata"][0]).first()
-            else:
+            if isinstance(session["logindata"][2],dict):
+                task = MyTaskResp("SUCCESS", session["logindata"][2])           
+            else: 
+                task = doLogin.AsyncResult(session["logindata"][2])
+    
+            # print(task)     
+            if task.status == "PENDING":
+                return "Running"
+            elif task.status == "SUCCESS": 
+                if task.info['status'] == "NotFound":    
+                    del session["logindata"]             
+                    return "Login failed! Please check your login details and try again." 
+                elif task.info['status'] == "Pass":
+                    user = User.query.filter_by(email=session["logindata"][0]).first()
+                    user.password = task.info['password']
+                    db.session.commit()
+                elif task.info['status'] == "NewUser":
+                    new_user = User(email=task.info['email'], name=task.info['name'], password=task.info['password'], role=task.info['role'], viewAs=task.info['email'], 
+                                            lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
+                    db.session.add(new_user)
+                    db.session.commit()
+                    user = User.query.filter_by(email=session["logindata"][0]).first()
+                else:
+                    del session["logindata"]  
+                    return "Login failed."
+
+            # print("=======")
+            # stored = user.password.split("$",2) 
+            # print(stored)
+            # print(session["logindata"][1])
+            # computed = hashlib.sha256((stored[1] + session["logindata"][1]).encode("utf-8")).hexdigest()
+            # print(user.password)
+            # print("=======")
+            # print(check_legacy_werkzeug_password(session["logindata"][1],user.password))
+            if not check_legacy_werkzeug_password(user.password,session["logindata"][1]): # check_password_hash(user.password, session["logindata"][1]):
                 del session["logindata"]  
-                return "Login failed."
+                return "Login failed! Please check your password and try again."
 
-        # print("=======")
-        # stored = user.password.split("$",2) 
-        # print(stored)
-        # print(session["logindata"][1])
-        # computed = hashlib.sha256((stored[1] + session["logindata"][1]).encode("utf-8")).hexdigest()
-        # print(user.password)
-        # print("=======")
-        # print(check_legacy_werkzeug_password(session["logindata"][1],user.password))
-        if not check_legacy_werkzeug_password(user.password,session["logindata"][1]): # check_password_hash(user.password, session["logindata"][1]):
-            del session["logindata"]  
-            return "Login failed! Please check your password and try again."
+            del session["logindata"]                    
+            login_user(user, remember=True)
+            session["CurrentProject"] = ""
+            current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not celeryon else ''}.")
+            return "Success"
+        
+        email = request.form.get('email').strip()
+        password = request.form.get('password')
 
-        del session["logindata"]                    
-        login_user(user, remember=True)
-        session["CurrentProject"] = ""
-        current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not celeryon else ''}.")
-        return "Success"
+        userexists = True if User.query.filter_by(email=email).first() else False
 
+        if celeryon:
+            task = doLogin.delay(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
+            session["logindata"] = (email,password,task.id)
+            return "Starting"
+        else:
+            resp = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
+            session["logindata"] = (email,password,resp)
+            return "AlreadyDone"
+        
+    except BaseException as err:    
+        current_app.logger.error(f"Login error: {str(err)}")
+        return f"Login failed! Please try again: {str(err)}."
 
-    email = request.form.get('email').strip()
-    password = request.form.get('password')
-
-    userexists = True if User.query.filter_by(email=email).first() else False
-
-    if celeryon:
-        task = doLogin.delay(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
-        session["logindata"] = (email,password,task.id)
-        return "Starting"
-    else:
-        resp = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
-        session["logindata"] = (email,password,resp)
-        return "AlreadyDone"
-
+    
 
 def check_legacy_werkzeug_password(stored_hash,password):
     """Check password against legacy Werkzeug sha256 format and modern formats"""
