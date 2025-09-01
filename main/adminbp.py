@@ -105,7 +105,9 @@ def checkStdErr():
     else:
         return "Only for admins." 
 
-@adm.route('/checklogs', methods=['POST'])
+# @adm.route('/checklogs', methods=['POST'])
+# @login_required
+@adm.route('/checklogs', methods=['POST','GET'])
 def checkLogs():
     file = Path(current_app.WORKDIR,"emulogs.log")
     if file.exists():
