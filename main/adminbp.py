@@ -79,31 +79,45 @@ def serverProcs():
     else:
         return "Only for admins." 
 
-@adm.route('/checkstdout', methods=['POST'])
-@login_required
+# @adm.route('/checkstdout', methods=['POST'])
+# @login_required
+@adm.route('/checkstdout', methods=['POST', 'GET'])
 def checkStdOut():
-    if (current_user.role == "Admin"):
-        file = Path("/home","stdout.log")
-        if file.exists():
-            with open(file,"r") as ff:
-                return ff.read().replace('\n','\n<br>') 
-        else:
-            return "File not found."
+    file = Path("/home","stdout.log")
+    if file.exists():
+        with open(file,"r") as ff:
+            return ff.read().replace('\n','\n<br>') 
     else:
-        return "Only for admins." 
+        return "File not found."
+    # if (current_user.role == "Admin"):
+    #     file = Path("/home","stdout.log")
+    #     if file.exists():
+    #         with open(file,"r") as ff:
+    #             return ff.read().replace('\n','\n<br>') 
+    #     else:
+    #         return "File not found."
+    # else:
+    #     return "Only for admins." 
 
-@adm.route('/checkstderr', methods=['POST'])
-@login_required
+# @adm.route('/checkstderr', methods=['POST'])
+# @login_required
+@adm.route('/checkstderr', methods=['POST','GET'])
 def checkStdErr():
-    if (current_user.role == "Admin"):
-        file = Path("/home","stderr.log")
-        if file.exists():
-            with open(file,"r") as ff:
-                return ff.read().replace('\n','\n<br>') 
-        else:
-            return "File not found."
+    file = Path("/home","stderr.log")
+    if file.exists():
+        with open(file,"r") as ff:
+            return ff.read().replace('\n','\n<br>') 
     else:
-        return "Only for admins." 
+        return "File not found."
+    # if (current_user.role == "Admin"):
+    #     file = Path("/home","stderr.log")
+    #     if file.exists():
+    #         with open(file,"r") as ff:
+    #             return ff.read().replace('\n','\n<br>') 
+    #     else:
+    #         return "File not found."
+    # else:
+    #     return "Only for admins." 
 
 # @adm.route('/checklogs', methods=['POST'])
 # @login_required
