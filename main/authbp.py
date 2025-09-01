@@ -44,7 +44,7 @@ def login_post():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))   
 
-    current_app.logger.info(f"Login attempt (1) {session['logindata']}.")
+    current_app.logger.info("Login attempt (1).")
 
     # If CloudDb is not defined, use local database only:    
     if not current_app.clouddb:
