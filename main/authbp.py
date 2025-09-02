@@ -46,10 +46,13 @@ def login_post():
 
     current_app.logger.info("Login attempt (1).")
 
+    email = request.form.get('email').strip()
+    password = request.form.get('password')
+
     # If CloudDb is not defined, use local database only:    
     if not current_app.clouddb:
-        email = request.form.get('email').strip()
-        password = request.form.get('password')
+        # email = request.form.get('email').strip()
+        # password = request.form.get('password')
         user = User.query.filter_by(email=email).first()
 
         if not user:
@@ -119,9 +122,6 @@ def login_post():
             session["CurrentProject"] = ""
             current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not celeryon else ''}.")
             return "Success"
-        
-        email = request.form.get('email').strip()
-        password = request.form.get('password')
 
         current_app.logger.info("Login attempt (6).")
 
