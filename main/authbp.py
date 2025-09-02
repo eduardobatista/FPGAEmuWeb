@@ -18,7 +18,7 @@ from sqlalchemy import Table,MetaData
 from .tasks import doLogin,doChangePass,doPassRecovery,MyTaskResp
 
 def checkCeleryOn():
-    insp = celery.control.inspect(timeout=0.1)   
+    insp = celery.control.inspect(timeout=1.0)   
     try: 
         celeryon = True if insp.ping() else False
     except BaseException as err:
@@ -63,12 +63,13 @@ def login_post():
         current_app.logger.info(f"User {user.email} logged in successfully (local database).")
         return "Success"
 
-    insp = celery.control.inspect(timeout=0.5)
-    try: 
-        celeryon = True if insp.ping() else False
-    except BaseException as err:
-        celeryon = False
-        current_app.logger.error(err)
+    # insp = celery.control.inspect(timeout=0.5)
+    # try: 
+    #     celeryon = True if insp.ping() else False
+    # except BaseException as err:
+    #     celeryon = False
+    #     current_app.logger.error(err)
+    celeryon = checkCeleryOn()
 
     current_app.logger.info(f"Login attempt (2) {celeryon}.")
 
