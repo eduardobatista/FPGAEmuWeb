@@ -40,6 +40,12 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
         app.logger = logger
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
+        "pool_size": 10,
+        "connect_args": {"timeout": 5}
+    }
 
     app.config['CELERY_BROKER_URL'] = celery.conf.broker_url
     app.config['CELERY_RESULT_BACKEND'] = celery.conf.result_backend
