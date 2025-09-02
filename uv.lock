@@ -256,7 +256,7 @@ wheels = [
 
 [[package]]
 name = "flask"
-version = "3.0.3"
+version = "2.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "blinker" },
@@ -265,9 +265,9 @@ dependencies = [
     { name = "jinja2" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/41/e1/d104c83026f8d35dfd2c261df7d64738341067526406b40190bc063e829a/flask-3.0.3.tar.gz", hash = "sha256:ceb27b0af3823ea2737928a4d99d125a06175b8512c445cbd9a9ce200ef76842", size = 676315, upload-time = "2024-04-07T19:26:11.035Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/b7/4ace17e37abd9c21715dea5ee11774a25e404c486a7893fa18e764326ead/flask-2.3.3.tar.gz", hash = "sha256:09c347a92aa7ff4a8e7f3206795f30d826654baf38b873d0744cd571ca609efc", size = 672756, upload-time = "2023-08-21T19:52:35.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/80/ffe1da13ad9300f87c93af113edd0638c75138c42a0994becfacac078c06/flask-3.0.3-py3-none-any.whl", hash = "sha256:34e815dfaa43340d1d15a5c3a02b8476004037eb4840b34910c6e21679d288f3", size = 101735, upload-time = "2024-04-07T19:26:08.569Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/56/26f0be8adc2b4257df20c1c4260ddd0aa396cf8e75d90ab2f7ff99bc34f9/flask-2.3.3-py3-none-any.whl", hash = "sha256:f69fcd559dc907ed196ab9df0e48471709175e696d6e698dd4dbe940f96ce66b", size = 96112, upload-time = "2023-08-21T19:52:33.115Z" },
 ]
 
 [[package]]
@@ -332,7 +332,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "celery", extras = ["redis"], specifier = ">=5.5.3" },
-    { name = "flask", specifier = "==3.0.3" },
+    { name = "flask", specifier = "==2.3.3" },
     { name = "flask-login", specifier = ">=0.6.3" },
     { name = "flask-socketio", specifier = ">=5.5.1" },
     { name = "flask-sqlalchemy", specifier = ">=3.1.1" },
@@ -342,7 +342,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "requests", specifier = ">=2.32.5" },
-    { name = "werkzeug", specifier = "==3.0.2" },
+    { name = "werkzeug", specifier = ">=3.1.3" },
     { name = "yagmail", specifier = ">=0.15.293" },
 ]
 
@@ -1004,14 +1004,14 @@ wheels = [
 
 [[package]]
 name = "werkzeug"
-version = "3.0.2"
+version = "3.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markupsafe" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/84/00f7193d7bd88ced26cd5f868903e431054424610dc7c041bbe87d2a4d66/werkzeug-3.0.2.tar.gz", hash = "sha256:e39b645a6ac92822588e7b39a692e7828724ceae0b0d702ef96701f90e70128d", size = 802172, upload-time = "2024-04-01T18:57:15.942Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/69/83029f1f6300c5fb2471d621ab06f6ec6b3324685a2ce0f9777fd4a8b71e/werkzeug-3.1.3.tar.gz", hash = "sha256:60723ce945c19328679790e3282cc758aa4a6040e4bb330f53d30fa546d44746", size = 806925, upload-time = "2024-11-08T15:52:18.093Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/23/c9843d7550092ae7ad380611c238f44afef66f58f76c1dab7dcf313e4339/werkzeug-3.0.2-py3-none-any.whl", hash = "sha256:3aac3f5da756f93030740bc235d3e09449efcf65f2f55e3602e1d851b8f48795", size = 226830, upload-time = "2024-04-01T18:57:12.979Z" },
+    { url = "https://files.pythonhosted.org/packages/52/24/ab44c871b0f07f491e5d2ad12c9bd7358e527510618cb1b803a88e986db1/werkzeug-3.1.3-py3-none-any.whl", hash = "sha256:54b78bf3716d19a65be4fceccc0d1d7b89e608834989dfae50ea87564639213e", size = 224498, upload-time = "2024-11-08T15:52:16.132Z" },
 ]
 
 [[package]]
