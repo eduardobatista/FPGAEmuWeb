@@ -40,20 +40,14 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
         app.logger = logger
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        "pool_pre_ping": True,
-        "pool_recycle": 1800,
-        "pool_size": 10,
-        "connect_args": {"timeout": 5}
-    }
 
     app.config['CELERY_BROKER_URL'] = celery.conf.broker_url
     app.config['CELERY_RESULT_BACKEND'] = celery.conf.result_backend
 
     # If db.sqlite does not exist, erase seckey:
-    localdbfile = Path(workdir,"dbb.sqlite")
+    localdbfile = Path(workdir,"dbc.sqlite")
     localdburl = 'sqlite:///' + str(localdbfile) # WARNING: do not put local database in other place without changing the seckey.
-    seckeyfile = Path(workdir,"seckeyb")  # WARNING: do not put seckey in other place.
+    seckeyfile = Path(workdir,"seckeyc")  # WARNING: do not put seckey in other place.
     
     if not localdbfile.exists():
         if seckeyfile.exists():
