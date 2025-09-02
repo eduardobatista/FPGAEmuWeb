@@ -46,6 +46,9 @@ def login_post():
 
     current_app.logger.info("Login attempt (1).")
 
+    print(request.args)
+    print(request.form)
+
     email = request.form['email'].strip()
     password = request.form['password']
 
