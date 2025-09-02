@@ -74,7 +74,7 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     # Cloud Database:
     app.config['CLOUDDBINFO'] = ''
     app.clouddb = None
-    clouddbfile =  Path(workdir,'clouddb.conf');
+    clouddbfile =  Path(workdir,'clouddb.conf')
     if clouddbfile.exists():
         try:
             with open(clouddbfile,'r') as cfile:

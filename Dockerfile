@@ -12,13 +12,15 @@ EXPOSE 80
 # EXPOSE 6379
 
 COPY --from=ghcr.io/astral-sh/uv:0.8.14 /uv /uvx /bin/
-COPY ./ fpgaemuweb/
+COPY ./ /home/fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 
 WORKDIR /home/fpgaemuweb
 RUN uv sync --locked
 RUN ln -s /home/fpgaemuweb/.venv/bin/celery /usr/local/bin/celery
+
+WORKDIR /home
 
 ARG CACHEDWORK
 ENV ENVCACHEDWORK ${CACHEDWORK}
