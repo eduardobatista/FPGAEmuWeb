@@ -1,4 +1,5 @@
-import os,logging
+import os
+import logging
 from logging.handlers import WatchedFileHandler
 from pathlib import Path
 from flask import Flask
@@ -115,7 +116,7 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
         else:            
             app.yag = None
     except ImportError as e:
-        app.logger.error(f"YagMail module missing.")
+        app.logger.error(f"YagMail module missing. {e}")
         app.yag = None
 
     from main import main as main_blueprint
