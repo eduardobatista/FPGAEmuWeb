@@ -4,7 +4,7 @@ WORKDIR /home
 
 # TODO: Remover celery e redis:
 RUN apt-get update \
-    && apt-get install -y supervisor nginx rsync cron
+    && apt-get install -y supervisor rsync cron
     #&& pip install SQLAlchemy flask==2.2.2 Werkzeug==2.2.2 flask_socketio==5.3.2 flask_login flask_sqlalchemy requests yagmail psycopg2-binary gevent gevent-websocket psutil gunicorn celery[redis]
 
 # EXPOSE 5000
