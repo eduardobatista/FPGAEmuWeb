@@ -15,7 +15,7 @@ services:
     build: .
     image: fpgaemuweb
     ports:
-      - "80:80"
+      - "80:5000"
     volumes:
       - fpgaemuwork:/home/fpgaemuweb/work
 volumes:
