@@ -18,7 +18,8 @@ COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 
 WORKDIR /home/fpgaemuweb
 RUN uv sync --locked
-RUN ln -s /home/fpgaemuweb/.venv/bin/celery /usr/local/bin/celery
+COPY ./celerybash /usr/local/bin/celery
+# RUN ln -s /home/fpgaemuweb/.venv/bin/celery /usr/local/bin/celery
 
 WORKDIR /home
 

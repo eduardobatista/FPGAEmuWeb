@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# Wrapper script to execute celery via "uv run celery"
+# It passes all command-line arguments to the actual command.
+
+uv run celery "$@"

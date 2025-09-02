@@ -230,7 +230,7 @@ def signup_post():
         return redirect(url_for('auth.signup'))
     elif current_app.clouddb is not None:
         try:             
-            with current_app.clouddb.connect() as conncloud:     
+            with current_app.clouddb.connect() as conncloud:
                 table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
                 if clouddata.first() is not None:
