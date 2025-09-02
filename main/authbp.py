@@ -46,8 +46,8 @@ def login_post():
 
     current_app.logger.info("Login attempt (1).")
 
-    email = request.form.get('email').strip()
-    password = request.form.get('password')
+    email = request.form['email'].strip()
+    password = request.form['password']
 
     # If CloudDb is not defined, use local database only:    
     if not current_app.clouddb:
