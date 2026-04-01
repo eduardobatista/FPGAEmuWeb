@@ -27,8 +27,6 @@ else
   echo "ENVCACHEDWORK is false.";
 fi
 
-# cp /home/fpgaemuweb/work/dbb.sqlite /home/fpgaemuweb/work/seckeyb /home/fpgaemuweb/
-
 crontab /home/fpgaemuweb/crontask
 cron start
 

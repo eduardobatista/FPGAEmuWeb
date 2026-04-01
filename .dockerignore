@@ -7,7 +7,7 @@ LICENSE
 .vscode
 __pycache__
 work
-db.sqlite
+*.sqlite
 *.pyc
 seckey
 oauth2_creds.*
