@@ -184,6 +184,15 @@
 
         $(window).resize(adjustCanvas);
 
+        document.addEventListener("keydown", function(event) {
+            if (/^[0-9]$/.test(event.key)) {
+                $("#SW" + event.key).click();
+            } else if (/^[a-hA-H]$/.test(event.key)) {
+                var keynum = event.key.toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0) + 10;
+                $("#SW" + keynum).click();
+            }
+        });
+
         window.LEDRState = [0,0,0];
         window.HEXState = [0,0,0,0,0,0,0,0];
 

@@ -112,7 +112,7 @@ def doWorkBackup(workdir,destdir):
     ret = {"status":"Failed"}
 
     try:
-        bckfile = Path(destdir,"workbackup.tar")        
+        bckfile = Path(destdir,"workbackup.tar")
         if bckfile.exists():
             bckfile.unlink()
         shutil.make_archive(destdir + "/workbackup", 'tar', Path(workdir))        
