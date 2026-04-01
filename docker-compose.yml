@@ -4,8 +4,8 @@ services:
   celery: 
     image: fpgaemuweb
     working_dir: /home/fpgaemuweb
-    entrypoint: ['/bin/bash','-c']
-    command: ["celery -A appp.celery worker --concurrency=5"]
+    # entrypoint: ['/bin/bash','-c']
+    # command: ["celery -A appp.celery worker --concurrency=5"]
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -18,8 +18,5 @@ services:
       - "80:5000"
     volumes:
       - fpgaemuwork:/home/fpgaemuweb/work
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 volumes:
   fpgaemuwork: {}

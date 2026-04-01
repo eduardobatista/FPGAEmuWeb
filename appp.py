@@ -39,6 +39,8 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     if not debug:
         app.logger = logger
 
+    logger.info(f"Workdir is {app.WORKDIR} / {workdir}.")
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     app.config['CELERY_BROKER_URL'] = celery.conf.broker_url
