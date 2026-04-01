@@ -20,9 +20,9 @@ then
   echo "ENVCACHEDWORK is true.";
   mkdir -p /home/fpgaemuweb/cachedwork;
   rm /home/fpgaemuweb/work/workbackup.tar
-  cp -r /home/fpgaemuweb/work/* /home/fpgaemuweb/cachedwork/;
-  rm /home/fpgaemuweb/crontask;
-  echo "00,10,20,30,40,50 * * * * rsync -a /home/fpgaemuweb/cachedwork/ /home/fpgaemuweb/work/" >> /home/fpgaemuweb/crontask;
+  # cp -r /home/fpgaemuweb/work/* /home/fpgaemuweb/cachedwork/;
+  # rm /home/fpgaemuweb/crontask;
+  # echo "00,10,20,30,40,50 * * * * rsync -a /home/fpgaemuweb/cachedwork/ /home/fpgaemuweb/work/" >> /home/fpgaemuweb/crontask;
 else
   echo "ENVCACHEDWORK is false.";
 fi
