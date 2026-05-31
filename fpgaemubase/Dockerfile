@@ -3,7 +3,7 @@
 # FROM python:3.10-slim-bookworm
 FROM debian:bookworm-slim
 
-ADD ./builtghdl5.tar.gz /usr/local
+ADD ./builtghdl6.tar.gz /usr/local
 
 WORKDIR /home
 
