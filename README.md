@@ -9,7 +9,7 @@ Emulation:
 
 ![screenshot1](./imgs/screenshotemul.png)
 
-Simulation:
+Simulation and waveform visualization ([Surfer Waveformer Viewer](https://surfer-project.org/)!):
 
 ![screenshot2](./imgs/screenshotsim.png)
 
