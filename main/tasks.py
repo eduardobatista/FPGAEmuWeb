@@ -1,6 +1,5 @@
-from appp import celery
+from appp import huey
 
-# from .models import User
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import Table,MetaData
 from sqlalchemy import create_engine
@@ -9,12 +8,7 @@ from datetime import datetime,timedelta
 from pathlib import Path
 import shutil
 
-class MyTaskResp:
-    def __init__(self,status,info):
-        self.status = status
-        self.info = info
-
-@celery.task()
+@huey.task()
 def doLogin(userexists,email,password,clouddburl,loginkey):
 
     retorno = {'status':"NotFound" + ("ButExists" if userexists else "")}
@@ -40,7 +34,7 @@ def doLogin(userexists,email,password,clouddburl,loginkey):
     return retorno
 
 
-@celery.task()
+@huey.task()
 def doChangePass(email,newpass,name,role,clouddburl):
 
     ret = {"status":"Failed"}
@@ -70,12 +64,10 @@ def doChangePass(email,newpass,name,role,clouddburl):
         except BaseException as err:
             ret = {"status": "Error", "message":f"Exception: {err}"}
 
-    # current_app.logger.info(f"Successful password change for {email}.")
-
     return ret
 
 
-@celery.task()
+@huey.task()
 def doPassRecovery(email,randompasshash,clouddburl):
 
     ret = {"status":"Failed"}
@@ -87,10 +79,8 @@ def doPassRecovery(email,randompasshash,clouddburl):
             clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
             usercloud = clouddata.first()  
             if usercloud is not None:
-                userincloud = True
                 if (usercloud.lastPassRecovery is not None) and ( datetime.now() < (usercloud.lastPassRecovery+timedelta(minutes=10)) ):
                     ret = {"status":"NotAllowed10Min"}
-                    # return "Password recovery allowed only after 10 minutes"
                 else:
                     conncloud.execute(table1.update().where(table1.c.email==email).values(password=randompasshash,lastPassRecovery=datetime.now()))
                     conncloud.commit()
@@ -106,7 +96,7 @@ def doPassRecovery(email,randompasshash,clouddburl):
     return ret
 
 
-@celery.task()
+@huey.task()
 def doWorkBackup(workdir,destdir):
 
     ret = {"status":"Failed"}

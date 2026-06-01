@@ -15,9 +15,9 @@ from sqlalchemy.exc import OperationalError
 import shutil
 
 from .tasks import doWorkBackup
-from celery.result import AsyncResult
+from appp import huey
 
-from .authbp import checkCeleryOn
+from .authbp import checkHueyOn
 
 @adm.route('/profile')
 @login_required
@@ -360,11 +360,8 @@ def workbackup():
     if bckfile.exists():
         bckfile.unlink()
 
-    if checkCeleryOn():
-        # tempdir = Path(current_app.MAINPATH,"temp")
-        # if not tempdir.exists():
-        #     tempdir.mkdir(parents=True,exist_ok=True)
-        task = doWorkBackup.delay(str(workdir),str(workdir))        
+    if checkHueyOn():
+        task = doWorkBackup(str(workdir), str(workdir))        
         session["workbackup"] = task.id
         return "Starting"
     else:
@@ -376,22 +373,21 @@ def workbackup():
 
 
 @adm.route('/workbackupstatus')
-def workbackupstatus(nocelery=False,resp=None):
+def workbackupstatus(nohuey=False,resp=None):
     if ("workbackup" in session.keys()):       
-        task = doWorkBackup.AsyncResult(session["workbackup"])
-        if task.status == "PENDING":
+        info = huey.result(session["workbackup"], blocking=False, preserve=False)
+        if info is None:
             return "Running"
-        elif task.status == "SUCCESS": 
-            if 'workbackup' in session:
-                del session['workbackup']
-            if task.info['status'].startswith("Success"):
-                current_app.logger.info(f"Workdir backup finished successfully.")                
-                return "Success"                
-            elif task.info["status"] == "Error":
-                current_app.logger.info(f"Workdir backup error: {task.info['message']}.")                
-                return "Failed = " + f"Workdir backup error: {task.info['message']}."
-            else:
-                return "Failed"
+        if 'workbackup' in session:
+            del session['workbackup']
+        if info['status'].startswith("Success"):
+            current_app.logger.info(f"Workdir backup finished successfully.")                
+            return "Success"                
+        elif info["status"] == "Error":
+            current_app.logger.info(f"Workdir backup error: {info['message']}.")                
+            return "Failed = " + f"Workdir backup error: {info['message']}."
+        else:
+            return "Failed"
     else:
         return "Workbackup not running."
 

@@ -7,7 +7,8 @@ from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy # Database
 from flask_login import LoginManager
 from sqlalchemy import create_engine
-from celery import Celery
+# from huey import RedisHuey
+from huey import SqliteHuey
 
 socketio = SocketIO(async_mode="gevent",cors_allowed_origins='*')
 # socketio = SocketIO(cors_allowed_origins='*')
@@ -15,10 +16,8 @@ db = SQLAlchemy()  # Database
 logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
 
-celery = Celery('main.tasks', include=["main.tasks"])
-celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
-celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
-# celery.autodiscover_tasks()
+# huey = RedisHuey('fpgaemuweb', url=os.environ.get("REDIS_URL", "redis://redis:6379/0"))
+huey = SqliteHuey(filename="huey.db")
 
 
 def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
@@ -42,9 +41,6 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     logger.info(f"Workdir is {app.WORKDIR} / {workdir}.")
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    app.config['CELERY_BROKER_URL'] = celery.conf.broker_url
-    app.config['CELERY_RESULT_BACKEND'] = celery.conf.result_backend
 
     # If db.sqlite does not exist, erase seckey:
     localdbfile = Path(workdir,"dbb.sqlite")

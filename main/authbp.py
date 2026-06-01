@@ -1,5 +1,5 @@
 from flask import current_app, render_template, redirect, url_for, request, flash, session
-from appp import db,celery
+from appp import db, huey
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import auth
 from flask_login import login_user, logout_user, current_user
@@ -15,16 +15,16 @@ import hmac
 from datetime import datetime,timedelta
 from sqlalchemy import Table,MetaData
 
-from .tasks import doLogin,doChangePass,doPassRecovery,MyTaskResp
 
-def checkCeleryOn():
-    insp = celery.control.inspect(timeout=1.0)   
-    try: 
-        celeryon = True if insp.ping() else False
-    except BaseException as err:
-        celeryon = False
-        current_app.logger.error(err)
-    return celeryon
+from .tasks import doLogin,doChangePass,doPassRecovery
+
+def checkHueyOn():
+    return True
+    # try:
+    #     huey.storage.conn.ping()
+    #     return True
+    # except:
+    #     return False
 
 def verifyCaptcha(captcha_response):
     secret = current_app.config['RECAPTCHA_SECRET_KEY']
@@ -37,6 +37,8 @@ def verifyCaptcha(captcha_response):
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.sendfiles'))
+    if "logindata" in session.keys():
+        del session["logindata"]
     return render_template('login.html')
 
 @auth.route('/login', methods=['POST'])
@@ -46,16 +48,11 @@ def login_post():
 
     current_app.logger.info("Login attempt (1).")
 
-    # print(request.args)
-    # print(request.form)
-
     email = request.form['email'].strip()
     password = request.form['password']
 
     # If CloudDb is not defined, use local database only:    
     if not current_app.clouddb:
-        # email = request.form.get('email').strip()
-        # password = request.form.get('password')
         user = User.query.filter_by(email=email).first()
 
         if not user:
@@ -69,52 +66,47 @@ def login_post():
         current_app.logger.info(f"User {user.email} logged in successfully (local database).")
         return "Success"
 
-    # insp = celery.control.inspect(timeout=0.5)
-    # try: 
-    #     celeryon = True if insp.ping() else False
-    # except BaseException as err:
-    #     celeryon = False
-    #     current_app.logger.error(err)
-    celeryon = checkCeleryOn()
+    hueyon = checkHueyOn()
 
-    current_app.logger.info(f"Login attempt (2) {celeryon}.")
+    current_app.logger.info(f"Login attempt (2) {hueyon}.")
 
     try:  
         if "logindata" in session.keys():
 
             current_app.logger.info("Login attempt (2.5).")
 
-            if isinstance(session["logindata"][2],dict):
-                task = MyTaskResp("SUCCESS", session["logindata"][2])           
-            else: 
-                task = doLogin.AsyncResult(session["logindata"][2])
+            stored = session["logindata"][2]            
+            if isinstance(stored, dict):
+                # Sync fallback path: result already in session
+                info = stored
+            else:
+                # Async path: retrieve result from Huey
+                info = huey.result(stored, blocking=False, preserve=False)
+                if info is None:
+                    return "Running"
 
             current_app.logger.info("Login attempt (3).")
-    
-            # print(task)     
-            if task.status == "PENDING":
-                return "Running"
-            elif task.status == "SUCCESS": 
-                if task.info['status'] == "NotFound":    
-                    del session["logindata"]             
-                    return "Login failed! Please check your login details and try again." 
-                elif task.info['status'] == "Pass":
-                    user = User.query.filter_by(email=session["logindata"][0]).first()
-                    user.password = task.info['password']
-                    db.session.commit()
-                elif task.info['status'] == "NewUser":
-                    new_user = User(email=task.info['email'], name=task.info['name'], password=task.info['password'], role=task.info['role'], viewAs=task.info['email'], 
-                                            lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
-                    db.session.add(new_user)
-                    db.session.commit()
-                    user = User.query.filter_by(email=session["logindata"][0]).first()
-                else:
-                    del session["logindata"]  
-                    return "Login failed."
-                
+
+            if info['status'] == "NotFound":    
+                del session["logindata"]             
+                return "Login failed! Please check your login details and try again." 
+            elif info['status'] == "Pass":
+                user = User.query.filter_by(email=session["logindata"][0]).first()
+                user.password = info['password']
+                db.session.commit()
+            elif info['status'] == "NewUser":
+                new_user = User(email=info['email'], name=info['name'], password=info['password'], role=info['role'], viewAs=info['email'], 
+                                        lastPassRecovery=None, topLevelEntity='usertop', testEntity='usertest')
+                db.session.add(new_user)
+                db.session.commit()
+                user = User.query.filter_by(email=session["logindata"][0]).first()
+            else:
+                del session["logindata"]  
+                return "Login failed."
+            
             current_app.logger.info("Login attempt (4).")
 
-            if not check_legacy_werkzeug_password(user.password,session["logindata"][1]): # check_password_hash(user.password, session["logindata"][1]):
+            if not check_legacy_werkzeug_password(user.password,session["logindata"][1]):
                 del session["logindata"]  
                 return "Login failed! Please check your password and try again."
 
@@ -123,7 +115,7 @@ def login_post():
             del session["logindata"]                    
             login_user(user, remember=True)
             session["CurrentProject"] = ""
-            current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not celeryon else ''}.")
+            current_app.logger.info(f"User {user.email} logged in successfully{' (cloudb only)' if not hueyon else ''}.")
             return "Success"
 
         current_app.logger.info("Login attempt (6).")
@@ -132,18 +124,16 @@ def login_post():
 
         current_app.logger.info("Login attempt (7).")
 
-        if celeryon:
-            task = doLogin.delay(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
-            session["logindata"] = (email,password,task.id)
+        if hueyon:
+            task = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
+            session["logindata"] = (email, password, task.id)
             current_app.logger.info("Login attempt (8).")
             return "Starting"
         else:
-            resp = doLogin(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
-            session["logindata"] = (email,password,resp)
+            resp = doLogin.call_local(userexists, email, password, current_app.config['CLOUDDBINFO'], email)
+            session["logindata"] = (email, password, resp)
             current_app.logger.info("Login attempt (9).")
             return "AlreadyDone"
-        
-       
         
     except BaseException as err:    
         current_app.logger.error(f"Login error: {str(err)}")
@@ -224,8 +214,8 @@ def signup_post():
         flash("Database does not exist.") 
         return redirect(url_for('auth.login'))
 
-    user = User.query.filter_by(email=email).first() # if this returns a user, then the email already exists in database
-    if user: # if a user is found, we want to redirect back to signup page so user can try again
+    user = User.query.filter_by(email=email).first()
+    if user:
         flash('Email address already exists.')
         return redirect(url_for('auth.signup'))
     elif current_app.clouddb is not None:
@@ -275,45 +265,40 @@ def signup_post():
 
 
 @auth.route('/passrecoverystatus',methods=['POST'])
-def passrecstatus(nocelery=False,resp=None):
+def passrecstatus(nohuey=False, resp=None):
 
-    if ("passrecoverydata" in session.keys()) or nocelery:
+    if ("passrecoverydata" in session.keys()) or nohuey:
 
-        if nocelery:
-            task = MyTaskResp("SUCCESS", resp)
+        if nohuey:
+            info = resp
         else:        
-            task = doChangePass.AsyncResult(session["passrecoverydata"][2])
+            info = huey.result(session["passrecoverydata"][2], blocking=False, preserve=False)
+            if info is None:
+                return "Running"
 
-        # print(task.status)
-        if task.status == "PENDING":
-            return "Running"
+        if 'passrecoverydata' in session:
+            email = session['passrecoverydata'][0]
+            randompass = session['passrecoverydata'][1]
+            del session['passrecoverydata']
+        elif nohuey:
+            return "Failed"
+        else:
+            return "Failed"
 
-        elif task.status == "SUCCESS":
-
-            if 'passrecoverydata' in session:
-                email = session['passrecoverydata'][0]
-                randompass = session['passrecoverydata'][1]
-                del session['passrecoverydata']
-            else:
-                return "Failed"
-
-            if task.info['status'].startswith("NotAllowed10Min"):
-                return "NotAllowed10Min"
-            elif task.info['status'] == "Success": 
-                current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
-                         contents=f"Dear {email},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
-                # return "New password generated and sent to your email address, please check your inbox and spam box as well. In case of problems, please contact the system administrator."
-                current_app.logger.info(f"Successful password change for {email}{' (no celery)' if nocelery else ''}.")                
-                return "Success"
-            elif task.info['status'] == "NotFoundInCloud":
-                return "NotFoundInCloud"
-            elif task.info["status"] == "Error":
-                current_app.logger.info(f"Pass change error: {task.info['message']}.")                
-                return "Error"
-            else:
-                return "Failed"
-        
-        return "Failed"
+        if info['status'].startswith("NotAllowed10Min"):
+            return "NotAllowed10Min"
+        elif info['status'] == "Success": 
+            current_app.yag.send(to=email,subject="FPGAEmuWeb: Password Recovery",
+                     contents=f"Dear {email},\n\nYour FPGAEmuWeb password has been reset to \"{randompass}\".\n\nBest regards!")
+            current_app.logger.info(f"Successful password change for {email}{' (no huey)' if nohuey else ''}.")                
+            return "Success"
+        elif info['status'] == "NotFoundInCloud":
+            return "NotFoundInCloud"
+        elif info["status"] == "Error":
+            current_app.logger.info(f"Pass change error: {info['message']}.")                
+            return "Error"
+        else:
+            return "Failed"
 
     else:
         return "Failed"
@@ -349,39 +334,39 @@ def passrecovery():
             return "NotFoundLocal"
 
     if current_app.clouddb is not None:
-        if checkCeleryOn():
-            task = doPassRecovery.delay(email,randompasshash,current_app.config['CLOUDDBINFO'])
-            session["passrecoverydata"] = (email,randompass,task.id)
+        if checkHueyOn():
+            task = doPassRecovery(email, randompasshash, current_app.config['CLOUDDBINFO'])
+            session["passrecoverydata"] = (email, randompass, task.id)
             return "Starting"
         else:
-            resp = doPassRecovery(email,randompasshash,current_app.config['CLOUDDBINFO'])
-            session["passrecoverydata"] = (email,randompass)
-            return passrecstatus(False,resp)
+            resp = doPassRecovery.call_local(email, randompasshash, current_app.config['CLOUDDBINFO'])
+            session["passrecoverydata"] = (email, randompass)
+            return passrecstatus(nohuey=True, resp=resp)
 
 
 @auth.route('/changepassstatus', methods=['POST'])
-def changepassstatus(nocelery=False,resp=None):
+def changepassstatus(nohuey=False, resp=None):
 
-    if ("changepassdata" in session.keys()) or nocelery:
+    if ("changepassdata" in session.keys()) or nohuey:
 
-        if nocelery:
-            task = MyTaskResp("SUCCESS", resp)
+        if nohuey:
+            info = resp
         else:        
-            task = doChangePass.AsyncResult(session["changepassdata"][1])
+            info = huey.result(session["changepassdata"][1], blocking=False, preserve=False)
+            if info is None:
+                return "Running"
 
-        if task.status == "PENDING":
-            return "Running"
-        elif task.status == "SUCCESS":
-            if 'changepassdata' in session:
-                del session['changepassdata']
-            if task.info['status'].startswith("PassUpdated"):
-                current_app.logger.info(f"Successful password change for {current_user.email}{' (no celery)' if nocelery else ''}.")                
-                return "Success"
-            elif task.info["status"] == "Error":
-                current_app.logger.info(f"Pass change error: {task.info['message']}.")                
-                return "LocalOnly"
-            else:
-                return "Failed"
+        if 'changepassdata' in session:
+            del session['changepassdata']
+
+        if info['status'].startswith("PassUpdated"):
+            current_app.logger.info(f"Successful password change for {current_user.email}{' (no huey)' if nohuey else ''}.")                
+            return "Success"
+        elif info["status"] == "Error":
+            current_app.logger.info(f"Pass change error: {info['message']}.")                
+            return "LocalOnly"
+        else:
+            return "Failed"
 
 
 @auth.route('/changepass', methods=['POST'])
@@ -415,20 +400,13 @@ def changepass():
 
     else:
 
-        insp = celery.control.inspect(timeout=0.1)   
-        try: 
-            celeryon = True if insp.ping() else False
-        except BaseException as err:
-            celeryon = False
-            current_app.logger.error(err)
-
-        if celeryon:
-            task = doChangePass.delay(email,generate_password_hash(newpass, method='pbkdf2:sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
-            session["changepassdata"] = (email,task.id)
+        if checkHueyOn():
+            task = doChangePass(email, generate_password_hash(newpass, method='pbkdf2:sha256'), user.name, user.role, current_app.config['CLOUDDBINFO'])
+            session["changepassdata"] = (email, task.id)
             return "Starting"
         else:
-            resp = doChangePass(email,generate_password_hash(newpass, method='pbkdf2:sha256'),user.name,user.role,current_app.config['CLOUDDBINFO'])
-            return changepassstatus(True,resp)
+            resp = doChangePass.call_local(email, generate_password_hash(newpass, method='pbkdf2:sha256'), user.name, user.role, current_app.config['CLOUDDBINFO'])
+            return changepassstatus(nohuey=True, resp=resp)
 
 
 
@@ -437,6 +415,5 @@ def logout():
     session["CurrentProject"] = ""
     logout_user()
     return redirect(url_for('auth.login'))
-
 
 
