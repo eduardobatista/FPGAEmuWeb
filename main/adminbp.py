@@ -211,7 +211,7 @@ def cloudinfo():
                 table1 = Table('user', MetaData(), autoload_with=current_app.clouddb)
                 clouddata = conncloud.execute(table1.select())   
                 userscloud = [row[0] for row in clouddata.columns('email')]
-                print(userscloud)
+                # print(userscloud)
                 ret = f"{len(userscloud)} users are registered in the CloudDb.<br>"
                 ret += f"User list is: {userscloud}"
                 conncloud.close()

@@ -31,16 +31,16 @@ with engcloud.connect() as conncloud:
         # print(clouddata.all())
         email = "eduardo.batista@ufsc.br"
         newpass = generate_password_hash("testepass", method='sha256', )
-        print(newpass)
+        # print(newpass)
 
         # clouddata = conncloud.execute(table1.select().where(table1.c.email==email))
         # usercloud = clouddata.first()
         # print(usercloud)
 
         stmt = table1.update().where(table1.c.email==email).values(password=newpass)
-        print(stmt)
+        # print(stmt)
         rett = conncloud.execute(stmt)
-        print(rett)
+        # print(rett)
         conncloud.commit()
 
         # userscloud = [row['email'] for row in clouddata]
