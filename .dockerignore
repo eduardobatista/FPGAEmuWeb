@@ -19,3 +19,5 @@ dump.rdb
 backend/fpgaemu_c.o
 bulmasetup
 pythonenv
+/static/surfer_wasm/dist
+builtghdl6.tar.gz

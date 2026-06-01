@@ -272,6 +272,12 @@ def downloadsimfile():
     temppath = Path(current_app.MAINPATH,'temp',current_user.email)
     return send_from_directory(temppath, 'output.ghw', as_attachment=True, max_age=0)
 
+@main.route("/output.ghw")
+@login_required
+def getsimoutput():
+    temppath = Path(current_app.MAINPATH,'temp',current_user.email)
+    return send_from_directory(temppath, 'output.ghw', as_attachment=True, max_age=0)
+
 @main.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -318,4 +324,4 @@ def compilar():
 
 @main.route('/simresult') 
 def plottest():
-    return render_template('simresult.html',socketiofile=getsocketiofile(),currentproject=getcurrentproject(getuserpath()))
+    return render_template('simresult.html',socketiofile=getsocketiofile(),currentproject=getcurrentproject(getuserpath()),filetoload=url_for('main.getsimoutput'))

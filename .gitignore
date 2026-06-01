@@ -27,3 +27,6 @@ bulmasetup/package-lock.json
 builtghdl3.tar.gz
 fpgaemubase/builtghdl4.tar.gz
 fpgaemubase/builtghdl5.tar.gz
+fpgaemubase/builtghdl6.tar.gz
+static/surfer_wasm/dist
+surferdist.tar.gz

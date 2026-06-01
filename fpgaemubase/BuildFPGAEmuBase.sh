@@ -1,1 +1,1 @@
-docker build -t eduardobatista/fpgaemubase:ghdl5 .
+docker build -t eduardobatista/fpgaemubase:ghdl6 .

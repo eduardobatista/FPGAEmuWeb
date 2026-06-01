@@ -1,4 +1,4 @@
-FROM eduardobatista/fpgaemubase:ghdl5
+FROM eduardobatista/fpgaemubase:ghdl6
 
 WORKDIR /home
 
@@ -17,7 +17,8 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 
 WORKDIR /home/fpgaemuweb
-RUN uv sync --locked
+RUN uv sync --locked && \
+    ln -sf /home/surferdist /home/fpgaemuweb/static/surfer_wasm/dist
 COPY ./celerybash /usr/local/bin/celery
 # RUN ln -s /home/fpgaemuweb/.venv/bin/celery /usr/local/bin/celery
 
