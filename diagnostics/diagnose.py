@@ -491,6 +491,7 @@ def _io_test(c, directory, size_mib):
     small = [Path(directory) / f"{prefix}{os.getpid()}-s{i}" for i in range(100)]
     try:
         t0 = time.monotonic()
+        res["step"] = "create/write big file"
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         try:
             for i in range(size_mib):
@@ -506,6 +507,7 @@ def _io_test(c, directory, size_mib):
             os.close(fd)
         res["write_mibs"] = round(size_mib / max(t2 - t0, 1e-6), 1)
         res["fsync_s"] = round(t2 - t1, 3)
+        res["step"] = "read back big file"
         fd = os.open(path, os.O_RDONLY)
         try:
             if hasattr(os, "posix_fadvise"):
@@ -524,15 +526,18 @@ def _io_test(c, directory, size_mib):
         res["match"] = got.digest() == expected.digest()
         # Small files / metadata operations
         t5 = time.monotonic()
+        res["step"] = "write 100 small files"
         for i, f in enumerate(small):
             f.write_bytes(b"%d" % i * 50)
+        res["step"] = "read 100 small files"
         bad_small = sum(1 for i, f in enumerate(small) if f.read_bytes() != b"%d" % i * 50)
+        res["step"] = "delete 100 small files"
         for f in small:
             f.unlink()
         res["small_files_s"] = round(time.monotonic() - t5, 3)
         res["small_bad"] = bad_small
     except OSError as e:
-        res["error"] = oserror_text(e)
+        res["error"] = f"{oserror_text(e)} (during: {res.get('step', '?')}, file {e.filename or '?'})"
     finally:
         for f in [path] + small:
             try:
@@ -697,12 +702,17 @@ def check_python_env(c, mode):
         for l in tail(out, 20):
             c.fail(l)
     # Compile application sources (catches damaged .py files that were not imported above)
+    # (never walk the data dirs: work/ is on NFS and may stall)
     rc2, out2, _ = run_cmd([str(py), "-c",
-                            "import sys,pathlib\n"
-                            "for p in pathlib.Path(sys.argv[1]).rglob('*.py'):\n"
-                            "    if '.venv' in p.parts: continue\n"
-                            "    try: compile(p.read_bytes(), str(p), 'exec')\n"
-                            "    except BaseException as e: print('FAIL', p, type(e).__name__, e)\n",
+                            "import os,sys\n"
+                            "skip={'.venv','work','cachedwork','persistentwork','temp','.worksync','.git','node_modules'}\n"
+                            "for d,dirs,files in os.walk(sys.argv[1]):\n"
+                            "    dirs[:]=[x for x in dirs if x not in skip]\n"
+                            "    for f in files:\n"
+                            "        if not f.endswith('.py'): continue\n"
+                            "        p=os.path.join(d,f)\n"
+                            "        try: compile(open(p,'rb').read(), p, 'exec')\n"
+                            "        except BaseException as e: print('FAIL', p, type(e).__name__, e)\n",
                             str(APP_DIR)], timeout=120)
     for l in out2.splitlines():
         if l.startswith("FAIL"):
