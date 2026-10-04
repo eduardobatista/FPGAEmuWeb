@@ -469,6 +469,9 @@ def _remove_io_leftovers(directory):
     removed = []
     try:
         for old in Path(directory).glob(IO_TEST_PREFIX + "*"):
+            # Only old ones: a test of another container (or a stuck one that woke up) may be running.
+            if time.time() - old.lstat().st_mtime < 3600:
+                continue
             progress(f"removing leftover {old}")
             if old.is_dir() and not old.is_symlink():
                 shutil.rmtree(old, ignore_errors=True)
@@ -484,11 +487,13 @@ def _io_test(c, directory, size_mib):
     """Writes random data, fsyncs, evicts page cache and reads it back."""
     data = os.urandom(1 << 20)
     expected = hashlib.sha256()
-    prefix = IO_TEST_PREFIX
-    path = Path(directory) / f"{prefix}{os.getpid()}.bin"
+    # Unique per container and run: PIDs repeat in every container (the test process is often
+    # pid 17), so a stuck test of an old container could otherwise delete this one's files.
+    prefix = f"{IO_TEST_PREFIX}{socket.gethostname()}-{os.getpid()}-{secrets.token_hex(3)}"
+    path = Path(directory) / f"{prefix}.bin"
     res = {"dir": str(directory)}
     progress(f"write/read test in {directory}")
-    small = [Path(directory) / f"{prefix}{os.getpid()}-s{i}" for i in range(100)]
+    small = [Path(directory) / f"{prefix}-s{i}" for i in range(100)]
     try:
         t0 = time.monotonic()
         res["step"] = "create/write big file"
