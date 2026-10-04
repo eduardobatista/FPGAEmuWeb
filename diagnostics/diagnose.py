@@ -1200,6 +1200,24 @@ def _run_isolated(cid, title, fn, mode, timeout, d, report):
         return c.to_dict()
 
 
+def say(line):
+    """Prints and also writes to the container log (stdout of PID 1), visible in Portainer even
+    when the web app is down."""
+    print(line, flush=True)
+    if os.getpid() == 1:
+        return
+    try:
+        if os.path.samefile("/proc/self/fd/1", "/proc/1/fd/1"):
+            return
+    except OSError:
+        pass
+    try:
+        with open("/proc/1/fd/1", "a") as f:
+            f.write(f"[diagnostics {datetime.datetime.now():%H:%M:%S}] {line}\n")
+    except OSError:
+        pass
+
+
 def run(args):
     d = diag_dir()
     running = d / "running.json"
@@ -1212,6 +1230,7 @@ def run(args):
             print("Another diagnostics run is in progress.")
             return 1
         print("Previous run looks dead (no heartbeat for 2 min); starting a new one.")
+    say(f"Starting {args.mode} diagnostics ({args.reason})")
     report = {"started": now_iso(), "mode": args.mode, "reason": args.reason, "running": True,
               "diag_dir": str(d), "pid": os.getpid(), "heartbeat": time.time(), "checks": []}
     atomic_write(running, json.dumps(report))
@@ -1219,7 +1238,12 @@ def run(args):
     for cid, title, fn, tq, tf in CHECKS:
         res = _run_isolated(cid, title, fn, args.mode, tf if args.mode == "full" else tq, d, report)
         report["checks"].append(res)
-        print(f"[{res['status'].upper():4}] {title}: {res['summary']} ({res['duration']}s)", flush=True)
+        say(f"[{res['status'].upper():4}] {title}: {res['summary']} ({res['duration']}s)")
+        problems = [t for lvl, t in res["details"] if lvl in ("warn", "fail")]
+        for t in problems[:15]:
+            say(f"       {t[:300]}")
+        if len(problems) > 15:
+            say(f"       ... {len(problems) - 15} more (see /diagnostics)")
     report.pop("current", None)
     report["running"] = False
     report["finished"] = now_iso()
@@ -1237,7 +1261,7 @@ def run(args):
             f.unlink()
         except OSError:
             pass
-    print(f"Overall: {report['overall'].upper()} -> {d / 'latest.json'}")
+    say(f"Overall ({args.mode}, {args.reason}): {report['overall'].upper()} -> {d / 'latest.json'}")
     return 0
 
 
