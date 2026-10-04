@@ -30,3 +30,16 @@ fpgaemubase/builtghdl5.tar.gz
 fpgaemubase/builtghdl6.tar.gz
 static/surfer_wasm/dist
 surferdist.tar.gz
+
+# Runtime data (worksync local copy and state, data volumes, task queue)
+cachedwork/
+persistentwork/
+.worksync/
+huey.db
+huey.db-*
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Local tool configuration
+mise.toml
