@@ -13,6 +13,7 @@ from datetime import datetime
 import subprocess
 from sqlalchemy.exc import OperationalError
 import shutil
+from markupsafe import escape
 
 from .tasks import doWorkBackup
 from appp import huey
@@ -194,8 +195,16 @@ def getuserlist():
         except BaseException as err:
             current_app.logger.error(err)
     else:
-        userlist = User.query
-        rendereduserlist = render_template('userlist.html',userlist=userlist)
+        t0 = datetime.now()
+        try:
+            userlist = User.query.all()
+            rendereduserlist = render_template('userlist.html',userlist=userlist)
+        except BaseException as err:
+            secs = (datetime.now() - t0).total_seconds()
+            current_app.logger.error(f"Local user list failed after {secs:.1f}s: {err}")
+            return (f"<div class='notification is-danger is-light'>Error reading the local database "
+                    f"({current_app.WORKDIR}/dbb.sqlite) after {secs:.1f}s:<br><code>{escape(str(err))}</code><br>"
+                    f"See <a href='/diagnostics' target='_blank'>Server Diagnostics</a>.</div>")
     
     return rendereduserlist
 

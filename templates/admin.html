@@ -172,7 +172,7 @@
                 $.post("/getuserlist",{"type":"local"}).done( function (data) {
                         $("#ulistspinner").hide();
                         $("#userlist").html(data);
-                    });
+                    }).fail(userListFailed);
             });
 
             function loadDiagSummary() {
@@ -232,6 +232,12 @@
                 }, 1000);
             }
 
+            function userListFailed(xhr, status, err) {
+                $("#ulistspinner").hide();
+                $("#userlist").html("<div class='notification is-danger is-light'>Request failed: " +
+                    xhr.status + " " + (err || status) + ". See <a href='/diagnostics' target='_blank'>Server Diagnostics</a>.</div>");
+            }
+
             function getLocalList() {
                 $("#CloudTab").removeClass("is-active")
                 $("#LocalTab").addClass("is-active")
@@ -240,7 +246,7 @@
                 $.post("/getuserlist",{"type":"local"}).done( function (data) {
                         $("#ulistspinner").hide();
                         $("#userlist").html(data);
-                    });
+                    }).fail(userListFailed);
             }
 
             function getCloudList() {

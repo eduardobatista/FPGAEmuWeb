@@ -18,7 +18,6 @@ Reports are written to DIAG_DIR (latest.json + history/).
 import argparse
 import datetime
 import errno
-import fcntl
 import gzip
 import hashlib
 import hmac
@@ -168,6 +167,26 @@ def read_text(path, default=""):
         return Path(path).read_text(errors="replace")
     except OSError:
         return default
+
+
+_PROGRESS_FILE = None
+_progress_last = 0.0
+
+
+def progress(msg):
+    """Records what the running check is doing (shown in the UI; tells where a hung check got stuck)."""
+    global _progress_last
+    if _PROGRESS_FILE is None:
+        return
+    now = time.monotonic()
+    if now - _progress_last < 1.0:
+        return
+    _progress_last = now
+    try:
+        with open(_PROGRESS_FILE, "w") as f:
+            f.write(f"{msg} (since {now_iso()})")
+    except OSError:
+        pass
 
 
 # --------------------------------------------------------------------------- check object
@@ -719,89 +738,237 @@ def check_toolchain(c, mode):
     c.summary = "compile/simulate test " + ("passed" if c.status in ("ok", "info") else "with problems")
 
 
+SQLITE_PROBE = r"""
+import sqlite3, sys, time
+path, pragma = sys.argv[1], sys.argv[2]
+t = time.time()
+con = sqlite3.connect('file:' + path + '?mode=ro', uri=True, timeout=5)
+print('OPEN', round(time.time() - t, 2), flush=True)
+t = time.time()
+res = [r[0] for r in con.execute('PRAGMA ' + pragma).fetchall()]
+print('CHECK', round(time.time() - t, 2), flush=True)
+for r in res[:30]:
+    print('RES', r, flush=True)
+tables = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+print('TABLES', ' '.join(tables), flush=True)
+if 'user' in tables:
+    t = time.time()
+    n = con.execute('SELECT count(*) FROM user').fetchone()[0]
+    print('USERS', n, round(time.time() - t, 2), flush=True)
+"""
+
+
+def _file_locks(path):
+    """Processes holding POSIX/flock locks on path (from /proc/locks)."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return []
+    res = []
+    for line in read_text("/proc/locks").splitlines():
+        parts = line.split()
+        if "->" in parts:  # waiting for a lock
+            parts.remove("->")
+            waiting = True
+        else:
+            waiting = False
+        try:
+            maj, mnr, ino = parts[5].split(":")
+            if int(ino) != st.st_ino:
+                continue
+            pid = int(parts[4])
+        except (IndexError, ValueError):
+            continue
+        cmd = " ".join(read_text(f"/proc/{pid}/cmdline").replace("\0", " ").split())
+        res.append(f"{'WAITING for ' if waiting else ''}{parts[1]} {parts[3]} lock, range {' '.join(parts[6:8])}, "
+                   f"pid {pid} {cmd[:120]}")
+    return res
+
+
+def _open_by(path):
+    """Processes that have path open (via /proc/*/fd)."""
+    target = str(Path(path).resolve())
+    res = []
+    for d in Path("/proc").iterdir():
+        if not d.name.isdigit():
+            continue
+        try:
+            for fd in (d / "fd").iterdir():
+                try:
+                    if os.readlink(fd) == target:
+                        st = read_text(d / "stat")
+                        state = st[st.rindex(")") + 2] if ")" in st else "?"
+                        cmd = " ".join(read_text(d / "cmdline").replace("\0", " ").split())
+                        res.append(f"pid {d.name} (state {state}, waiting in {read_text(d / 'wchan').strip() or '?'}): {cmd[:120]}")
+                        break
+                except OSError:
+                    continue
+        except OSError:
+            continue
+    return res
+
+
 def _sqlite_check(c, path, full):
     try:
-        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10)
-        try:
-            rows = con.execute("PRAGMA integrity_check" if full else "PRAGMA quick_check").fetchall()
-            res = [r[0] for r in rows]
-            if res != ["ok"]:
-                c.fail(f"SQLite {path} is CORRUPTED:")
-                for r in res[:30]:
-                    c.fail("    " + r)
-                return
-            tables = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")]
-            extra = ""
-            if "user" in tables:
-                extra = f", {con.execute('SELECT count(*) FROM user').fetchone()[0]} users"
-            c.info(f"SQLite {path}: ok ({len(tables)} tables{extra})")
-        finally:
-            con.close()
-    except sqlite3.DatabaseError as e:
-        c.fail(f"SQLite {path}: {e}")
+        st = path.stat()
+        c.info(f"{path}: {fmt_bytes(st.st_size)}, modified {datetime.datetime.fromtimestamp(st.st_mtime).isoformat(timespec='seconds')}")
     except OSError as e:
-        c.fail(f"SQLite {path}: {oserror_text(e)}")
+        c.fail(f"Cannot stat {path}: {oserror_text(e)}")
+        return
+    for suffix in ("-journal", "-wal", "-shm"):
+        side = Path(str(path) + suffix)
+        if side.exists():
+            sz = side.stat().st_size
+            msg = f"{side.name} exists ({fmt_bytes(sz)})"
+            if suffix == "-journal" and sz > 0:
+                c.warn(msg + ": unfinished transaction (hot journal) — a writer crashed or is stuck mid-write.")
+            else:
+                c.info(msg)
+    locks = _file_locks(path)
+    for l in locks:
+        c.info(f"Lock on {path.name}: {l}")
+    for l in _open_by(path):
+        c.info(f"Open by {l}")
+    # Raw read of the whole file, in a subprocess so a blocked read cannot hang us.
+    progress(f"raw read of {path}")
+    rc, out, secs = run_cmd(["dd", f"if={path}", "of=/dev/null", "bs=1M"], timeout=120)
+    if rc is None:
+        c.fail(f"Reading the raw file {path} did NOT finish in 120 s (blocked read — disk/filesystem problem).")
+        return
+    if rc != 0:
+        c.fail(f"Raw read of {path} failed ({secs:.1f}s): {' | '.join(tail(out, 3))}")
+        return
+    c.info(f"Raw read of the whole file: {secs:.2f}s")
+    progress(f"SQLite check of {path}")
+    py = "/usr/bin/python3" if os.path.exists("/usr/bin/python3") else sys.executable
+    rc, out, secs = run_cmd([py, "-c", SQLITE_PROBE, str(path), "integrity_check" if full else "quick_check"],
+                            timeout=300)
+    lines = out.splitlines()
+    res = [l[4:] for l in lines if l.startswith("RES ")]
+    if rc is None:
+        stage = "opening the database" if not any(l.startswith("OPEN") for l in lines) else "running the integrity check"
+        c.fail(f"SQLite {path}: HUNG while {stage} (killed after 300 s).")
+        return
+    if rc != 0:
+        err = tail(out, 1)[0] if out.strip() else f"exit {rc}"
+        if "locked" in err:
+            c.fail(f"SQLite {path}: {err} — another process holds a lock:")
+            for l in locks:
+                c.fail(f"    {l}")
+        else:
+            c.fail(f"SQLite {path}: {err}")
+        return
+    if res != ["ok"]:
+        c.fail(f"SQLite {path} is CORRUPTED:")
+        for r in res:
+            c.fail("    " + r)
+        return
+    users = next((l.split() for l in lines if l.startswith("USERS")), None)
+    tables = next((l[7:].split() for l in lines if l.startswith("TABLES")), [])
+    extra = f", {users[1]} users (count took {users[2]}s)" if users else ""
+    c.info(f"SQLite {path}: integrity ok in {secs:.1f}s ({len(tables)} tables{extra})")
+    if secs > 30:
+        c.warn(f"SQLite check of {path} was slow ({secs:.0f}s)")
+
+
+def _databases():
+    dbs = [APP_DIR / "huey.db"]
+    for w in WORKDIRS:
+        if w.exists():
+            dbs += sorted(p for p in w.iterdir() if p.suffix in (".sqlite", ".db") and p.is_file())
+    return [d for d in dbs if d.exists()]
+
+
+def check_databases(c, mode):
+    """Local SQLite databases. The one the app uses is <workdir>/dbb.sqlite."""
+    cw = os.environ.get("ENVCACHEDWORK", "")
+    active = APP_DIR / ("work" if cw in ("", "False") else "cachedwork") / "dbb.sqlite"
+    c.info(f"Database used by the app (ENVCACHEDWORK={cw or 'unset'}): {active}")
+    if not active.exists():
+        c.warn(f"{active} does not exist (the app creates a new empty one at start).")
+    else:
+        sk = active.parent / "seckeyb"
+        if not sk.exists() or sk.stat().st_size != 16:
+            c.warn(f"{sk} missing or with unexpected size (sessions become invalid)")
+    dbs = _databases()
+    # The active database first: it is the one that matters.
+    dbs.sort(key=lambda p: p != active)
+    for db in dbs:
+        _sqlite_check(c, db, mode == "full")
+    c.summary = f"{len(dbs)} SQLite databases checked"
 
 
 TEXT_SUFFIXES = {".vhd", ".vhdl", ".map", ".json", ".conf", ".config", ".txt", ".py", ".sh", ".html", ".js", ".css"}
 
 
+def _scan_file(p, text_check):
+    """Streams the file. Returns (size, seconds, all_zero, has_nul, head)."""
+    size = 0
+    all_zero = True
+    has_nul = False
+    head = b""
+    t0 = time.monotonic()
+    with open(p, "rb") as f:
+        while True:
+            b = f.read(1 << 20)
+            if not b:
+                break
+            if size == 0:
+                head = b[:1 << 20]
+            size += len(b)
+            if all_zero and b.count(0) != len(b):
+                all_zero = False
+            if text_check and not has_nul and b"\x00" in b:
+                has_nul = True
+    return size, time.monotonic() - t0, all_zero and size > 0, has_nul, head
+
+
 def check_workdata(c, mode):
-    full = mode == "full"
     nfiles = nbytes = 0
-    slow = []
-    dbs = [APP_DIR / "huey.db"]
+    slow, big = [], []
     for w in WORKDIRS:
         if not w.exists():
             continue
-        dbs += [p for p in w.iterdir() if p.suffix in (".sqlite", ".db") and p.is_file()]
-        if (w / "dbb.sqlite").exists():
-            sk = w / "seckeyb"
-            if not sk.exists() or sk.stat().st_size != 16:
-                c.warn(f"{sk} missing or with unexpected size (sessions become invalid)")
         for p, err in iter_tree(w):
             if err:
                 c.fail(f"Cannot list {p}: {oserror_text(err)}")
                 continue
             if p.is_symlink() or not p.is_file():
                 continue
+            progress(f"reading {p}")
+            name = p.name.lower()
+            suffix = p.suffix.lower()
+            is_text = suffix in TEXT_SUFFIXES or name == ".config"
             try:
-                t0 = time.monotonic()
-                data = p.read_bytes()
-                secs = time.monotonic() - t0
+                size, secs, all_zero, has_nul, head = _scan_file(p, is_text)
             except OSError as e:
                 c.fail(f"I/O ERROR reading {p}: {oserror_text(e)}" if e.errno == errno.EIO
                        else f"Cannot read {p}: {oserror_text(e)}")
                 continue
             nfiles += 1
-            nbytes += len(data)
+            nbytes += size
+            big.append((size, str(p)))
             if secs > 1.0:
-                slow.append((secs, str(p), len(data)))
-            name = p.name.lower()
-            if data and data.count(0) == len(data):
-                c.fail(f"File contains only zero bytes (typical of lost data): {p} ({len(data)} B)")
-            elif (p.suffix.lower() in TEXT_SUFFIXES or name == ".config") and b"\x00" in data:
+                slow.append((secs, str(p), size))
+            if all_zero:
+                c.fail(f"File contains only zero bytes (typical of lost data): {p} ({size} B)")
+            elif is_text and has_nul:
                 c.fail(f"Text file contains NUL bytes (possible corruption): {p}")
-            elif p.suffix.lower() in (".vhd", ".vhdl", ".map"):
+            elif suffix in (".vhd", ".vhdl", ".map") and size <= len(head):
                 try:
-                    data.decode("utf-8")
+                    head.decode("utf-8")
                 except UnicodeDecodeError:
-                    try:
-                        data.decode("latin-1").encode("latin-1")
-                        c.info(f"Not UTF-8 (probably Latin-1, usually harmless): {p}")
-                    except Exception:
-                        c.warn(f"Undecodable text: {p}")
-            if p.suffix == ".json" and p.parent == w:
+                    c.info(f"Not UTF-8 (probably Latin-1, usually harmless): {p}")
+            if suffix == ".json" and p.parent == w and size <= len(head):
                 try:
-                    json.loads(data or b"{}")
+                    json.loads(head or b"{}")
                 except ValueError as e:
                     c.warn(f"Invalid JSON {p}: {e}")
-    for db in dbs:
-        if db.exists():
-            _sqlite_check(c, db, full)
     for secs, path, size in sorted(slow, reverse=True)[:15]:
         c.warn(f"Slow read: {path} ({fmt_bytes(size)}) took {secs:.1f}s")
-    c.summary = f"{nfiles} files ({fmt_bytes(nbytes)}) read, {len([d for d in dbs if d.exists()])} databases checked"
+    for size, path in sorted(big, reverse=True)[:5]:
+        c.info(f"Large file: {path} ({fmt_bytes(size)})")
+    c.summary = f"{nfiles} files ({fmt_bytes(nbytes)}) read"
 
 
 def _procs():
@@ -834,6 +1001,21 @@ def check_processes(c, mode):
     zombies = [p for p in procs if p["state"] == "Z"]
     for p in dstate:
         c.warn(f"Process in uninterruptible I/O wait (state D): pid {p['pid']} {p['cmd'][:150]}")
+        wchan = read_text(f"/proc/{p['pid']}/wchan").strip() or "?"
+        c.info(f"    kernel wait channel: {wchan}")
+        files = set()
+        try:
+            for fd in Path(f"/proc/{p['pid']}/fd").iterdir():
+                try:
+                    t = os.readlink(fd)
+                    if t.startswith("/") and not t.startswith(("/dev/", "/proc/")):
+                        files.add(t)
+                except OSError:
+                    pass
+        except OSError:
+            pass
+        for f in sorted(files)[:10]:
+            c.info(f"    open file: {f}")
     if len(zombies) > 5:
         c.warn(f"{len(zombies)} zombie processes")
     old_ghdl = [p for p in procs if p["name"] in ("ghdl", "ghdl1-llvm", "fpgatest") or "fpgacompileweb" in p["cmd"]]
@@ -929,50 +1111,115 @@ def check_logs(c, mode):
     c.summary = f"{total_disk} disk-related and {total_other} other error lines in {len(files)} log files"
 
 
+# (id, title, function, timeout in seconds for quick mode, for full mode)
 CHECKS = [
-    ("environment", "Environment", check_environment),
-    ("memory", "Memory, OOM and cgroup limits", check_memory),
-    ("filesystems", "Filesystems: read-only mounts, free space", check_filesystems),
-    ("io", "Disk write/read-back test", check_io),
-    ("kernel", "Kernel log (dmesg)", check_kernel_log),
-    ("image", "Image integrity (checksums vs build manifest)", check_image_integrity),
-    ("dpkg", "System packages integrity (dpkg --verify)", check_dpkg),
-    ("python", "Python environment (.venv)", check_python_env),
-    ("toolchain", "GHDL/GCC compile and simulation test", check_toolchain),
-    ("workdata", "User data and databases", check_workdata),
-    ("processes", "Processes and web app response", check_processes),
-    ("supervisor", "Supervisor restarts", check_supervisor),
-    ("logs", "Application logs", check_logs),
+    ("environment", "Environment", check_environment, 60, 60),
+    ("memory", "Memory, OOM and cgroup limits", check_memory, 60, 60),
+    ("filesystems", "Filesystems: read-only mounts, free space", check_filesystems, 120, 120),
+    ("io", "Disk write/read-back test", check_io, 300, 600),
+    ("kernel", "Kernel log (dmesg)", check_kernel_log, 60, 60),
+    ("databases", "Local SQLite databases (locks, integrity)", check_databases, 900, 1800),
+    ("image", "Image integrity (checksums vs build manifest)", check_image_integrity, 600, 3600),
+    ("dpkg", "System packages integrity (dpkg --verify)", check_dpkg, 60, 1200),
+    ("python", "Python environment (.venv)", check_python_env, 400, 400),
+    ("toolchain", "GHDL/GCC compile and simulation test", check_toolchain, 900, 900),
+    ("workdata", "User data files", check_workdata, 1200, 3600),
+    ("processes", "Processes and web app response", check_processes, 300, 300),
+    ("supervisor", "Supervisor restarts", check_supervisor, 60, 60),
+    ("logs", "Application logs", check_logs, 120, 120),
 ]
 
 
 # --------------------------------------------------------------------------- run
 
-def run(args):
-    d = diag_dir()
-    lock = open(d / "run.lock", "w")
+def _run_isolated(cid, title, fn, mode, timeout, d, report):
+    """Runs one check in a forked child, so a check blocked on I/O cannot hang the whole run."""
+    global _PROGRESS_FILE
+    pfile = d / "progress.txt"
     try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        pfile.unlink()
     except OSError:
-        print("Another diagnostics run is in progress.")
-        return 1
-    report = {"started": now_iso(), "mode": args.mode, "reason": args.reason, "running": True,
-              "diag_dir": str(d), "checks": []}
-    t_start = time.monotonic()
-    for cid, title, fn in CHECKS:
-        report["current"] = title
-        atomic_write(d / "running.json", json.dumps(report))
+        pass
+    r, w = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # child
+        os.close(r)
+        _PROGRESS_FILE = pfile
         c = Check(cid, title)
         t0 = time.monotonic()
         try:
-            fn(c, args.mode)
+            fn(c, mode)
         except Exception as e:
             c.fail(f"The check itself crashed: {type(e).__name__}: {e}")
             for l in traceback.format_exc().splitlines()[-8:]:
                 c.info(l)
         c.duration = time.monotonic() - t0
-        report["checks"].append(c.to_dict())
-        print(f"[{c.status.upper():4}] {title}: {c.summary} ({c.duration:.1f}s)", flush=True)
+        data = json.dumps(c.to_dict()).encode()
+        with os.fdopen(w, "wb") as f:
+            f.write(data)
+        os._exit(0)
+    os.close(w)
+    buf = b""
+    t0 = time.monotonic()
+    os.set_blocking(r, False)
+    import select
+    while True:
+        remaining = timeout - (time.monotonic() - t0)
+        if remaining <= 0:
+            break
+        ready, _, _ = select.select([r], [], [], min(3.0, remaining))
+        if ready:
+            chunk = os.read(r, 1 << 16)
+            if not chunk:
+                break
+            buf += chunk
+        report["current"] = f"{title} — {read_text(pfile).strip() or 'starting'}"
+        report["heartbeat"] = time.time()
+        try:
+            atomic_write(d / "running.json", json.dumps(report))
+        except OSError:
+            pass
+    os.close(r)
+    try:
+        if os.waitpid(pid, os.WNOHANG) == (0, 0):
+            raise ChildProcessError
+        return json.loads(buf)
+    except (ChildProcessError, ValueError):
+        try:
+            os.kill(pid, 9)
+            os.waitpid(pid, os.WNOHANG)
+        except OSError:
+            pass
+        c = Check(cid, title)
+        last = read_text(pfile).strip() or "(no progress information)"
+        c.fail(f"The check did NOT finish within {timeout} s and was abandoned. Last activity: {last}")
+        c.info("A process stuck here usually means a read/write that never returns (disk or filesystem problem) "
+               "or a lock held by another process. See 'Processes' below for processes in I/O wait (state D).")
+        c.summary = f"HUNG — last activity: {last[:150]}"
+        c.duration = time.monotonic() - t0
+        return c.to_dict()
+
+
+def run(args):
+    d = diag_dir()
+    running = d / "running.json"
+    if running.exists():
+        try:
+            hb = json.loads(running.read_text()).get("heartbeat", 0)
+        except (OSError, ValueError):
+            hb = 0
+        if time.time() - max(hb, running.stat().st_mtime) < 120:
+            print("Another diagnostics run is in progress.")
+            return 1
+        print("Previous run looks dead (no heartbeat for 2 min); starting a new one.")
+    report = {"started": now_iso(), "mode": args.mode, "reason": args.reason, "running": True,
+              "diag_dir": str(d), "pid": os.getpid(), "heartbeat": time.time(), "checks": []}
+    atomic_write(running, json.dumps(report))
+    t_start = time.monotonic()
+    for cid, title, fn, tq, tf in CHECKS:
+        res = _run_isolated(cid, title, fn, args.mode, tf if args.mode == "full" else tq, d, report)
+        report["checks"].append(res)
+        print(f"[{res['status'].upper():4}] {title}: {res['summary']} ({res['duration']}s)", flush=True)
     report.pop("current", None)
     report["running"] = False
     report["finished"] = now_iso()
@@ -985,10 +1232,11 @@ def run(args):
     atomic_write(d / "history" / f"{stamp}-{args.mode}.json", text)
     for old in sorted((d / "history").glob("*.json"))[:-HISTORY_KEEP]:
         old.unlink()
-    try:
-        (d / "running.json").unlink()
-    except OSError:
-        pass
+    for f in (running, d / "progress.txt"):
+        try:
+            f.unlink()
+        except OSError:
+            pass
     print(f"Overall: {report['overall'].upper()} -> {d / 'latest.json'}")
     return 0
 
@@ -1160,7 +1408,7 @@ def render_html(key="", banner="", run_url="/diagnostics/run", json_url="/diagno
         ids = [c[0] for c in CHECKS]
         out.append("<div class='card'><b>History</b> <span class='muted'>(newest first — intermittent problems show up here)</span>"
                    "<div class='scroll'><table><tr><th>Started</th><th>Mode</th><th>Reason</th><th>Overall</th>")
-        out += [f"<th title='{e(t)}'>{e(i[:5])}</th>" for i, t, _ in CHECKS]
+        out += [f"<th title='{e(ch[1])}'>{e(ch[0][:5])}</th>" for ch in CHECKS]
         out.append("</tr>")
         for h in hist:
             out.append(f"<tr><td>{e(str(h['started']))}</td><td>{e(str(h['mode']))}</td><td>{e(str(h['reason']))}</td>"
