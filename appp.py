@@ -126,36 +126,19 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
 
     socketio.init_app(app)
 
-    # Request timing in the Flask log (emulogs.log): requests slower than 1 s, and start/end of the
-    # endpoints being investigated (a START without END means the request never finished).
+    # Requests slower than 1 s go to the Flask log (emulogs.log).
     import time
     from flask import g, request
-    traced = ("/getuserlist",)
 
     @app.before_request
     def _req_start():
         g._t0 = time.monotonic()
-        env = request.environ
-        if request.method in ("POST", "PUT", "PATCH"):
-            # How the request body arrives (logged BEFORE reading it; never the body itself).
-            logger.info(f"REQ BODYINFO {request.method} {request.path} proto={env.get('SERVER_PROTOCOL')} "
-                        f"CL={env.get('CONTENT_LENGTH')!r} TE={env.get('HTTP_TRANSFER_ENCODING')!r} "
-                        f"expect={env.get('HTTP_EXPECT')!r} conn={env.get('HTTP_CONNECTION')!r} "
-                        f"ctype={env.get('CONTENT_TYPE')!r} input_terminated={env.get('wsgi.input_terminated')!r} "
-                        f"input={type(env.get('wsgi.input')).__name__}")
-            t = time.monotonic()
-            request.get_data(cache=True)
-            g._body_ms = (time.monotonic() - t) * 1000
-            if g._body_ms > 1000:
-                logger.info(f"REQ SLOW BODY {request.method} {request.path}: reading the body took {g._body_ms:.0f} ms")
-        if request.path in traced:
-            logger.info(f"REQ START {request.method} {request.path} {dict(request.form)}")
 
     @app.after_request
     def _req_end(response):
         ms = (time.monotonic() - g.get("_t0", time.monotonic())) * 1000
-        if ms > 1000 or request.path in traced:
-            logger.info(f"REQ END {request.method} {request.path} -> {response.status_code}, "
+        if ms > 1000:
+            logger.info(f"SLOW REQUEST {request.method} {request.path} -> {response.status_code}, "
                         f"{response.calculate_content_length() or '?'} bytes, {ms:.0f} ms")
         return response
 

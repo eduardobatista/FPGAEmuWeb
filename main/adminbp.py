@@ -89,83 +89,44 @@ def _logtail(file, lines=400):
     return "<br>".join(str(escape(l)) for l in text.splitlines()[-lines:])
 
 
-# @adm.route('/checkstdout', methods=['POST'])
-# @login_required
-@adm.route('/checkstdout', methods=['POST', 'GET'])
+@adm.route('/checkstdout', methods=['POST'])
+@login_required
 def checkStdOut():
+    if current_user.role != "Admin":
+        return "Only for admins."
     file = Path("/home","stdout.log")
-    if file.exists():
-        return _logtail(file)
-    else:
-        return "File not found."
-    # if (current_user.role == "Admin"):
-    #     file = Path("/home","stdout.log")
-    #     if file.exists():
-    #         with open(file,"r") as ff:
-    #             return ff.read().replace('\n','\n<br>') 
-    #     else:
-    #         return "File not found."
-    # else:
-    #     return "Only for admins." 
+    return _logtail(file) if file.exists() else "File not found."
 
-# @adm.route('/checkstderr', methods=['POST'])
-# @login_required
-@adm.route('/checkstderr', methods=['POST','GET'])
+
+@adm.route('/checkstderr', methods=['POST'])
+@login_required
 def checkStdErr():
+    if current_user.role != "Admin":
+        return "Only for admins."
     file = Path("/home","stderr.log")
-    if file.exists():
-        return _logtail(file)
-    else:
-        return "File not found."
-    # if (current_user.role == "Admin"):
-    #     file = Path("/home","stderr.log")
-    #     if file.exists():
-    #         with open(file,"r") as ff:
-    #             return ff.read().replace('\n','\n<br>') 
-    #     else:
-    #         return "File not found."
-    # else:
-    #     return "Only for admins." 
+    return _logtail(file) if file.exists() else "File not found."
 
-# @adm.route('/checklogs', methods=['POST'])
-# @login_required
-@adm.route('/checklogs', methods=['POST','GET'])
+
+@adm.route('/checklogs', methods=['POST'])
+@login_required
 def checkLogs():
+    if current_user.role != "Admin":
+        return "Only for admins."
     file = Path(current_app.WORKDIR,"emulogs.log")
-    if file.exists():
-        with open(file,"r") as ff:
-            return ff.read().replace('\n','\n<br>') 
-    else:
-        return "File not found."
-    # if (current_user.role == "Admin"):
-    #     file = Path(current_app.WORKDIR,"emulogs.log")
-    #     if file.exists():
-    #         with open(file,"r") as ff:
-    #             return ff.read().replace('\n','\n<br>') 
-    #     else:
-    #         return "File not found."
-    # else:
-    #     return "Only for admins." 
+    return _logtail(file, lines=2000) if file.exists() else "File not found."
 
-# @adm.route('/deleteemulogs', methods=['POST'])
-# @login_required
-@adm.route('/deleteemulogs', methods=['POST','GET'])
+
+@adm.route('/deleteemulogs', methods=['POST'])
+@login_required
 def deleteEmuLogs():
+    if current_user.role != "Admin":
+        return "Only for admins."
     file = Path(current_app.WORKDIR,"emulogs.log")
     if file.exists():
         file.unlink()
         return "File deleted." 
     else:
         return "File not found."
-    # if (current_user.role == "Admin"):
-    #     file = Path(current_app.WORKDIR,"emulogs.log")
-    #     if file.exists():
-    #         file.unlink()
-    #         return "File deleted." 
-    #     else:
-    #         return "File not found."
-    # else:
-    #     return "Only for admins."
 
 
 @adm.route('/admin')
