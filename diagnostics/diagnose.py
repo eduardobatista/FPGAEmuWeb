@@ -431,6 +431,10 @@ def check_filesystems(c, mode):
             continue
         ro = "ro" in m["opts"].split(",") or "ro" in m["superopts"].split(",")
         line = f"{p} -> {m['mountpoint']} ({m['fstype']} from {m['source']}, {m['opts']})"
+        if m["fstype"].startswith("nfs") and m["mountpoint"] not in seen:
+            c.warn(f"{p} is on NETWORK storage ({m['fstype']}, server options: {m['superopts']}). "
+                   f"Any NFS stall blocks the processes reading it (state D) and freezes the single web worker; "
+                   f"SQLite on NFS is also not recommended (unreliable locking).")
         if ro:
             c.fail(f"READ-ONLY mount: {line}. Linux remounts a filesystem read-only after detecting errors.")
         elif m["mountpoint"] not in seen:
@@ -456,12 +460,35 @@ def check_filesystems(c, mode):
     c.summary = f"{len(seen)} filesystems checked"
 
 
+IO_TEST_PREFIX = ".fpgaemu-diag-"
+
+
+def _remove_io_leftovers(directory):
+    """Leftovers of previous (killed) runs. Older versions created a directory here, which the
+    profile page would list as a user, so remove those too."""
+    removed = []
+    try:
+        for old in Path(directory).glob(IO_TEST_PREFIX + "*"):
+            progress(f"removing leftover {old}")
+            if old.is_dir() and not old.is_symlink():
+                shutil.rmtree(old, ignore_errors=True)
+            else:
+                old.unlink()
+            removed.append(str(old))
+    except OSError:
+        pass
+    return removed
+
+
 def _io_test(c, directory, size_mib):
     """Writes random data, fsyncs, evicts page cache and reads it back."""
     data = os.urandom(1 << 20)
     expected = hashlib.sha256()
-    path = Path(directory) / f".fpgaemu-diag-{os.getpid()}.bin"
+    prefix = IO_TEST_PREFIX
+    path = Path(directory) / f"{prefix}{os.getpid()}.bin"
     res = {"dir": str(directory)}
+    progress(f"write/read test in {directory}")
+    small = [Path(directory) / f"{prefix}{os.getpid()}-s{i}" for i in range(100)]
     try:
         t0 = time.monotonic()
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -469,7 +496,9 @@ def _io_test(c, directory, size_mib):
             for i in range(size_mib):
                 block = bytes([i & 0xFF]) + data[1:]
                 expected.update(block)
-                os.write(fd, block)
+                view = memoryview(block)
+                while view:
+                    view = view[os.write(fd, view):]
             t1 = time.monotonic()
             os.fsync(fd)
             t2 = time.monotonic()
@@ -495,21 +524,21 @@ def _io_test(c, directory, size_mib):
         res["match"] = got.digest() == expected.digest()
         # Small files / metadata operations
         t5 = time.monotonic()
-        sdir = Path(directory) / f".fpgaemu-diag-small-{os.getpid()}"
-        sdir.mkdir(exist_ok=True)
-        for i in range(100):
-            (sdir / f"f{i}").write_bytes(b"%d" % i * 50)
-        bad_small = sum(1 for i in range(100) if (sdir / f"f{i}").read_bytes() != b"%d" % i * 50)
-        shutil.rmtree(sdir)
+        for i, f in enumerate(small):
+            f.write_bytes(b"%d" % i * 50)
+        bad_small = sum(1 for i, f in enumerate(small) if f.read_bytes() != b"%d" % i * 50)
+        for f in small:
+            f.unlink()
         res["small_files_s"] = round(time.monotonic() - t5, 3)
         res["small_bad"] = bad_small
     except OSError as e:
         res["error"] = oserror_text(e)
     finally:
-        try:
-            path.unlink()
-        except OSError:
-            pass
+        for f in [path] + small:
+            try:
+                f.unlink()
+            except OSError:
+                pass
     return res
 
 
@@ -518,6 +547,8 @@ def check_io(c, mode):
     mounts = _mounts()
     done = set()
     for p in key_paths():
+        for f in _remove_io_leftovers(p):
+            c.info(f"Removed leftover of a previous test: {f}")
         m = _mount_for(p, mounts)
         mp = m["mountpoint"] if m else str(p)
         if mp in done or not os.access(p, os.W_OK):
@@ -1123,7 +1154,7 @@ CHECKS = [
     ("dpkg", "System packages integrity (dpkg --verify)", check_dpkg, 60, 1200),
     ("python", "Python environment (.venv)", check_python_env, 400, 400),
     ("toolchain", "GHDL/GCC compile and simulation test", check_toolchain, 900, 900),
-    ("workdata", "User data files", check_workdata, 1200, 3600),
+    ("workdata", "User data files", check_workdata, 600, 1200),
     ("processes", "Processes and web app response", check_processes, 300, 300),
     ("supervisor", "Supervisor restarts", check_supervisor, 60, 60),
     ("logs", "Application logs", check_logs, 120, 120),
@@ -1165,6 +1196,7 @@ def _run_isolated(cid, title, fn, mode, timeout, d, report):
     t0 = time.monotonic()
     os.set_blocking(r, False)
     import select
+    eof = False
     while True:
         remaining = timeout - (time.monotonic() - t0)
         if remaining <= 0:
@@ -1173,6 +1205,7 @@ def _run_isolated(cid, title, fn, mode, timeout, d, report):
         if ready:
             chunk = os.read(r, 1 << 16)
             if not chunk:
+                eof = True
                 break
             buf += chunk
         report["current"] = f"{title} — {read_text(pfile).strip() or 'starting'}"
@@ -1182,11 +1215,20 @@ def _run_isolated(cid, title, fn, mode, timeout, d, report):
         except OSError:
             pass
     os.close(r)
-    try:
-        if os.waitpid(pid, os.WNOHANG) == (0, 0):
-            raise ChildProcessError
-        return json.loads(buf)
-    except (ChildProcessError, ValueError):
+    if eof:  # the child closed the pipe: it finished (or died); reap it and use its result
+        try:
+            _, wstatus = os.waitpid(pid, 0)
+        except ChildProcessError:
+            wstatus = 0
+        try:
+            return json.loads(buf)
+        except ValueError:
+            c = Check(cid, title)
+            c.fail(f"The check process ended without a result (wait status {wstatus}).")
+            c.summary = "check process died"
+            c.duration = time.monotonic() - t0
+            return c.to_dict()
+    else:
         try:
             os.kill(pid, 9)
             os.waitpid(pid, os.WNOHANG)
