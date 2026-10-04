@@ -188,6 +188,21 @@ def fix_blackboxes(netlist):
             f"port directions guessed." for t in sorted(warnings)]
 
 
+def normalize_constants(netlist):
+    """netlistsvg accepts only bit numbers and the constants "0", "1" and "x". yosys also emits
+    "z" (outputs nobody drives, e.g. HEX7 in the usertop template): draw those as "x"."""
+    def fix(bits):
+        return [b if isinstance(b, int) or b in ("0", "1", "x") else "x" for b in bits]
+    for module in netlist["modules"].values():
+        for p in module.get("ports", {}).values():
+            p["bits"] = fix(p["bits"])
+        for n in module.get("netnames", {}).values():
+            n["bits"] = fix(n["bits"])
+        for c in module.get("cells", {}).values():
+            c["connections"] = {k: fix(v) for k, v in c.get("connections", {}).items()}
+    return netlist
+
+
 def to_blocks(netlist):
     """Copy of the netlist where each module's primitive cells become a single 'logic' cell."""
     out = {"creator": netlist.get("creator", ""), "modules": {}}

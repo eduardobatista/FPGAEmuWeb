@@ -136,7 +136,11 @@
                 console.error("Block diagram:", err);
                 div.innerHTML = "";
                 $("#dlbtn").prop("disabled", true);
-                const msg = (err && err.message) || String(err);
+                // netlistsvg rejects invalid netlists with a (long) list of schema errors
+                const msg = Array.isArray(err)
+                    ? `invalid netlist (${err[0].message} at ${err[0].dataPath}` +
+                      (err.length > 1 ? `, and ${err.length - 1} more problems)` : ")")
+                    : ((err && err.message) || String(err));
                 showError(msg.startsWith("This module") ? msg :
                           "Could not draw this module: " + msg +
                           (err instanceof RangeError ? " (too complex; try the Blocks view or a sub-block)" : ""));

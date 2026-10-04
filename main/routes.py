@@ -9,7 +9,7 @@ from .funcs import *
 from flask_login import login_required, current_user, AnonymousUserMixin
 from .models import User
 from appp import db
-from .diagram import list_entities, synthesize, display_names, fix_blackboxes, to_blocks, rename_modules, DiagramError
+from .diagram import list_entities, synthesize, display_names, fix_blackboxes, normalize_constants, to_blocks, rename_modules, DiagramError
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -239,6 +239,7 @@ def diagramdata():
         current_app.logger.info(f"{current_user.email}: Block diagram of {entity} failed.")
         return jsonify(error=str(err))
     warnings = fix_blackboxes(netlist)
+    normalize_constants(netlist)
     names = display_names(netlist, [e for _, e in list_entities(sources, folder)])
     top = next((m for m, v in netlist["modules"].items() if v.get("attributes", {}).get("top")), entity)
     current_app.logger.info(f"{current_user.email}: Block diagram of {relfile}:{entity}.")
