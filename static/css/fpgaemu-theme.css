@@ -122,9 +122,10 @@ hr{background:var(--fe-border);height:1px}
 /* ---------- tags / notifications / messages ---------- */
 .tag{border-radius:20px;font-size:12px;font-weight:600;padding:0 9px;height:1.9em}
 .tag:not(body){background:var(--fe-nav-active);color:var(--fe-muted)}
-.tag.is-success,.tag.is-primary{background:#ddf6e4;color:#005f2e}
-.tag.is-danger{background:#ffe7e4;color:#a5292b}
-.tag.is-warning{background:#fff1dc;color:#8a4b00}
+.tag:not(body).is-success,.tag:not(body).is-primary{background:#ddf6e4;color:#005f2e}
+.tag:not(body).is-danger{background:#ffe7e4;color:#a5292b}
+.tag:not(body).is-warning{background:#fff1dc;color:#8a4b00}
+.tag:not(body).is-info,.tag:not(body).is-link,.tag:not(body).is-dark,.tag:not(body).is-light{background:var(--fe-nav-active);color:var(--fe-muted)}
 .notification{border-radius:var(--fe-radius-input);background:var(--fe-surface-2);color:var(--fe-text-2);border:1px solid var(--fe-border);font-size:14px}
 .notification.is-danger,.notification.is-danger.is-light{background:#fff3f1;color:#a5292b;border-color:#f6d3ce}
 .notification.is-warning,.notification.is-warning.is-light{background:#fff7ea;color:#7a4300;border-color:#f6dfb9}

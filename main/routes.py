@@ -63,7 +63,7 @@ def sendfiles():
                 else:
                     ff.rmdir()
     else: 
-        projectnames = []
+        projectnames = [x.stem for x in getdirlist(sessionpath)]   # the project list stays visible
         sessionpath = sessionpath / cproj
     aux = getvhdfilelist(sessionpath) #list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))  
     filenames = [x.stem for x in aux]

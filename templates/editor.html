@@ -1,134 +1,156 @@
 {% extends "base.html" %}
 
 {% block styles %}
-
   <style>
-      #editor { 
-        position: relative;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        height: 500px;
-        width: 100%;
-        margin-top: 5px;
+      html, body { overflow: hidden; }
+      .fe-editor-body { flex: 1; display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 0; }
+      .fe-editor-files { padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+      .fe-editor-files .section-label { padding: 0 10px 8px; }
+      .fe-editor-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+      #editor {
+        flex: 1; min-height: 0; width: 100%; margin: 0;
         font-variant-ligatures: none;
         font-feature-settings: "liga" 0, "calt" 0;
-    }
+      }
+      .fe-crumb { display: flex; align-items: center; gap: 8px; font-family: var(--fe-mono); font-size: 14px; color: var(--fe-muted);
+                  margin-right: auto !important; min-width: 0; overflow: hidden; flex: 0 1 auto !important; }
+      .fe-crumb .fe-sep { color: var(--fe-faint-2); }
+      .fe-crumb .fe-file { color: var(--fe-ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+      .fe-crumb .fe-dirty { width: 7px; height: 7px; border-radius: 50%; background: var(--fe-warning); flex: none; display: none; }
+      .fe-crumb.is-dirty .fe-dirty { display: inline-block; }
+      .fe-toolbar .dropdown-menu { min-width: 13rem; }
+      .fe-toolbar .dropdown-item[disabled] { color: var(--fe-faint-2); pointer-events: none; }
+      button.dropdown-item { border: 0; background: none; width: 100%; text-align: left; cursor: pointer; font-family: inherit; }
+      .fe-output { height: 150px; flex: none; border-top: 1px solid var(--fe-border); background: var(--fe-surface-2); display: flex; flex-direction: column; }
+      .fe-output-head { display: flex; align-items: center; gap: 12px; padding: 0 18px; height: 38px; flex: none; border-bottom: 1px solid #e8ebe9; font-size: 13px; }
+      .fe-output-head .fe-title { font-weight: 600; color: var(--fe-ink); }
+      .fe-output-head .button { height: 26px; font-size: 12px; padding: 0 10px; }
+      .fe-output-head #myspinner { width: 14px; height: 14px; border-width: 2px; }
+      #status { padding: 10px 18px; font-family: var(--fe-mono); font-size: 12.5px; line-height: 1.75; color: var(--fe-text-2); overflow-y: auto; flex: 1; }
+      #status:empty::before { content: "Analyze, compile or simulate to see the output here."; color: var(--fe-faint); }
+      #status .fe-ok { color: var(--fe-link); font-weight: 500; }
+      #status .fe-err { color: var(--fe-danger); }
+      /* Ace editor theme from the visual identity */
+      .ace-fpgaemu { background: #ffffff; color: var(--fe-ink); }
+      .ace-fpgaemu .ace_gutter { background: #ffffff; color: #b5bcb9; }
+      .ace-fpgaemu .ace_gutter-active-line { background: #effaf2; color: var(--fe-muted); }
+      .ace-fpgaemu .ace_marker-layer .ace_active-line { background: #effaf2; }
+      .ace-fpgaemu .ace_marker-layer .ace_selection { background: #cbefd6; }
+      .ace-fpgaemu .ace_marker-layer .ace_bracket { border: 1px solid #b5bcb9; }
+      .ace-fpgaemu .ace_cursor { color: var(--fe-accent); }
+      .ace-fpgaemu .ace_print-margin { width: 0; }
+      .ace-fpgaemu .ace_keyword { color: #5040a8; font-weight: 500; }
+      .ace-fpgaemu .ace_keyword.ace_operator { color: var(--fe-ink); font-weight: 400; }
+      .ace-fpgaemu .ace_storage, .ace-fpgaemu .ace_support.ace_type, .ace-fpgaemu .ace_storage.ace_type { color: #006d78; }
+      .ace-fpgaemu .ace_string, .ace-fpgaemu .ace_constant.ace_numeric, .ace-fpgaemu .ace_constant.ace_character { color: #a64b00; }
+      .ace-fpgaemu .ace_support.ace_function, .ace-fpgaemu .ace_entity.ace_name.ace_function { color: #006c35; }
+      .ace-fpgaemu .ace_constant.ace_language { color: #a64b00; }
+      .ace-fpgaemu .ace_comment { color: #8a928f; }
+      .ace-fpgaemu .ace_indent-guide { background: none; }
   </style>
   <link href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-tooltip@1.2.0/dist/bulma-tooltip.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 
-        <!-- <div class="container mt-2">
-            Your <strong>id</strong> is {{ username }}.        
-        </div> -->
-
         <input type="hidden" value="{{toplevel}}" id="toplevel">
 
         {%- if filenames is defined -%}
-        <div class="container is-max-desktop mt-3 px-3">
-            <div class="columns is-mobile">
-                <div class="column">
-                    <div class="fixed-grid has-1-cols">
-                    <div class="cell">
-                        <div class="select is-small mr-1">
-                            <select id="fileselect" onchange="openfile()" style="min-width: 180px;">
-                                <option selected value="0">Choose file...</option>
-                                {% for fname in filenames %}
-                                    <option value="{{fname}}">{{fname}}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <button class="button is-info is-small mr-1" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button> 
-                        <button class="button is-info is-small mr-1" id="inmapperbtn" onclick="gotomapper()" disabled>in Mapper&nbsp;<i class="fas fa-arrow-circle-right"></i></button>                      
-                    </div><div class="cell mt-1">
-                        <button class="button is-info is-small mr-1 has-tooltip-arrow has-tooltip-right has-tooltip-info" 
-                             onclick="savefile(0);" data-tooltip="Ctrl+S">Save</button> 
-                        <button class="button is-info is-small mr-1" onclick="savefileas()">Save As...</button>                        
-                        <button class="button is-info is-small mr-1" onclick="newfile();">New File</button>
-                        <div class="dropdown ml-1" id="tdropdown">
-                            <div class="dropdown-trigger">
-                            <button class="button is-small is-light" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
-                                <span>Templates</span>
-                                <span class="icon is-small">
-                                <i class="fas fa-angle-down" aria-hidden="true"></i>
-                                </span>
-                            </button>
-                            </div>
-                            <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                            <div class="dropdown-content">
-                                <a href="#" class="dropdown-item" onclick="fillWithUsertop();">
-                                    usertop.vhd
-                                </a>
-                                <a class="dropdown-item" onclick="fillWithUsertest();">
-                                    usertest.vhd
-                                </a>                    
-                            </div>
-                            </div>
-                        </div>                        
-                    </div></div>
-                </div>
-                <!-- <div class="column"></div> -->
-                <div class="column is-narrow has-text-right" style="border-right: 1px solid lightgray; border-left: 1px solid lightgray;">
-                    <button class="button is-dark is-small is-fullwidth has-tooltip-arrow has-tooltip-left has-tooltip-dark" 
-                        onclick="runSimulation();" data-tooltip="Ctrl+Shift+S">
-                        Simulate</button> 
-                        <div class="select is-info is-fullwidth is-small mt-1">
-                            <select id="stoptime" class="">
-                                <option value="200 ns" {{'selected' if stoptime == 200 else ''}}>200 ns</option>
-                                <option value="400 ns" {{'selected' if stoptime == 400 else ''}}>400 ns</option>
-                                <option value="600 ns" {{'selected' if stoptime == 600 else ''}}>600 ns</option>
-                                <option value="800 ns" {{'selected' if stoptime == 800 else ''}}>800 ns</option>
-                                <option value="1000 ns" {{'selected' if stoptime == 1000 else ''}}>1000 ns</option>
-                                <option value="2000 ns" {{'selected' if stoptime == 2000 else ''}}>2000 ns</option>
-                                <option value="3000 ns" {{'selected' if stoptime == 3000 else ''}}>3000 ns</option>
-                            </select>
-                        </div>
-                </div>
-                <div class="column is-narrow has-text-right">
-                    <button class="button is-warning is-small has-tooltip-arrow has-tooltip-left has-tooltip-warning" 
-                        onclick="analyze()" data-tooltip="Ctrl+Shift+A">
-                        Analyze Current File</button><br>
-                    <button class="button is-danger is-fullwidth is-small mt-1 has-tooltip-arrow has-tooltip-left has-tooltip-danger" 
-                        onclick="fpgaCompile()" data-tooltip="Ctrl+Shift+C">
-                        Compile Project</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="container is-max-desktop mt-1 px-4">
-            <div id="editor" style="height: 80vh;"></div>
-        </div>
-        {% endif %}
+        <div class="fe-app">
 
-        <!-- Button trigger modal -->
-        <!-- <button type="button" class="btn btn-primary">
-            Launch demo modal
-        </button> -->
-
-        <div class="modal is-clipped" id="compilationmodal">
-            <div class="modal-background"></div>
-            <div class="modal-card">
-              <header class="modal-card-head">
-                <p id="cmodaltitle" class="modal-card-title">Compilation</p>
-                <button class="delete" aria-label="close" onclick="$('#compilationmodal').removeClass('is-active');"></button>
-              </header>
-              <section class="modal-card-body">
-                <div id="myspinner" class="loader is-loading"></div>
-                <div id="status">    
-                </div> 
-              </section>
-              <footer class="modal-card-foot">
-                <button class="button is-danger is-small" id="closecompbtn" 
-                        onclick="$('#compilationmodal').removeClass('is-active'); editor.focus();">Close</button>
-                <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
-                <button id="gotoplot" type="button" class="button is-info is-small" onclick="location.href = '/simresult'">View Result</button>
-              </footer>
+          <div class="fe-toolbar">
+            <div class="fe-crumb" id="crumb">
+              {% if currentproject %}<span>{{ currentproject }}</span><span class="fe-sep">/</span>{% endif %}
+              <span class="fe-file" id="crumbfile">no file open</span>
+              <span class="fe-dirty" title="Unsaved changes"></span>
             </div>
+            <!-- the file selector the editor logic works with (driven by the file list on the left) -->
+            <select id="fileselect" onchange="openfile()" style="display: none;">
+              <option selected value="0">Choose file...</option>
+              {% for fname in filenames %}
+                <option value="{{fname}}">{{fname}}</option>
+              {% endfor %}
+            </select>
+
+            <div class="dropdown is-right" id="tdropdown">
+              <div class="dropdown-trigger">
+                <button class="button" aria-haspopup="true" aria-controls="dropdown-menu" onclick="toggleTemplateList();">
+                  <span>Templates</span><span class="icon is-small"><i class="fas fa-angle-down" aria-hidden="true"></i></span>
+                </button>
+              </div>
+              <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                <div class="dropdown-content">
+                  <a href="#" class="dropdown-item is-mono" onclick="fillWithUsertop(); return false;">usertop.vhd</a>
+                  <a class="dropdown-item is-mono" onclick="fillWithUsertest();">usertest.vhd</a>
+                </div>
+              </div>
+            </div>
+            <div class="dropdown is-right" id="filedropdown">
+              <div class="dropdown-trigger">
+                <button class="button" aria-haspopup="true" onclick="$('#filedropdown').toggleClass('is-active');">
+                  <span>File</span><span class="icon is-small"><i class="fas fa-angle-down" aria-hidden="true"></i></span>
+                </button>
+              </div>
+              <div class="dropdown-menu" role="menu">
+                <div class="dropdown-content" onclick="$('#filedropdown').removeClass('is-active');">
+                  <button class="dropdown-item" onclick="newfile();">New file…</button>
+                  <button class="dropdown-item" onclick="savefileas()">Save as…</button>
+                  <hr class="dropdown-divider">
+                  <button class="dropdown-item" id="toplevelbtn" onclick="settop();" disabled>Set Top Level</button>
+                  <button class="dropdown-item" id="inmapperbtn" onclick="gotomapper()" disabled>Open in Mapper</button>
+                </div>
+              </div>
+            </div>
+            <button class="button has-tooltip-arrow has-tooltip-bottom" onclick="savefile(0);" data-tooltip="Ctrl+S">Save</button>
+            <button class="button has-tooltip-arrow has-tooltip-bottom" onclick="analyze()" data-tooltip="Ctrl+Shift+A">Analyze current file</button>
+            <div class="fe-toolbar-sep"></div>
+            <button class="button has-tooltip-arrow has-tooltip-bottom" onclick="runSimulation();" data-tooltip="Ctrl+Shift+S">Simulate</button>
+            <div class="select" title="Simulation stop time">
+              <select id="stoptime" class="is-mono">
+                <option value="200 ns" {{'selected' if stoptime == 200 else ''}}>200 ns</option>
+                <option value="400 ns" {{'selected' if stoptime == 400 else ''}}>400 ns</option>
+                <option value="600 ns" {{'selected' if stoptime == 600 else ''}}>600 ns</option>
+                <option value="800 ns" {{'selected' if stoptime == 800 else ''}}>800 ns</option>
+                <option value="1000 ns" {{'selected' if stoptime == 1000 else ''}}>1000 ns</option>
+                <option value="2000 ns" {{'selected' if stoptime == 2000 else ''}}>2000 ns</option>
+                <option value="3000 ns" {{'selected' if stoptime == 3000 else ''}}>3000 ns</option>
+              </select>
+            </div>
+            <button class="button has-tooltip-arrow has-tooltip-bottom" onclick="fpgaCompile()" data-tooltip="Ctrl+Shift+C">Compile</button>
+            <button class="button is-primary" onclick="location.href = '/emulation'">Go to Emulation</button>
           </div>
 
+          <div class="fe-editor-body">
+            <nav class="fe-sidebar fe-editor-files" id="filelist">
+              <div class="section-label">Files</div>
+              {% for fname in filenames %}
+                {% set fstr = fname|string %}
+                <a class="fe-file-item" data-file="{{ fstr }}" title="{{ fstr }}"
+                   onclick="$('#fileselect').val(this.dataset.file); openfile();">{{ fstr.split('/')[-1] if currentproject else fstr }}</a>
+              {% else %}
+                <span class="fe-hint px-2">No files. Use File › New file.</span>
+              {% endfor %}
+            </nav>
+
+            <div class="fe-editor-main">
+              <div id="editor"></div>
+              <!-- Output: same ids the editor logic used in the old compilation dialog -->
+              <div class="fe-output" id="compilationmodal">
+                <div class="fe-output-head">
+                  <span class="fe-title">Output</span>
+                  <span class="has-text-faint" id="cmodaltitle"></span>
+                  <div id="myspinner" class="loader" style="display: none;"></div>
+                  <span class="fe-spacer"></span>
+                  <button class="button is-primary" id="gotoemul" style="display: none;" onclick="location.href = '/emulation'">Go to Emulation</button>
+                  <button id="gotoplot" type="button" class="button is-primary" style="display: none;" onclick="location.href = '/simresult'">View result</button>
+                  <button class="button" id="closecompbtn" onclick="$('#status').html(''); $('#cmodaltitle').html(''); editor.focus();">Clear</button>
+                </div>
+                <div id="status"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
 
           <div class="modal is-clipped" id="centralModalSm">
             <div class="modal-background"></div>
@@ -143,7 +165,7 @@
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-link is-small" id="filesavedbutton" onclick="$('#centralModalSm').removeClass('is-active');editor.focus();">Close</button>
+                <button class="button" id="filesavedbutton" onclick="$('#centralModalSm').removeClass('is-active');editor.focus();">Close</button>
               </footer>
             </div>
           </div>
@@ -159,7 +181,7 @@
               <section class="modal-card-body">
                 <div class="field has-addons w-100">                    
                     <div class="control">
-                        <div class="select is-info">
+                        <div class="select fe-mono-select">
                             <select id="projectselect">
                                 {% if projectnames|length > 0 %}
                                     {% for proj in projectnames %} 
@@ -172,7 +194,7 @@
                         </div>
                     </div>
                     <div class="control">
-                        <input type="text" id="filenameas" class="input" placeholder="File Name">
+                        <input type="text" id="filenameas" class="input is-mono" placeholder="file_name.vhd">
                     </div>
                 </div>                    
                 <div id="saveasalert" class="notification is-warning py-1 mt-1">
@@ -180,8 +202,8 @@
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="saveAsOrNew()">Save<i class="fas fa-paper-plane-o ml-1"></i></button>
-                <button class="button is-link is-small" onclick="$('#modalSaveAs').removeClass('is-active');">Close</button>
+                <button class="button" onclick="$('#modalSaveAs').removeClass('is-active');">Cancel</button>
+                <button class="button is-primary" onclick="saveAsOrNew()">Save</button>
               </footer>
             </div>
           </div>
@@ -198,7 +220,7 @@
                 <p id="errorMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button id="bcloseerr"class="button is-danger is-small" onclick="$('#modalError').removeClass('is-active');">Close</button>
+                <button id="bcloseerr" class="button" onclick="$('#modalError').removeClass('is-active');">Close</button>
               </footer>
             </div>
           </div> 
@@ -270,9 +292,19 @@
         window.filechanged = false;
         window.autosave = 0;
 
+        // Ace theme of the visual identity (colors in the <style> block, class .ace-fpgaemu)
+        ace.define("ace/theme/fpgaemu", ["require", "exports", "module"], function (require, exports) {
+            exports.isDark = false;
+            exports.cssClass = "ace-fpgaemu";
+            exports.cssText = "";
+        });
         var editor = ace.edit("editor");
-        // editor.setTheme("ace/theme/monokai");
-        editor.setTheme("ace/theme/github_light_default");  
+        editor.setTheme("ace/theme/fpgaemu");
+        editor.setOptions({ fontFamily: "IBM Plex Mono, ui-monospace, monospace", fontSize: "13.5px",
+                            showPrintMargin: false, highlightActiveLine: true });
+        editor.container.style.lineHeight = "21px";
+        editor.renderer.setPadding(8);
+        editor.renderer.setScrollMargin(14, 14);
         editor.session.setMode("ace/mode/vhdl");
         editor.commands.addCommand({
             name: 'mySaveFile',
@@ -311,7 +343,20 @@
             window.filechanged = true;
         });
         editor.resize();
-        document.getElementById('editor').style.fontSize='15px';
+        document.fonts && document.fonts.ready.then(function () { editor.renderer.updateFontSize(); });
+
+        // Toolbar breadcrumb, unsaved-changes dot and file list highlight follow the editor state.
+        function syncFileUi() {
+            var val = $("#fileselect").val();
+            $(".fe-file-item").each(function () { $(this).toggleClass("is-active", this.dataset.file === val); });
+            $("#crumbfile").text((val && val != 0) ? val.split("/").pop() : "no file open");
+            $("#crumb").toggleClass("is-dirty", !!window.filechanged && val != 0);
+        }
+        setInterval(syncFileUi, 400);
+        $(document).on("click", function (e) {
+            if (!$(e.target).closest("#filedropdown").length) { $("#filedropdown").removeClass("is-active"); }
+            if (!$(e.target).closest("#tdropdown").length) { $("#tdropdown").removeClass("is-active"); }
+        });
 
         window.socket = 0;
         window.socketOn = false;
@@ -370,13 +415,13 @@
                 }                
             });
             window.socket.on('errors', function(msg){
-                $('#status').append('<br><span style="color:red;">Errors:<br>'+String(msg)+"</span>");
+                $('#status').append('<br><span class="fe-err">Errors:<br>'+String(msg)+"</span>");
                 $("#myspinner").hide();
             });
             window.socket.on('success',function(msg){
                 if (window.lastaction == "compilation") {
                     $('#status').append(`
-                        <span style="color:blue;">
+                        <span class="fe-ok">
                             Compilation successful!<br>
                             You can now start your emulation.
                         </span>
@@ -385,7 +430,7 @@
                     $("#gotoemul").focus();
                 } else {
                     $('#status').append(`
-                        <span style="color:blue;">
+                        <span class="fe-ok">
                             Simulation successful!<br>
                             Your result is ready for visualization.
                         </span>
@@ -397,8 +442,8 @@
             });
             window.socket.on('asuccess',function(msg){
                 $('#status').append(`
-                    <span style="color:blue;">
-                        Analysis end up successfully!
+                    <span class="fe-ok">
+                        Analysis finished successfully!
                     </span>
                 `);
                 $("#myspinner").hide();
@@ -629,7 +674,7 @@
                     $("#status").html("");
                 }
                 window.lastaction = "simulation";
-                $("#status").append("<span style='color: red; font-weight:bold;'>Warning: if current file is not a testbench, simulation will return empty!</span>");
+                $("#status").append("<span class='fe-err'>Warning: if the current file is not a testbench, the simulation will return empty.</span>");
                 $("#myspinner").show();
                 $("#gotoemul").hide();
                 $("#gotoplot").show();

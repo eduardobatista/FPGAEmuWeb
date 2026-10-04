@@ -1,147 +1,173 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<style>
+  .fe-projects { display: grid; grid-template-columns: 400px minmax(0, 1fr); min-height: calc(100vh - 60px); }
+  .fe-projects-list { background: var(--fe-surface); border-right: 1px solid var(--fe-border); display: flex; flex-direction: column; }
+  .fe-projects-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 22px 14px; }
+  .fe-projects-head h2 { font-size: 20px; font-weight: 600; margin: 0; }
+  .fe-projects-head .button { height: 34px; font-size: 13px; padding: 0 14px; }
+  .fe-projects-rows { padding: 0 12px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+  .fe-projects-rows .fe-name { font-family: var(--fe-mono); font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fe-projects-rows .fe-meta { font-size: 12px; color: var(--fe-faint); }
+  .fe-projects-foot { margin-top: auto; padding: 16px 22px; border-top: 1px solid #e8ebe9; font-size: 13px; }
+  .fe-detail { padding: 28px 32px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .fe-detail-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  .fe-detail-head .fe-name { font-family: var(--fe-mono); font-size: 26px; font-weight: 600; line-height: 1.2; }
+  .fe-detail-head .tag { margin-bottom: 5px; }
+  .fe-detail-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .fe-files td:first-child { width: 100%; }
+  .fe-files .fe-fname { font-family: var(--fe-mono); }
+  .fe-files .fe-top-chip { display: none; }
+  .fe-files tr.has-background-light { background: var(--fe-accent-tint) !important; }
+  .fe-files tr.has-background-light .fe-top-chip { display: inline; }
+  .fe-files .settopbtl[disabled] { display: none; }
+  .fe-files .fe-actions .button.is-text { height: auto; padding: 0; font-size: 13px; text-decoration: none; }
+  .fe-files .fe-actions .button.is-text:hover { background: none; color: var(--fe-link-hover); }
+  .fe-dropzone { border: 1px dashed var(--fe-border-input); border-radius: 10px; padding: 14px 18px; display: flex;
+                 align-items: center; gap: 12px; color: var(--fe-muted); font-size: 13px; background: var(--fe-surface); }
+  .fe-dropzone .file-name { border: 0; background: none; padding: 0; font-family: var(--fe-mono); color: var(--fe-faint); }
+  .fe-dropzone .file-input { position: absolute; }
+  @media screen and (max-width: 799px) { .fe-projects { grid-template-columns: 1fr; } .fe-detail { padding: 20px; } }
+</style>
+{% endblock %}
+
 {% block content %}
 
-        
+<div class="fe-projects">
 
-        <div class="container is-max-desktop mt-3 mb-4 px-3">
+  <aside class="fe-projects-list">
+    <div class="fe-projects-head">
+      <h2>Projects</h2>
+      <button class="button is-primary" onclick="createProject();">New project</button>
+    </div>
+    <div class="fe-projects-rows">
+      {% for pname in projectnames %}
+        <a class="fe-list-row{% if pname == currentproject %} is-selected{% endif %}" id="project-{{ pname }}"
+           href="/openproject/{{ pname }}">
+          <span class="fe-dot{% if pname == currentproject %} is-ok{% endif %}"></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+            <span class="fe-name">{{ pname }}</span>
+            {% if pname == currentproject %}<span class="fe-meta">open · {{ filenames|length }} file{{ '' if filenames|length == 1 else 's' }}</span>{% endif %}
+          </span>
+        </a>
+      {% else %}
+        <p class="fe-hint px-3 py-2">No projects yet. Create one to start.</p>
+      {% endfor %}
+    </div>
+    <div class="fe-projects-foot">
+      <a href="/downloadfile">Download all projects</a>
+    </div>
+  </aside>
 
-            {% with messages = get_flashed_messages() %}
-              {% if messages %}
-                <!-- <article class="message is-danger is-light my-1">
-                  <div class="message-body py-1 px-1"> -->
-                  <div class="notification is-danger is-light py-1 px-2">
-                    {{ messages[0] }}
-                  </div>
-                  <!-- </div>
-                </article> -->
-              {% endif %}
-            {% endwith %}
+  <section class="fe-detail">
 
-            <article class="message is-info">
-                <div class="message-body py-2">
-                    User is <strong>{{ username }}</strong>.
-                    {% if (current_user.role == 'Admin') or (current_user.role == 'Professor') %}
-                        {% if (current_user.viewAs != '') and (current_user.viewAs != current_user.email) %}
-                            <span style="color: red;">(viewing as <strong>{{current_user.viewAs}}</strong>).</span>
-                        {% endif %}
-                    {% endif %}
-                </div>
-            </article>
-            
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="notification is-danger py-2 px-3 m-0">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+    {% if (current_user.role == 'Admin') or (current_user.role == 'Professor') %}
+      {% if (current_user.viewAs != '') and (current_user.viewAs != current_user.email) %}
+        <div class="notification is-warning py-2 px-3 m-0">Viewing the files of <strong>{{ current_user.viewAs }}</strong> (change it in Profile).</div>
+      {% endif %}
+    {% endif %}
+
+    {% if currentproject == "" %}
+
+      <div class="fe-panel fe-empty">
+        <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="">
+        <strong>Open a project</strong>
+        <span>Choose a project from the list, or create a new one.</span>
+        <button class="button is-primary mt-2" onclick="createProject();">New project</button>
+      </div>
+
+    {% else %}
+
+      <div class="fe-detail-head">
+        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+          <span class="fe-caption">Project</span>
+          <span class="fe-name">{{ currentproject }}</span>
         </div>
-
-        {%- if filenames is defined -%}
-        <div class="container is-max-desktop mt-4 px-3">            
-            {% if currentproject == "" %}
-                <button class="button is-info is-small is-pulled-right mx-1" onclick="location.href = '/downloadfile';">Download All</button>  
-                <button class="button is-primary is-small is-pulled-right mx-1" onclick="createProject();">Create Project</button>
-                <h4 class="title is-4 m-0">Project List</h4>
-                <p class="is-6 is-italic">To begin, open a project or create one.</p>
-            {% else %}
-                <div class="is-flex my-1">  
-                    <h4 class="title is-4 m-0 is-flex-grow-1">Current Project is <i>{{currentproject}}</i></h4>                  
-                    <button class="button is-warning is-small ml-1" onclick="location.href = '/closeproject';">Close Project</button>
-                    <!-- <button class="button is-dark is-small mx-1" onclick="location.href = '/closeproject';">Export as DE1-SoC/Quartus II Project</button> -->
-                    <button class="button is-info is-small is-pulled-right ml-1" onclick="location.href = '/downloadafile?file={{ currentproject }}';">Download All</button>  
-                    <button class="button is-danger is-small is-pulled-right ml-1" onclick="deleteAllFiles('{{ currentproject }}');">Delete All</button> 
-                    <div class="dropdown" id="exportdropdown">
-                        <div class="dropdown-trigger">
-                          <button class="button is-small is-dark mx-1" aria-haspopup="true" aria-controls="dropdown-menu3" onclick="toggleExportList()" >
-                            <span>Export To...</span>
-                            <span class="icon is-small">
-                              <i class="fas fa-angle-down" aria-hidden="true"></i>
-                            </span>
-                          </button>
-                        </div>
-                        <div class="dropdown-menu" id="dropdown-menu3" role="menu">
-                          <div class="dropdown-content">
-                            <a class="dropdown-item" onclick="exportProject('DE1SOC');">
-                              DE1-SoC/Quartus II
-                            </a>
-                            <a class="dropdown-item" onclick="exportProject('DE2');">
-                              DE2/Quartus II
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                </div>  
-                <div class="container w-100 my-0">
-                    <button type="button" class="button is-info is-small mt-2 mb-0 is-pulled-right" onclick="newFile();">New File</button>              
-                </div>
-            {% endif %}
-            <table class="table is-fullwidth is-hoverable mt-1">
-                <tbody>
-                    <tr><td></td></tr>
-                    {% if currentproject == "" %}
-                        {% for pname in projectnames %}
-                            <tr><td id="project-{{ pname }}">
-                                {{ pname }}
-                                <button class="button is-danger is-small is-pulled-right mr-1" onclick="deleteProject('{{ pname }}');"><i class="far fa-trash-alt"></i></button>
-                                <button class="button is-info is-small is-pulled-right mr-1" onclick="window.open('/downloadafile?file={{ pname }}', '_blank');"><i class="fas fa-download"></i></button>
-                                <button class="button is-info is-small is-pulled-right mr-1" onclick="rename('{{ pname }}');">Rename</button>
-                                <!-- <button class="button is-info is-small is-pulled-right mr-1" onclick="location.href = '/editor?file={{ fname }}.vhd';">Edit</button> -->
-                                <button id="btl{{ fname }}" class="button is-primary is-small is-pulled-right mr-1" onclick="location.href = '/openproject/{{ pname }}';">Open Project</button>
-                            </td></tr>
-                        {% endfor %}
-                    {% else %}
-                        {% for fname in filenames %}
-                            {% if currentproject != "" %}
-                                {% set fullfname = currentproject + '/' + fname + '.vhd'  %}
-                            {% else %}
-                                {% set fullfname = fname + '.vhd'  %}
-                            {% endif %} 
-                            <tr><td id="vhd{{ fname }}">
-                                {{ fname }}.vhd                        
-                                <button class="button is-danger is-small is-pulled-right mr-1" onclick="deletefile('{{ fullfname }}');"><i class="far fa-trash-alt"></i></button>
-                                <button class="button is-info is-small is-pulled-right mr-1" onclick="window.open('/downloadafile?file={{ fullfname }}', '_blank');"><i class="fas fa-download"></i></button>                       
-                                <button class="button is-info is-small is-pulled-right mr-1" onclick="rename('{{ fullfname }}');">Rename</button>
-                                <button class="button is-info is-small is-pulled-right mr-1" onclick="location.href = '/editor?file={{ fullfname }}';">Edit</button>                       
-                                <button id="btl{{ fname }}" class="button is-info is-small is-pulled-right mr-1 settopbtl" onclick="settop('{{ fname }}','{{currentproject}}',true);">Set top level</button>
-                            </td></tr>                    
-                        {% endfor %}
-                    {% endif %}
-                    <tr><td></td></tr>
-                </tbody>   
-            </table>
-
-        </div>
-        {% else %}
-        <div class="container is-max-desktop mt-4 px-3">
-            <h4 class="title is-4 m-0">No files in your folder.</h4>
-        </div>
-        {% endif %}
-
-        {% if currentproject != "" %}
-            <div class="container is-max-desktop mt-3 px-3">
-            
-                <form class="md-form" id="meuform" enctype="multipart/form-data">
-
-                    <div id="fileselector" class="file is-info is-small has-name is-fullwidth" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
-                        <label class="file-label">
-                        <input class="file-input" type="file" name="fileToUpload" id="fileToUpload" accept=".vhd" multiple>
-                        <span class="file-cta">
-                            <span class="file-icon">
-                            <i class="fas fa-upload"></i>
-                            </span>
-                            <span class="file-label">
-                            Files to upload
-                            </span>
-                        </span>
-                        <span class="file-name">
-                            ...
-                        </span>
-                        </label>
-                        <button type="button" class="button is-info is-small" onclick="uploadfile();">Upload</button>
-                    </div>
-
-                </form> 
-
-                <div class="buttons has-addons is-centered mt-4 mx-3">
-                    <button type="button" class="button is-danger is-centered" onclick="fpgaCompile();">Compile</button>
-                </div>
+        {% set topname = toplevel.split('/')[-1] if toplevel else '' %}
+        {% if topname %}<span class="tag is-success">top: {{ topname }}</span>{% endif %}
+        <div class="fe-detail-actions">
+          <button class="button" onclick="$('#fileToUpload').click();">Upload</button>
+          <button class="button" onclick="newFile();">New file</button>
+          <button class="button" onclick="fpgaCompile();">Compile</button>
+          <div class="dropdown is-right" id="exportdropdown">
+            <div class="dropdown-trigger">
+              <button class="button" aria-haspopup="true" aria-controls="dropdown-menu3" onclick="toggleExportList()">
+                <span>More</span><span class="icon is-small"><i class="fas fa-angle-down" aria-hidden="true"></i></span>
+              </button>
             </div>
-        {% endif %}        
+            <div class="dropdown-menu" id="dropdown-menu3" role="menu">
+              <div class="dropdown-content">
+                <a class="dropdown-item" onclick="exportProject('DE1SOC');">Export to DE1-SoC / Quartus II</a>
+                <a class="dropdown-item" onclick="exportProject('DE2');">Export to DE2 / Quartus II</a>
+                <a class="dropdown-item" onclick="window.open('/downloadafile?file={{ currentproject }}', '_blank');">Download project</a>
+                <a class="dropdown-item" onclick="rename('{{ currentproject }}');">Rename project</a>
+                <a class="dropdown-item" href="/closeproject">Close project</a>
+                <hr class="dropdown-divider">
+                <a class="dropdown-item has-text-danger" onclick="deleteAllFiles('{{ currentproject }}');">Delete all files</a>
+                <a class="dropdown-item has-text-danger" onclick="deleteProject('{{ currentproject }}');">Delete project</a>
+              </div>
+            </div>
+          </div>
+          <button class="button is-primary" onclick="location.href = '/emulation'">Go to Emulation</button>
+        </div>
+      </div>
+
+      <div class="fe-panel">
+        <table class="table is-fullwidth fe-files m-0">
+          <thead><tr><th>File</th><th style="text-align: right;">Actions</th></tr></thead>
+          <tbody>
+            {% for fname in filenames %}
+              {% set fullfname = currentproject + '/' + fname + '.vhd' %}
+              <tr id="vhd{{ fname }}">
+                <td>
+                  <span style="display: flex; align-items: center; gap: 10px;">
+                    <span class="fe-chip">VHD</span>
+                    <a class="fe-fname" href="/editor?file={{ fullfname }}" style="color: var(--fe-ink);">{{ fname }}.vhd</a>
+                    <span class="fe-chip is-accent fe-top-chip">TOP</span>
+                  </span>
+                </td>
+                <td>
+                  <span class="fe-actions">
+                    <button id="btl{{ fname }}" class="button is-text settopbtl" onclick="settop('{{ fname }}','{{currentproject}}',true);">Set top</button>
+                    <a href="/editor?file={{ fullfname }}">Edit</a>
+                    <a onclick="rename('{{ fullfname }}');">Rename</a>
+                    <a onclick="window.open('/downloadafile?file={{ fullfname }}', '_blank');">Download</a>
+                    <a class="is-danger" onclick="deletefile('{{ fullfname }}');">Delete</a>
+                  </span>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2" class="has-text-muted">No files yet: upload .vhd files or create a new one.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <form id="meuform" enctype="multipart/form-data" onsubmit="return false;">
+        <div id="fileselector" class="fe-dropzone file" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+          <i class="fas fa-upload"></i>
+          <span>Drop <span class="is-mono">.vhd</span> files here or</span>
+          <label class="file-label">
+            <input class="file-input" type="file" name="fileToUpload" id="fileToUpload" accept=".vhd" multiple>
+            <a>choose files</a>
+          </label>
+          <span class="file-name">...</span>
+          <button type="button" class="button is-small ml-auto" onclick="uploadfile();">Upload</button>
+        </div>
+      </form>
+
+      <p class="fe-hint">The top-level entity, marked <span class="fe-chip is-accent">TOP</span>, is the one compiled for emulation. Use <em>Set top</em> to change it.</p>
+
+    {% endif %}
+
+  </section>
+</div>
 
         <div class="modal is-clipped" id="compilationmodal">
             <div class="modal-background"></div>
@@ -156,8 +182,8 @@
                 </div> 
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');">Close</button>
-                <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
+                <button class="button" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');">Close</button>
+                <button class="button is-primary" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
               </footer>
             </div>
           </div>
@@ -173,14 +199,14 @@
               <section class="modal-card-body">
                 <div class="field has-addons w-100">                    
                     <div class="control">
-                        <div id="projectselectdiv" class="select is-info">
+                        <div id="projectselectdiv" class="select fe-mono-select">
                             <select id="projectselect">
                                 <option value="{{currentproject}}">{{currentproject}}</option>
                             </select>
                         </div>
                     </div>
                     <div class="control">
-                        <input type="text" id="filenameas" class="input" placeholder="File Name">
+                        <input type="text" id="filenameas" class="input is-mono" placeholder="file_name.vhd">
                     </div>
                 </div>                    
                 <div id="saveasalert" class="notification is-warning py-1 mt-1">
@@ -188,9 +214,9 @@
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button id="renameButton" class="button is-danger is-small" onclick="renameTo()">Rename</button>
-                <button id="newFileButton" class="button is-info is-small" onclick="createNewFile()">Create File</button>
-                <button class="button is-link is-small" onclick="document.querySelector('#modalSaveAs').classList.remove('is-active');">Close</button>
+                <button class="button" onclick="document.querySelector('#modalSaveAs').classList.remove('is-active');">Cancel</button>
+                <button id="renameButton" class="button is-primary" onclick="renameTo()">Rename</button>
+                <button id="newFileButton" class="button is-primary" onclick="createNewFile()">Create file</button>
               </footer>
             </div>
           </div>
@@ -200,18 +226,18 @@
             <div class="modal-background"></div>
             <div class="modal-card">
               <header class="modal-card-head">
-                <p class="modal-card-title">Create project...</p>
+                <p class="modal-card-title">New project</p>
                 <button class="delete" aria-label="close" onclick="document.querySelector('#modalCreateProject').classList.remove('is-active');"></button>
               </header>
               <section class="modal-card-body">
-                <input class="input" type="text" id="projectname" placeholder="Text input" autofocus>
+                <input class="input is-mono" type="text" id="projectname" placeholder="project_name" autofocus>
                 <div class="notification is-warning py-1 mt-1" id="createprojectalert">
                     File extension must be ".vhd".                  
                 </div>
               </section>
               <footer class="modal-card-foot">
-                <button type="button" class="button is-info is-small" onclick="createProject2()">Create</button>
-                <button type="button" class="button is-danger is-small" onclick="document.querySelector('#modalCreateProject').classList.remove('is-active');">Close</button>
+                <button type="button" class="button" onclick="document.querySelector('#modalCreateProject').classList.remove('is-active');">Cancel</button>
+                <button type="button" class="button is-primary" onclick="createProject2()">Create project</button>
               </footer>                
             </div>
         </div>
@@ -228,8 +254,8 @@
                 <p id="confirmDialogMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button type="button" class="button is-danger is-small" id="confirmDeleteBtn">Delete!</button>
-                <button class="button is-info is-small" onclick="document.querySelector('#confirmDialog').classList.remove('is-active');">Close</button>
+                <button class="button" onclick="document.querySelector('#confirmDialog').classList.remove('is-active');">Cancel</button>
+                <button type="button" class="button is-danger" id="confirmDeleteBtn">Delete</button>
               </footer>
             </div>
         </div>
@@ -245,7 +271,7 @@
                 <p id="errorMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="document.querySelector('#modalError').classList.remove('is-active');">Close</button>
+                <button class="button" onclick="document.querySelector('#modalError').classList.remove('is-active');">Close</button>
               </footer>
             </div>
           </div>        
@@ -313,6 +339,7 @@
                     }
                     const fileName = document.querySelector('#fileselector .file-name');
                     fileName.textContent = filestr.substring(0, filestr.length - 1);
+                    uploadfile();
                 } else {
                     const fileName = document.querySelector('#fileselector .file-name');
                     fileName.textContent = "...";
