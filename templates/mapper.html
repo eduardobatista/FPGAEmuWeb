@@ -18,9 +18,12 @@
         </div> -->
 
         {%- if filenames is defined -%}
-        <div class="container mt-4 px-4 is-max-desktop">
-            <div class="select">
-                <select id="fileselect" class="" onchange="openmap()" style="min-width: 250px;">
+        <div class="fe-page" style="max-width: 980px;">
+            <span class="fe-caption">Mapper</span>
+            <h1 class="fe-page-title mb-2">Port mapping</h1>
+            <p class="fe-hint mb-4">Map the ports of an entity to the board (switches, keys, LEDs and displays). Only useful for the emulation of the top-level entity.</p>
+            <div class="select fe-mono-select">
+                <select id="fileselect" class="" onchange="openmap()" style="min-width: 280px;">
                     <option selected value="0">Choose file...</option>
                     {% for fname in filenames %}
                         <option value="{{fname}}">{{fname}}</option>
@@ -28,13 +31,12 @@
                 </select>  
             </div> 
         
-            <h3 class="title is-4 mb-1 mt-3">Port Mapping</h3>
-            <p class="mb-2 is-1 has-text-weight-bold" style="color: red;">Only useful for emulation of the top level entity.</p>
-
+            <div class="mt-4 mb-2">
             <label class="checkbox">
                 <input type="checkbox" value="" id="enableMapCheck" onchange="checkchanged()">
-                Enable Port Mapping
+                Enable port mapping
             </label>
+            </div>
 
             <div id="portmap" class="container" style="text-size-adjust: 70%;"></div>
 
@@ -44,9 +46,10 @@
                 </div>
             </article>
 
-            <button id="bSave" class='mt-2 button is-small is-info' onclick="buildmap()">Save</button>
-
-            <button id="bCompile" class='mt-2 button is-small is-danger' onclick="settop()" disabled>Set as Top Level and Compile</button>
+            <div class="buttons mt-4">
+            <button id="bSave" class='button' onclick="buildmap()">Save</button>
+            <button id="bCompile" class='button is-primary' onclick="settop()" disabled>Set as top level and compile</button>
+            </div>
 
         </div>  
 
@@ -64,8 +67,8 @@
                 </div> 
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');">Close</button>
-                <button class="button is-info is-small" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
+                <button class="button" onclick="document.querySelector('#compilationmodal').classList.remove('is-active');">Close</button>
+                <button class="button is-primary" id="gotoemul" onclick="location.href = '/emulation'">Go to Emulation</button>
               </footer>
             </div>
           </div>

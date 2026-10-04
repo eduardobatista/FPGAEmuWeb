@@ -3,103 +3,83 @@
 
 {% block styles %}
 <script src="https://www.google.com/recaptcha/api.js"></script>
-<style>      
-    #maincard{
-      /* height: 370px; */
-      margin-top: auto;
-      margin-bottom: auto;
-      width: 400px;
-    }
+<style>
+  html, body { background: var(--fe-surface); }
+  .fe-login { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+  .fe-login-main { display: flex; flex-direction: column; padding: 48px 64px; }
+  .fe-login-form { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; max-width: 380px; width: 100%; }
+  .fe-login-form h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+  .fe-login-form .fe-sub { margin: 6px 0 0; color: var(--fe-muted); font-size: 15px; }
+  .fe-login-form form { display: flex; flex-direction: column; gap: 18px; }
+  .fe-login-form .field { margin: 0; }
+  .fe-login-form .label { margin-bottom: 7px; }
+  .fe-login-form .button.is-primary { height: 46px; font-size: 15px; border-radius: 8px; margin-top: 6px; width: 100%; }
+  .fe-login-credit { margin: 0; font-size: 13px; line-height: 1.6; color: var(--fe-faint); max-width: 440px; }
+  .fe-login-aside { background: #f3f5f4; border-left: 1px solid #e8ebe9; display: flex; flex-direction: column;
+                    align-items: center; justify-content: center; gap: 36px; padding: 48px; text-align: center; }
+  .fe-login-aside img { width: 140px; height: 140px; }
+  .fe-login-aside .fe-tagline { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .fe-login-aside .fe-steps { margin-top: 10px; font-family: var(--fe-mono); font-size: 13px; color: var(--fe-muted); letter-spacing: 0.04em; }
+  @media screen and (max-width: 799px) {
+    .fe-login { grid-template-columns: 1fr; } .fe-login-main { padding: 32px 24px; } .fe-login-aside { display: none; }
+  }
 </style>
 {% endblock %} 
 
-
-
 {% block content %}
 
-<div class="container is-fullwidth">
-                         
-    <div class="card mx-auto my-4" id="maincard">
-                      
-      <div class="card-header">
-        <p class="card-header-title has-background-info has-text-white">
-            Sign Up to FPGA Emul Web
-        </p>
+<div class="fe-login">
+  <div class="fe-login-main">
+    <span class="fe-logo is-large">
+      <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="">
+      <span class="fe-wordmark"><b>FPGA</b><span>Emu</span><em>Web</em></span>
+    </span>
+
+    <div class="fe-login-form">
+      <div>
+        <h1>Create an account</h1>
+        <p class="fe-sub">Sign up to edit, compile, emulate and simulate VHDL.</p>
       </div>
-      <div class="card-content">
-        <form method="POST" action="signup">
 
-            <div class="field">
-                <label class="label">Name</label>
-                <div class="control has-icons-left">
-                  <input class="input" type="text" name="name" placeholder="name" required>
-                  <span class="icon is-small is-left">
-                    <i class="fas fa-user"></i>
-                  </span>
-                  <!-- <span class="icon is-small is-right">
-                    <i class="fas fa-exclamation-triangle"></i>
-                  </span> -->
-                </div>
-                <!-- <p class="help is-danger">This email is invalid</p> -->
-              </div>
+      <form method="POST" action="signup">
+        <div class="field">
+          <label class="label">Name</label>
+          <div class="control"><input class="input" type="text" name="name" placeholder="Your name" required></div>
+        </div>
+        <div class="field">
+          <label class="label">Email</label>
+          <div class="control"><input class="input" type="email" name="email" placeholder="name@institution.edu" required></div>
+        </div>
+        <div class="field">
+          <label class="label">Password</label>
+          <div class="control"><input class="input" type="password" name="password" placeholder="••••••••" required></div>
+        </div>
 
-          <div class="field">
-            <label class="label">Email</label>
-            <div class="control has-icons-left">
-              <input class="input" type="email" name="email" placeholder="your@email" required>
-              <span class="icon is-small is-left">
-                <i class="fas fa-envelope"></i>
-              </span>
-              <!-- <span class="icon is-small is-right">
-                <i class="fas fa-exclamation-triangle"></i>
-              </span> -->
-            </div>
-            <!-- <p class="help is-danger">This email is invalid</p> -->
-          </div>
+        {% if recaptchaOn %}
+          <div class="g-recaptcha" data-sitekey="{{recaptchaOn}}"></div>
+        {% endif %}
 
-          <div class="field">
-            <label class="label">Password</label>
-            <p class="control has-icons-left">                
-              <input class="input" type="password" name="password" placeholder="Password" required>
-              <span class="icon is-small is-left">
-                <i class="fas fa-lock"></i>
-              </span>
-            </p>
-          </div>
-
-          {% if recaptchaOn %}
-            <div class="g-recaptcha" data-sitekey="{{recaptchaOn}}"></div>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="notification is-danger py-2 px-3 m-0">{{ messages[0] }}</div>
           {% endif %}
+        {% endwith %}
 
-          {% with messages = get_flashed_messages() %}
-            {% if messages %}
-              <!-- <article class="message is-danger is-light my-1">
-                <div class="message-body py-1 px-1"> -->
-                <div class="notification is-danger is-light py-1 px-2">
-                  {{ messages[0] }}
-                </div>
-                <!-- </div>
-              </article> -->
-            {% endif %}
-          {% endwith %} 
-         
-          <input type="submit" value="Sign Up" class="button is-info mt-1 mb-2" >
-
-          </form> 
-
-          <article class="message is-info m-0 is-small">
-            <div class="message-body p-2 mt-2 mb-0">
-                <a href="login" class="text-white ml-1">Back to the Login Page</a>
-            </div>
-          </article>
-          
-                           
-      </div>
-            
-
+        <input type="submit" value="Sign up" class="button is-primary">
+        <span class="has-text-muted" style="font-size: 14px;">Already have an account? <a href="login">Sign in</a></span>
+      </form>
     </div>
 
-</div>
+    <p class="fe-login-credit">Developed by Prof. Eduardo L. O. Batista. Emulation backend based on FPGAEmu by Prof. Fabian L. Cabrera.</p>
+  </div>
 
+  <div class="fe-login-aside">
+    <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="FPGAEmuWeb">
+    <div>
+      <div class="fe-tagline">VHDL emulation and simulation in the browser</div>
+      <div class="fe-steps">edit · analyze · compile · emulate · simulate</div>
+    </div>
+  </div>
+</div>
 
 {% endblock %}

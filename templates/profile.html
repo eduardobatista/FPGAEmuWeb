@@ -7,13 +7,11 @@
 
     {% block content %}
 
-    <div class="container mt-3 is-max-desktop" style="max-width: 600px;">
+    <div class="fe-page" style="max-width: 640px;">
 
-        <article class="message is-info ">
-            <div class="message-body py-2">
-                Current user is <strong><em>{{current_user.name}}</em></strong> (<strong>{{current_user.email}}</strong>).
-            </div>
-        </article>
+        <span class="fe-caption">Profile</span>
+        <h1 class="fe-page-title">{{ current_user.name }}</h1>
+        <p class="fe-hint mb-5"><span class="is-mono">{{ current_user.email }}</span> · {{ current_user.role }}</p>
 
 
         {% with messages = get_flashed_messages() %}
@@ -30,7 +28,8 @@
 
         {% if current_user.role == 'Professor' or current_user.role == 'Admin' %}
             <form class="box" action="setViewAs" method="POST">
-                <h3 class="title is-4">View As</h3>
+                <h3 class="title is-5 mb-2">View as</h3>
+                <p class="fe-hint mb-3">See the projects of another user.</p>
                 <div class="select is-small">
                     <select class="custom-select mb-2" id="viewAsSelect" name="viewAsSelect">
                         {% for uu in userlist %} 
@@ -44,13 +43,13 @@
                         {% endfor %}
                     </select>
                 </div>
-                <button type="submit" class="button is-info is-small">Change View</button>
+                <button type="submit" class="button is-small">Change view</button>
 
             </form>
         {% endif %}
 
         <form class="box" action="" onsubmit="doChangePass(event)" method="POST">
-            <h3 class="title is-4">Change Password</h3>
+            <h3 class="title is-5">Change password</h3>
             <div class= "mt-3">
                 <!-- <label for="exampleInputPassword1">Change Password</label> -->
                 <div class="field">
@@ -80,7 +79,7 @@
                 <input type="hidden" name="email" value="{{current_user.email}}" id="useremail">
             </div>
 
-            <button type="submit" class="button is-info is-small">Change Pass</button>
+            <button type="submit" class="button is-primary">Change password</button>
 
             <div class="notification is-warning is-light py-1 px-2 my-1" style="display: none;" id="msg2">                
             </div>
