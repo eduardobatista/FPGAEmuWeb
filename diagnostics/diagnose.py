@@ -1142,11 +1142,84 @@ def check_logs(c, mode):
     c.summary = f"{total_disk} disk-related and {total_other} other error lines in {len(files)} log files"
 
 
+WORKSYNC_STATUS = APP_DIR / ".worksync" / "status.json"
+
+
+def sync_status():
+    """(level, text lines) describing worksync.py, or None when it is not in use."""
+    if os.environ.get("ENVCACHEDWORK", "") in ("", "False"):
+        return None
+    try:
+        st = json.loads(WORKSYNC_STATUS.read_text())
+    except (OSError, ValueError):
+        return "warn", ["No sync status yet (worksync.py starting?)."]
+    lines = []
+    level = "ok"
+    interval = int(os.environ.get("WORKSYNC_INTERVAL", "180"))
+    if not (APP_DIR / ".worksync" / "ready").exists():
+        level = "fail"
+        lines.append(f"Initial copy NFS → local NOT finished: phase {st.get('phase')}, "
+                     f"attempt {st.get('pull_attempts')}, started {st.get('pull_started')}. The web app waits for it.")
+    else:
+        ps = st.get("pull_stats") or {}
+        lines.append(f"App works on local disk since {st.get('ready_since') or '(before this restart)'}"
+                     + (f"; initial copy took {st.get('pull_seconds')} s, {ps.get('files')} entries." if ps else "."))
+        last_ok = st.get("last_push_ok")
+        lines.append(f"Last successful save to NFS: {last_ok or 'none yet'}"
+                     + (f" ({st.get('last_push_seconds')} s, {(st.get('last_push_stats') or {}).get('transferred')} files, "
+                        f"databases {st.get('last_push_dbs') or 'unchanged'})" if last_ok else "")
+                     + f". Saves every {interval} s.")
+        ref = last_ok or st.get("ready_since")
+        if ref:
+            age = (datetime.datetime.now().astimezone() - datetime.datetime.fromisoformat(ref)).total_seconds()
+            if age > 3 * interval + 600:
+                level = "fail"
+                lines.append(f"Local changes NOT saved to NFS for {int(age // 60)} min.")
+        if st.get("consecutive_push_failures"):
+            level = "fail" if level == "fail" else "warn"
+            lines.append(f"{st['consecutive_push_failures']} consecutive failed saves.")
+        if not st.get("push_delete", True):
+            level = "fail" if level == "fail" else "warn"
+            lines.append("Initial copy was incomplete (unreadable files on NFS): deletions are not propagated to NFS.")
+        if st.get("db_problems"):
+            level = "fail"
+            lines.append(f"Database problems after the copy: {st['db_problems']}")
+        if st.get("last_push_warning"):
+            lines.append(f"Warning: {st['last_push_warning']}")
+    if st.get("last_error"):
+        lines.append(f"Last error: {st['last_error']}")
+    return level, lines
+
+
+def check_worksync(c, mode):
+    s = sync_status()
+    if s is None:
+        c.status = "skip"
+        c.summary = "not in use (ENVCACHEDWORK is not True: the app works directly on work/)"
+        return
+    level, lines = s
+    add = {"ok": c.info, "warn": c.warn, "fail": c.fail}[level]
+    for l in lines:
+        add(l)
+    c.summary = lines[0][:200]
+
+
+def _sync_card():
+    s = sync_status()
+    if s is None:
+        return ""
+    level, lines = s
+    e = html.escape
+    return (f"<div class='card'><span class='badge b-{level}'>{level.upper()}</span> <b>Data sync (local disk ↔ NFS)</b>"
+            f"<div class='lines'>" + "".join(f"<div>{e(l)}</div>" for l in lines) + "</div></div>")
+
+
 # (id, title, function, timeout in seconds for quick mode, for full mode)
 CHECKS = [
     ("environment", "Environment", check_environment, 60, 60),
     ("memory", "Memory, OOM and cgroup limits", check_memory, 60, 60),
     ("filesystems", "Filesystems: read-only mounts, free space", check_filesystems, 120, 120),
+    ("worksync", "Data sync between local disk and NFS (worksync)", check_worksync, 30, 30),
     ("io", "Disk write/read-back test", check_io, 300, 600),
     ("kernel", "Kernel log (dmesg)", check_kernel_log, 60, 60),
     ("databases", "Local SQLite databases (locks, integrity)", check_databases, 900, 1800),
@@ -1320,17 +1393,27 @@ def start_background_run(mode, reason):
 
 # --------------------------------------------------------------------------- access key
 
-def access_key():
-    """DIAG_KEY env var, or a random key persisted in the work dir (shown in the admin page)."""
+def _active_workdir():
+    cw = os.environ.get("ENVCACHEDWORK", "")
+    return APP_DIR / ("work" if cw in ("", "False") else "cachedwork")
+
+
+def access_key(create=True):
+    """DIAG_KEY env var, or a random key persisted in the app's work dir (shown in the admin page).
+    With ENVCACHEDWORK=True that is cachedwork/, synced to work/ (NFS) by worksync.py, so the key
+    survives re-deploys. create=False while the initial copy from NFS is not done (the key will
+    come from there)."""
     env = os.environ.get("DIAG_KEY", "").strip()
     if env:
         return env
-    for f in (APP_DIR / "work" / ".diagkey", DIAG_DIR / "key", Path(tempfile.gettempdir()) / "fpgaemu-diagkey"):
+    for f in (_active_workdir() / ".diagkey", DIAG_DIR / "key", Path(tempfile.gettempdir()) / "fpgaemu-diagkey"):
         try:
             if f.exists():
                 k = f.read_text().strip()
                 if len(k) >= 16:
                     return k
+            if not create:
+                continue
             f.parent.mkdir(parents=True, exist_ok=True)
             k = secrets.token_urlsafe(18)
             f.write_text(k)
@@ -1341,8 +1424,8 @@ def access_key():
     return None
 
 
-def key_ok(given):
-    k = access_key()
+def key_ok(given, create=True):
+    k = access_key(create)
     return bool(k and given and hmac.compare_digest(str(given), k))
 
 
@@ -1392,9 +1475,14 @@ def summary_html(key_qs=""):
     """Small fragment for the admin page."""
     rep, _ = load_latest()
     e = html.escape
-    if not rep:
-        return "<p>No diagnostics report yet.</p>"
     parts = []
+    ss = sync_status()
+    if ss:
+        level, lines = ss
+        parts.append(f"<p><b>Data sync:</b> <b class='diag-{level}'>{level.upper()}</b> — " +
+                     "<br>".join(e(l) for l in lines) + "</p>")
+    if not rep:
+        return "".join(parts) + "<p>No diagnostics report yet.</p>"
     if rep.get("in_progress"):
         ip = rep["in_progress"]
         done = ip.get("checks", [])
@@ -1505,6 +1593,7 @@ def render_html(key="", banner="", run_url="/diagnostics/run", json_url="/diagno
                "<button name='mode' value='quick'>Run quick check</button> "
                "<button name='mode' value='full'>Run full check (slow, reads the whole image)</button></form> "
                f"<a href='{e(json_url)}{kq}'>JSON</a></div>")
+    out.append(_sync_card())
     if running:
         out += _progress_html(rep["in_progress"])
     if not rep or not rep.get("started"):
@@ -1547,11 +1636,64 @@ def _port_in_use(port):
         return False
 
 
-def serve_fallback(args):
-    """Waits; if nothing answers on port 5000 for FALLBACK_DELAY seconds, serves the report there."""
+def serve_page(banner, stop=lambda: False, public_html=None, create_key=True, port=APP_PORT):
+    """Minimal server on `port`: /diagnostics (with ?key=) and a 503 page for everything else.
+    `banner` is a function returning the text shown on top. Returns when stop() is true."""
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from urllib.parse import urlparse, parse_qs
 
+    public_html = public_html or "<h1>FPGAEmu is temporarily unavailable</h1><p>The server is being diagnosed.</p>"
+
+    class H(BaseHTTPRequestHandler):
+        def _send(self, code, body, ctype="text/html; charset=utf-8"):
+            b = body.encode()
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(b)))
+            self.send_header("Cache-Control", "no-store")
+            if code == 503:
+                self.send_header("Retry-After", "60")
+            self.end_headers()
+            self.wfile.write(b)
+
+        def _key(self):
+            return parse_qs(urlparse(self.path).query).get("key", [""])[0]
+
+        def do_GET(self):
+            path = urlparse(self.path).path
+            if path in ("/diagnostics", "/diagnostics.json"):
+                if not key_ok(self._key(), create_key):
+                    return self._send(403, "Forbidden: missing or wrong ?key=")
+                if path.endswith(".json"):
+                    rep, _ = load_latest()
+                    return self._send(200, json.dumps(rep), "application/json")
+                return self._send(200, render_html(self._key(), html.escape(banner())))
+            self._send(503, public_html)
+
+        def do_POST(self):
+            if urlparse(self.path).path != "/diagnostics/run" or not key_ok(self._key(), create_key):
+                return self._send(403, "Forbidden")
+            n = int(self.headers.get("Content-Length") or 0)
+            mode = parse_qs(self.rfile.read(n).decode()).get("mode", ["quick"])[0]
+            start_background_run("full" if mode == "full" else "quick", "manual (fallback)")
+            self.send_response(303)
+            self.send_header("Location", f"/diagnostics?key={self._key()}")
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    srv = ThreadingHTTPServer(("0.0.0.0", port), H)
+    srv.timeout = 1
+    try:
+        while not stop():
+            srv.handle_request()
+    finally:
+        srv.server_close()
+
+
+def serve_fallback(args):
+    """Waits; if nothing answers on port 5000 for FALLBACK_DELAY seconds, serves the report there."""
     down_since = None
     while True:
         if _port_in_use(APP_PORT):
@@ -1564,47 +1706,9 @@ def serve_fallback(args):
 
     print(f"Web app down for {FALLBACK_DELAY}s: serving diagnostics on port {APP_PORT}", flush=True)
     start_background_run("quick", "app down (fallback)")
-    banner = (f"The FPGAEmu web application has not been answering on port {APP_PORT} since "
-              f"{now_iso()} (minus {FALLBACK_DELAY}s). This page is served by the diagnostics fallback server.")
-
-    class H(BaseHTTPRequestHandler):
-        def _send(self, code, body, ctype="text/html; charset=utf-8"):
-            b = body.encode()
-            self.send_response(code)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(b)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(b)
-
-        def _key(self):
-            return parse_qs(urlparse(self.path).query).get("key", [""])[0]
-
-        def do_GET(self):
-            path = urlparse(self.path).path
-            if path in ("/diagnostics", "/diagnostics.json"):
-                if not key_ok(self._key()):
-                    return self._send(403, "Forbidden: missing or wrong ?key=")
-                if path.endswith(".json"):
-                    rep, _ = load_latest()
-                    return self._send(200, json.dumps(rep), "application/json")
-                return self._send(200, render_html(self._key(), banner))
-            self._send(503, "<h1>FPGAEmu is temporarily unavailable</h1><p>The server is being diagnosed.</p>")
-
-        def do_POST(self):
-            if urlparse(self.path).path != "/diagnostics/run" or not key_ok(self._key()):
-                return self._send(403, "Forbidden")
-            n = int(self.headers.get("Content-Length") or 0)
-            mode = parse_qs(self.rfile.read(n).decode()).get("mode", ["quick"])[0]
-            start_background_run("full" if mode == "full" else "quick", "manual (fallback)")
-            self.send_response(303)
-            self.send_header("Location", f"/diagnostics?key={self._key()}")
-            self.end_headers()
-
-        def log_message(self, *a):
-            pass
-
-    ThreadingHTTPServer(("0.0.0.0", APP_PORT), H).serve_forever()
+    since = now_iso()
+    serve_page(lambda: f"The FPGAEmu web application has not been answering on port {APP_PORT} since "
+                       f"{since} (minus {FALLBACK_DELAY}s). This page is served by the diagnostics fallback server.")
 
 
 # --------------------------------------------------------------------------- main

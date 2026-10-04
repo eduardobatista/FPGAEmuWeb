@@ -364,7 +364,7 @@ def workbackup():
     if current_user.role != "Admin":
         return "Error! Not an Admin."
     
-    workdir = Path(current_app.MAINPATH) / "work"
+    workdir = Path(current_app.WORKDIR)
     bckfile = workdir / "workbackup.tar"
     if bckfile.exists():
         bckfile.unlink()
@@ -406,7 +406,7 @@ def workbackupdownload(nocelery=False,resp=None):
     if current_user.role != "Admin":
         return "Error! Not an Admin."
     # temppath = Path(current_app.MAINPATH,"temp")
-    workdir = Path(current_app.MAINPATH) / "work"
+    workdir = Path(current_app.WORKDIR)
     return send_from_directory(workdir, "workbackup.tar", as_attachment=True, max_age=0)
 
 
