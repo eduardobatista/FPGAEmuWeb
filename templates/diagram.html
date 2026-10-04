@@ -60,6 +60,9 @@
     {% endblock %}
 
     {% block scripts %}
+    <!-- The netlistsvg browser bundle does not include its layout engine: it expects a global ELK,
+         from the elkjs version it was built for (0.3.x). -->
+    <script src="https://cdn.jsdelivr.net/npm/elkjs@0.3.0/lib/elk.bundled.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/netlistsvg@1.0.2/built/netlistsvg.bundle.js"></script>
     <script>
         const SKIN_URL = "https://cdn.jsdelivr.net/npm/netlistsvg@1.0.2/lib/default.svg";
@@ -124,13 +127,19 @@
             const prims = Object.values(mod.cells || {}).filter(c => c.type.startsWith("$")).length;
             let svg;
             try {
-                if (prims > MAX_RTL_CELLS) throw new Error("too large");
+                if (prims > MAX_RTL_CELLS) {
+                    throw new Error(`This module is too large to draw in the ${mode.toUpperCase()} view (${prims} gates/cells).` +
+                                    (mode === "rtl" ? " Use the Blocks view, or open its sub-blocks." : ""));
+                }
                 svg = await netlistsvg.render(skin, {modules: {[modname]: mod}});
             } catch (err) {
+                console.error("Block diagram:", err);
                 div.innerHTML = "";
                 $("#dlbtn").prop("disabled", true);
-                showError(`This module is too large or complex to draw in the ${mode.toUpperCase()} view (${prims} gates/cells).` +
-                          (mode === "rtl" ? " Use the Blocks view, or open its sub-blocks." : ""));
+                const msg = (err && err.message) || String(err);
+                showError(msg.startsWith("This module") ? msg :
+                          "Could not draw this module: " + msg +
+                          (err instanceof RangeError ? " (too complex; try the Blocks view or a sub-block)" : ""));
                 return;
             }
             div.innerHTML = svg;
