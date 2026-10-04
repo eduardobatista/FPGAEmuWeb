@@ -80,14 +80,22 @@ def serverProcs():
     else:
         return "Only for admins." 
 
+def _logtail(file, lines=400):
+    """Last lines of a log file (they can be several MB), HTML-escaped."""
+    with open(file, "rb") as ff:
+        ff.seek(0, 2)
+        ff.seek(max(0, ff.tell() - 200_000))
+        text = ff.read().decode("utf-8", "replace")
+    return "<br>".join(str(escape(l)) for l in text.splitlines()[-lines:])
+
+
 # @adm.route('/checkstdout', methods=['POST'])
 # @login_required
 @adm.route('/checkstdout', methods=['POST', 'GET'])
 def checkStdOut():
     file = Path("/home","stdout.log")
     if file.exists():
-        with open(file,"r") as ff:
-            return ff.read().replace('\n','\n<br>') 
+        return _logtail(file)
     else:
         return "File not found."
     # if (current_user.role == "Admin"):
@@ -106,8 +114,7 @@ def checkStdOut():
 def checkStdErr():
     file = Path("/home","stderr.log")
     if file.exists():
-        with open(file,"r") as ff:
-            return ff.read().replace('\n','\n<br>') 
+        return _logtail(file)
     else:
         return "File not found."
     # if (current_user.role == "Admin"):

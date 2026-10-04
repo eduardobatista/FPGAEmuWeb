@@ -964,11 +964,55 @@ def _scan_file(p, text_check):
     return size, time.monotonic() - t0, all_zero and size > 0, has_nul, head
 
 
+NFS_SAMPLE = 200
+
+
+def _nfs_sample(c):
+    """With worksync, reading the whole NFS tree (100k+ files) takes long and loads a struggling
+    NFS: read a random sample of the files the index says are there, and time it."""
+    import random
+    paths = []
+    try:
+        with open(APP_DIR / ".worksync" / "index.tsv", encoding="utf-8", errors="surrogateescape") as f:
+            paths = [l.rstrip("\n").split("\t", 3)[3] for l in f if l.startswith("f\t")]
+    except (OSError, IndexError):
+        pass
+    if not paths:
+        c.info("NFS sample skipped: no worksync index yet.")
+        return
+    sample = random.sample(paths, min(NFS_SAMPLE, len(paths)))
+    times, errs = [], 0
+    for rel in sample:
+        p = APP_DIR / "work" / rel
+        progress(f"NFS sample: reading {p}")
+        try:
+            t0 = time.monotonic()
+            _scan_file(p, False)
+            times.append((time.monotonic() - t0, str(p)))
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            errs += 1
+            c.fail(f"I/O ERROR reading {p} on NFS: {oserror_text(e)}" if e.errno == errno.EIO
+                   else f"Cannot read {p} on NFS: {oserror_text(e)}")
+    if times:
+        ts = sorted(t for t, _ in times)
+        line = (f"NFS sample: {len(times)} random files read, median {ts[len(ts) // 2] * 1000:.0f} ms, "
+                f"slowest {ts[-1]:.1f} s, {sum(1 for t in ts if t > 1)} over 1 s")
+        (c.warn if ts[len(ts) // 2] > 0.5 or ts[-1] > 5 else c.info)(line)
+        for t, p in sorted(times, reverse=True)[:5]:
+            if t > 1:
+                c.info(f"    slow NFS read: {p} {t:.1f} s")
+
+
 def check_workdata(c, mode):
     nfiles = nbytes = 0
     slow, big = [], []
+    synced = sync_status() is not None
+    if synced:
+        _nfs_sample(c)
     for w in WORKDIRS:
-        if not w.exists():
+        if not w.exists() or (synced and w == APP_DIR / "work"):
             continue
         for p, err in iter_tree(w):
             if err:
@@ -1177,6 +1221,7 @@ def sync_status():
         last_ok = st.get("last_push_ok")
         lines.append(f"Last successful save to NFS: {last_ok or 'none yet'}"
                      + (f" ({st.get('last_push_seconds')} s, {(st.get('last_push_stats') or {}).get('transferred')} files, "
+                        f"{(st.get('last_push_stats') or {}).get('deleted') or 0} deleted, "
                         f"databases {st.get('last_push_dbs') or 'unchanged'})" if last_ok else "")
                      + f". Saves every {interval} s.")
         ref = last_ok or st.get("ready_since")
@@ -1188,13 +1233,20 @@ def sync_status():
         fp = st.get("full_pull_phase")
         if fp and fp != "done":
             level = "fail" if level == "fail" else "warn"
-            lines.append(f"User folders still being copied from NFS (attempt {st.get('full_pull_attempts')}, "
-                         f"started {st.get('full_pull_started')}): some students may not see all their projects yet."
-                         + (f" Last problem: {st['full_pull_error']}" if st.get("full_pull_error") else ""))
+            failed = st.get("folders_failed") or {}
+            lines.append(f"User folders being copied from NFS ({fp}): {st.get('folders_done', 0)} of "
+                         f"{st.get('folders_total', '?')} done, pass {st.get('full_pull_attempts')}"
+                         + (f", now {st['current_folder']}" if st.get("current_folder") else "")
+                         + (f", {len(failed)} failed so far (retried later)" if failed else "")
+                         + ". Students whose folder was not copied yet may not see their projects.")
+            if st.get("full_pull_error"):
+                lines.append(f"Last folder problem: {st['full_pull_error']}")
         elif fp == "done":
-            fs = st.get("full_pull_stats") or {}
-            lines.append(f"User folders copied from NFS at {st.get('full_pull_done')} "
-                         f"({st.get('full_pull_seconds')} s, {fs.get('files')} entries).")
+            lines.append(f"All {st.get('folders_total', '?')} user folders copied from NFS at {st.get('full_pull_done')}.")
+        if st.get("last_reconcile"):
+            rs = st.get("last_reconcile_stats") or {}
+            lines.append(f"Last full reconciliation: {st['last_reconcile']} ({st.get('last_reconcile_seconds')} s, "
+                         f"{rs.get('transferred')} files sent).")
         if st.get("consecutive_push_failures"):
             level = "fail" if level == "fail" else "warn"
             lines.append(f"{st['consecutive_push_failures']} consecutive failed saves.")

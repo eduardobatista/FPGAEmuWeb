@@ -125,7 +125,27 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
     app.register_blueprint(admin_blueprint)    
 
     socketio.init_app(app)
-    
+
+    # Request timing in the Flask log (emulogs.log): requests slower than 1 s, and start/end of the
+    # endpoints being investigated (a START without END means the request never finished).
+    import time
+    from flask import g, request
+    traced = ("/getuserlist",)
+
+    @app.before_request
+    def _req_start():
+        g._t0 = time.monotonic()
+        if request.path in traced:
+            logger.info(f"REQ START {request.method} {request.path} {dict(request.form)}")
+
+    @app.after_request
+    def _req_end(response):
+        ms = (time.monotonic() - g.get("_t0", time.monotonic())) * 1000
+        if ms > 1000 or request.path in traced:
+            logger.info(f"REQ END {request.method} {request.path} -> {response.status_code}, "
+                        f"{response.calculate_content_length() or '?'} bytes, {ms:.0f} ms")
+        return response
+
     return app
 
 
