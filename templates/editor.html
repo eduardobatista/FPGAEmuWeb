@@ -4,8 +4,10 @@
   <style>
       html, body { overflow: hidden; }
       .fe-editor-body { flex: 1; display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 0; }
-      .fe-editor-files { padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
-      .fe-editor-files .section-label { padding: 0 10px 8px; }
+      .fe-editor-body > * { min-height: 0; }
+      .fe-editor-files { padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+      .fe-editor-files > * { flex: none; }
+      .fe-editor-files .section-label { padding: 0 10px 8px; position: sticky; top: -16px; background: var(--fe-surface); z-index: 1; }
       .fe-editor-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
       #editor {
         flex: 1; min-height: 0; width: 100%; margin: 0;
