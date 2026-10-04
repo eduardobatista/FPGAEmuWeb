@@ -170,7 +170,7 @@ def admin():
     if recaptchafile.exists():
         with open(recaptchafile,"r") as ff:
             recapdata = ff.read()
-    return render_template('admin.html',clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'],recaptchainfo=recapdata)
+    return render_template('admin.html',clouddbinfo=current_app.config['CLOUDDBINFO'],emailinfo=current_app.config['EMAILINFO'],recaptchainfo=recapdata,diagkey=diagnose.access_key())
 
 
 @adm.route('/getuserlist', methods=['POST'])
@@ -428,3 +428,52 @@ def workcleanup():
     
 
     
+
+# ---------------------------------------------------------------- Server diagnostics
+# The checks live in diagnostics/diagnose.py (stdlib only). These routes are reachable
+# by a logged-in Admin OR with ?key=<access key>, so they still work when login/DB is broken.
+
+from diagnostics import diagnose
+
+
+def _diag_allowed():
+    try:
+        if current_user.is_authenticated and current_user.role == "Admin":
+            return True
+    except Exception as ex:  # e.g. corrupted database while loading the user
+        current_app.logger.error(f"Diagnostics: cannot check current user: {ex}")
+    return diagnose.key_ok(request.args.get("key", ""))
+
+
+@adm.route('/diagnostics')
+def diagnostics_page():
+    if not _diag_allowed():
+        return "Forbidden: log in as Admin or use ?key=", 403
+    return diagnose.render_html(key=request.args.get("key", ""))
+
+
+@adm.route('/diagnostics.json')
+def diagnostics_json():
+    if not _diag_allowed():
+        return "Forbidden", 403
+    rep, _ = diagnose.load_latest()
+    return current_app.response_class(json.dumps(rep), mimetype="application/json")
+
+
+@adm.route('/diagnostics/summary')
+def diagnostics_summary():
+    if not _diag_allowed():
+        return "Forbidden", 403
+    return diagnose.summary_html()
+
+
+@adm.route('/diagnostics/run', methods=['POST'])
+def diagnostics_run():
+    if not _diag_allowed():
+        return "Forbidden", 403
+    mode = "full" if request.form.get("mode") == "full" else "quick"
+    diagnose.start_background_run(mode, "manual")
+    key = request.args.get("key", "")
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return "Started"
+    return redirect(url_for('adm.diagnostics_page', key=key) if key else url_for('adm.diagnostics_page'))

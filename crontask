@@ -1,2 +1,5 @@
 # At each ten minutes, synchronizes...
 # 00,10,20,30,40,50 * * * * cp /home/fpgaemuweb/dbb.sqlite /home/fpgaemuweb/seckeyb /home/fpgaemuweb/work/
+# Server diagnostics: quick check every 6 hours, full check every night.
+15 */6 * * * nice -n 10 /usr/bin/python3 /home/fpgaemuweb/diagnostics/diagnose.py run --mode quick --reason cron > /dev/null 2>&1
+45 3 * * * nice -n 10 /usr/bin/python3 /home/fpgaemuweb/diagnostics/diagnose.py run --mode full --reason cron-nightly > /dev/null 2>&1

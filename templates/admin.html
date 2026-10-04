@@ -2,6 +2,11 @@
 
 
     {% block styles %}
+    <style>
+        .diag-ok, .diag-info { color: #1a7f37; }
+        .diag-warn { color: #a96b00; }
+        .diag-fail { color: #c62828; }
+    </style>
     {% endblock %} 
 
 
@@ -38,6 +43,25 @@
             <div class="mb-2 mt-1 mx-2 is-size-7" id="psinfo" style="height: 70vh; overflow-y:auto">
                 
             </div>
+
+        </div>
+
+        <div class="box">
+
+            <h2 class="title is-4">Server Diagnostics</h2>
+
+            <p class="is-size-7 mb-2">
+                Disk, filesystem, file integrity, database, toolchain and process checks. A full check runs at every
+                container start; quick checks run every 6 hours. Bookmark this link: it works even if login is broken
+                (and, if the app goes down for 5 minutes, it is served by a fallback server):<br>
+                <a id="diaglink" href="/diagnostics?key={{diagkey}}" target="_blank"></a>
+            </p>
+
+            <button class="button is-info is-small" onclick="runDiagnostics('quick');">Run Quick Check</button>
+            <button class="button is-info is-small" onclick="runDiagnostics('full');">Run Full Check</button>
+            <a class="button is-link is-small" href="/diagnostics" target="_blank">Open Full Report</a>
+
+            <div class="mb-2 mt-2 mx-2 is-size-7" id="diagsummary"></div>
 
         </div>
 
@@ -143,11 +167,29 @@
 
             $(document).ready(function () {
                 $("#psinfo").hide();
+                $("#diaglink").text(window.location.origin + $("#diaglink").attr("href"));
+                loadDiagSummary();
                 $.post("/getuserlist",{"type":"local"}).done( function (data) {
                         $("#ulistspinner").hide();
                         $("#userlist").html(data);
                     });
             });
+
+            function loadDiagSummary() {
+                $.get("/diagnostics/summary").done(function (data) {
+                    $("#diagsummary").html(data);
+                    if (data.indexOf("Running now") >= 0) {
+                        setTimeout(loadDiagSummary, 5000);
+                    }
+                });
+            }
+
+            function runDiagnostics(mode) {
+                $("#diagsummary").html("Starting " + mode + " check...");
+                $.ajax({url: "/diagnostics/run", method: "POST", data: {mode: mode},
+                        headers: {"X-Requested-With": "XMLHttpRequest"}})
+                    .done(function () { setTimeout(loadDiagSummary, 2000); });
+            }
 
             function performBackup() {
                 $("#bckinfo").hide();

@@ -37,5 +37,10 @@ RUN mkdir /home/fpgaemuweb/work
 RUN touch /home/stdout.log
 RUN touch /home/stdout.err
 
+# Checksums of every file of the image, verified at runtime by diagnostics/diagnose.py
+# (detects files corrupted on the server disk). Must be the last step that changes files.
+ARG GIT_COMMIT
+RUN GIT_COMMIT=${GIT_COMMIT} python3 /home/fpgaemuweb/diagnostics/diagnose.py manifest
+
 # ENTRYPOINT ["/usr/bin/supervisord","-c","/home/fpgaemuweb/supervisord.conf"]
 ENTRYPOINT [ "/home/fpgaemuweb/entrypoint.sh" ]

@@ -27,6 +27,12 @@ else
   echo "ENVCACHEDWORK is false.";
 fi
 
+# Server diagnostics: full check in background at every start (see diagnostics/diagnose.py).
+DIAG=/home/fpgaemuweb/diagnostics/diagnose.py
+/usr/bin/python3 $DIAG print-url
+if command -v ionice >/dev/null 2>&1; then IONICE="ionice -c 3"; else IONICE=""; fi
+nohup nice -n 10 $IONICE /usr/bin/python3 $DIAG run --mode full --reason startup > /home/diagnostics-startup.log 2>&1 &
+
 crontab /home/fpgaemuweb/crontask
 cron start
 
