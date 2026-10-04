@@ -2,95 +2,90 @@
 
 {% block styles %}
 <style>
-      
-      #maincard{
-        /* height: 370px; */
-        margin-top: auto;
-        margin-bottom: auto;
-        width: 400px;
-      }
-      
-    
-  </style>
+  html, body { background: var(--fe-surface); }
+  .fe-login { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+  .fe-login-main { display: flex; flex-direction: column; padding: 48px 64px; }
+  .fe-login-form { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; max-width: 380px; width: 100%; }
+  .fe-login-form h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+  .fe-login-form .fe-sub { margin: 6px 0 0; color: var(--fe-muted); font-size: 15px; }
+  .fe-login-form form { display: flex; flex-direction: column; gap: 18px; }
+  .fe-login-form .field { margin: 0; }
+  .fe-login-form .label { margin-bottom: 7px; }
+  .fe-login-form .input { padding-left: 14px; }
+  .fe-login-form .button.is-primary { height: 46px; font-size: 15px; border-radius: 8px; margin-top: 6px; width: 100%; }
+  .fe-login-links { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  #msg2 { margin: 0; }
+  .fe-login-credit { margin: 0; font-size: 13px; line-height: 1.6; color: var(--fe-faint); max-width: 440px; }
+  .fe-login-aside { background: #f3f5f4; border-left: 1px solid #e8ebe9; display: flex; flex-direction: column;
+                    align-items: center; justify-content: center; gap: 36px; padding: 48px; text-align: center; }
+  .fe-login-aside img { width: 140px; height: 140px; }
+  .fe-login-aside .fe-tagline { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .fe-login-aside .fe-steps { margin-top: 10px; font-family: var(--fe-mono); font-size: 13px; color: var(--fe-muted); letter-spacing: 0.04em; }
+  @media screen and (max-width: 799px) {
+    .fe-login { grid-template-columns: 1fr; }
+    .fe-login-main { padding: 32px 24px; }
+    .fe-login-aside { display: none; }
+  }
+</style>
 {% endblock %}   
 
 {% block content %}
 
-<div class="container is-fullwidth">
-                         
-      <div class="card mx-auto my-4" id="maincard">
-                        
-        <div class="card-header">
-          <p class="card-header-title has-background-info has-text-white">
-            FPGAEmuWeb Sign In
-          </p>
-        </div>
-        <div class="card-content">
-          <form method="POST" action="" onsubmit="doLogin(event)">
+<div class="fe-login">
+  <div class="fe-login-main">
+    <span class="fe-logo is-large">
+      <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="">
+      <span class="fe-wordmark"><b>FPGA</b><span>Emu</span><em>Web</em></span>
+    </span>
 
-            <div class="field">
-              <label class="label">Email</label>
-              <div class="control has-icons-left">
-                <input class="input" type="email" name="email" id="email" placeholder="your@email" required>
-                <span class="icon is-small is-left">
-                  <i class="fas fa-envelope"></i>
-                </span>
-                <!-- <span class="icon is-small is-right">
-                  <i class="fas fa-exclamation-triangle"></i>
-                </span> -->
-              </div>
-              <!-- <p class="help is-danger">This email is invalid</p> -->
-            </div>
-
-            <div class="field">
-              <label class="label">Password</label>
-              <p class="control has-icons-left">                
-                <input class="input" type="password" name="password" id="password" placeholder="Password" required>
-                <span class="icon is-small is-left">
-                  <i class="fas fa-lock"></i>
-                </span>
-              </p>
-            </div>
-
-            {% with messages = get_flashed_messages() %}
-              {% if messages %}
-                <!-- <article class="message is-danger is-light my-1">
-                  <div class="message-body py-1 px-1"> -->
-                  <div class="notification is-danger is-light py-1 px-2">
-                    {{ messages[0] }}
-                  </div>
-                  <!-- </div>
-                </article> -->
-              {% endif %}
-              {% endwith %} 
-                            
-              <div class="notification is-warning is-light py-1 px-2 my-1" style="display: none;" id="msg2">                
-              </div>
-           
-            <input type="submit" value="Login" class="button is-info mt-1 mb-2">
-            
-            <!-- <button type="button" class="button is-info mt-1 mb-2" onclick="doLogin()" >Login</button> -->
-
-            </form> 
-
-            <article class="message is-info m-0 is-small">
-              <div class="message-body p-2 mt-2 mb-0">
-                Don't have an account? <a href="signup" class="text-white font-weight-bold ml-1">Sign Up!</a><br>
-              </div>
-            </article>
-
-            <article class="message is-info is-small">
-              <div class="message-body p-2 mt-1">
-                <a href="#" class="text-white font-weight-bold" onclick="passRecovery();">Forgot your password?</a>
-              </div>
-            </article>
-            
-                             
-        </div>
-              
-
+    <div class="fe-login-form">
+      <div>
+        <h1>Sign in</h1>
+        <p class="fe-sub">Use the account provided by your instructor.</p>
       </div>
 
+      <form method="POST" action="" onsubmit="doLogin(event)">
+        <div class="field">
+          <label class="label" for="email">Email</label>
+          <div class="control">
+            <input class="input" type="email" name="email" id="email" placeholder="name@institution.edu" required autofocus>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <div class="control">
+            <input class="input" type="password" name="password" id="password" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="notification is-danger py-2 px-3 m-0">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="notification is-warning py-2 px-3" style="display: none;" id="msg2"></div>
+
+        <input type="submit" value="Sign in" class="button is-primary">
+
+        <div class="fe-login-links">
+          <a href="#" onclick="passRecovery(); return false;">Forgot your password?</a>
+          <span class="has-text-muted">No account? <a href="signup">Sign up</a></span>
+        </div>
+      </form>
+    </div>
+
+    <p class="fe-login-credit">Developed by Prof. Eduardo L. O. Batista. Emulation backend based on FPGAEmu by Prof. Fabian L. Cabrera.</p>
+  </div>
+
+  <div class="fe-login-aside">
+    <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="FPGAEmuWeb">
+    <div>
+      <div class="fe-tagline">VHDL emulation and simulation in the browser</div>
+      <div class="fe-steps">edit · analyze · compile · emulate · simulate</div>
+    </div>
+  </div>
 </div>
 
 <div class="modal is-clipped" id="modalPassRecovery">
@@ -102,13 +97,9 @@
     </header>
     <section class="modal-card-body">
       <p>Enter the e-mail address of the account to be recovered:</p>
-      <div class="field">
-        <!-- <label class="label">Email</label> -->
-        <div class="control has-icons-left">
-          <input class="input" type="email" name="email" id="recoveryemail" placeholder="email">
-          <span class="icon is-small is-left">
-            <i class="fas fa-envelope"></i>
-          </span>
+      <div class="field mt-3">
+        <div class="control">
+          <input class="input" type="email" name="email" id="recoveryemail" placeholder="name@institution.edu">
           <!-- <span class="icon is-small is-right">
             <i class="fas fa-exclamation-triangle"></i>
           </span> -->
@@ -117,8 +108,8 @@
       </div>
     </section>
     <footer class="modal-card-foot">
-      <button type="button" class="button is-info is-small" onclick="recovery(event);">Recovery</button>
-      <button class="button is-danger is-success is-small" onclick="$('#modalPassRecovery').removeClass('is-active');">Close</button>
+      <button class="button" onclick="$('#modalPassRecovery').removeClass('is-active');">Cancel</button>
+      <button type="button" class="button is-primary" onclick="recovery(event);">Send new password</button>
       
     </footer>
   </div>
