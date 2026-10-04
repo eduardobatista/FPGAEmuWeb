@@ -8,9 +8,12 @@ touch NFS_DIR, and they are abandoned when they exceed their timeout, so an NFS
 stall never blocks this process nor the web app.
 
 Commands (stdlib only, run with /usr/bin/python3):
-    daemon       initial pull NFS -> local (retried until it succeeds), then push
-                 local -> NFS every WORKSYNC_INTERVAL seconds and once more on SIGTERM
-    wait-ready   serve a "starting" page on port 5000 until the initial pull is done,
+    daemon       phase 1: copy the top-level files of work/ (databases, keys) NFS -> local;
+                 the app starts right after it. Phase 2, in the background: copy the user
+                 folders (retried until it succeeds, never overwriting newer local files).
+                 Meanwhile and afterwards: push local -> NFS every WORKSYNC_INTERVAL seconds,
+                 and once more on SIGTERM. Deletions reach NFS only after phase 2.
+    wait-ready   serve a "starting" page on port 5000 until phase 1 is done,
                  then exec the command given after "--" (the web app)
     push         push once now
     status       print the sync status
@@ -26,6 +29,7 @@ import signal
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -41,6 +45,7 @@ STATUS = STATE_DIR / "status.json"
 SNAP_DIR = STATE_DIR / "snapshots"
 INTERVAL = int(os.environ.get("WORKSYNC_INTERVAL", "180"))
 PULL_TIMEOUT = int(os.environ.get("WORKSYNC_PULL_TIMEOUT", "900"))
+ESSENTIAL_TIMEOUT = int(os.environ.get("WORKSYNC_ESSENTIAL_TIMEOUT", "120"))
 PUSH_TIMEOUT = int(os.environ.get("WORKSYNC_PUSH_TIMEOUT", "600"))
 MAX_DELETE = int(os.environ.get("WORKSYNC_MAX_DELETE", "200"))
 PARTIAL_PULL_ACCEPT = 3   # after this many partial (not timed out) pulls, start anyway
@@ -77,13 +82,17 @@ def load_status():
         return {}
 
 
+_status_lock = threading.Lock()
+
+
 def save_status(**changes):
-    st = load_status()
-    st.update(changes)
-    st["updated"] = now_iso()
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    diagnose.atomic_write(STATUS, json.dumps(st, indent=1))
-    return st
+    with _status_lock:
+        st = load_status()
+        st.update(changes)
+        st["updated"] = now_iso()
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        diagnose.atomic_write(STATUS, json.dumps(st, indent=1))
+        return st
 
 
 def run(cmd, timeout):
@@ -157,44 +166,77 @@ def excludes():
 
 # --------------------------------------------------------------------------- pull
 
-def pull():
-    """NFS -> local. Returns True when the local copy can be used."""
+def pull_essential():
+    """Phase 1, NFS -> local: only the files at the top of work/ (databases, keys, configuration).
+    Small and fast; the app starts right after it. Returns True on success."""
     st = load_status()
     attempt = st.get("pull_attempts", 0) + 1
-    save_status(phase="pulling", pull_attempts=attempt, pull_started=now_iso())
-    log(f"Initial copy NFS -> local, attempt {attempt} (timeout {PULL_TIMEOUT}s)...")
+    save_status(phase="pulling essential files", pull_attempts=attempt, pull_started=now_iso())
+    log(f"Phase 1: copying top-level files (databases, keys) NFS -> local, attempt {attempt}...")
     LOCAL_DIR.mkdir(parents=True, exist_ok=True)
-    rc, out, secs = rsync(local_tmp_args() + excludes() + [f"{NFS_DIR}/", f"{LOCAL_DIR}/"], PULL_TIMEOUT)
+    rc, out, secs = rsync(local_tmp_args() + ["--exclude", "/*/"] + excludes() + [f"{NFS_DIR}/", f"{LOCAL_DIR}/"],
+                          ESSENTIAL_TIMEOUT)
+    if rc not in (0, 24):
+        err = f"timed out after {ESSENTIAL_TIMEOUT}s (NFS stalled?)" if rc is None else \
+              f"rsync exit {rc}: {' | '.join(errors(out))}"
+        log(f"Phase 1 failed: {err}. Will retry.")
+        save_status(phase="pull failed", last_error=f"{now_iso()}: phase 1 {err}")
+        return False
+    db_problems = check_local_dbs()
+    READY.touch()
+    save_status(phase="ready", ready_since=now_iso(), pull_seconds=round(secs, 1), pull_stats=stats(out),
+                db_problems=db_problems,
+                last_error=None if not db_problems else f"{now_iso()}: local DB problems: {db_problems}")
+    log(f"Phase 1 done in {secs:.1f}s. App can start; user folders are copied in the background.")
+    return True
+
+
+def pull_folders():
+    """Phase 2, NFS -> local: everything (the user folders), without overwriting files that
+    are newer locally (changed by users meanwhile). Returns True when finished."""
+    st = load_status()
+    attempt = st.get("full_pull_attempts", 0) + 1
+    save_status(full_pull_phase="copying", full_pull_attempts=attempt, full_pull_started=now_iso())
+    log(f"Phase 2: copying user folders NFS -> local, attempt {attempt} (timeout {PULL_TIMEOUT}s)...")
+    rc, out, secs = rsync(local_tmp_args() + ["--update"] + excludes() + [f"{NFS_DIR}/", f"{LOCAL_DIR}/"],
+                          PULL_TIMEOUT)
     s = stats(out)
     if rc is None:
-        log(f"Initial copy did NOT finish in {PULL_TIMEOUT}s (NFS stalled?). Will retry.")
-        save_status(phase="pull failed", last_error=f"{now_iso()}: pull timed out after {PULL_TIMEOUT}s")
+        log(f"Phase 2 did NOT finish in {PULL_TIMEOUT}s (NFS stalled?). Will retry; files copied so far are kept.")
+        save_status(full_pull_phase="retrying", full_pull_error=f"{now_iso()}: timed out after {PULL_TIMEOUT}s")
         return False
     partial = rc in (23, 24)
     if rc != 0 and not partial:
-        log(f"Initial copy failed (rsync exit {rc}): {' | '.join(errors(out))}")
-        save_status(phase="pull failed", last_error=f"{now_iso()}: pull rsync exit {rc}: {' | '.join(errors(out))}")
+        err = f"rsync exit {rc}: {' | '.join(errors(out))}"
+        log(f"Phase 2 failed ({err}). Will retry.")
+        save_status(full_pull_phase="retrying", full_pull_error=f"{now_iso()}: {err}")
         return False
     push_delete = True
     if partial:
         n = st.get("pull_partial_count", 0) + 1
         save_status(pull_partial_count=n)
-        msg = f"Initial copy incomplete (rsync exit {rc}, some files unreadable): {' | '.join(errors(out))}"
+        msg = f"Phase 2 incomplete (rsync exit {rc}, some files unreadable): {' | '.join(errors(out))}"
         if n < PARTIAL_PULL_ACCEPT:
             log(msg + " Will retry.")
-            save_status(phase="pull failed", last_error=f"{now_iso()}: {msg}")
+            save_status(full_pull_phase="retrying", full_pull_error=f"{now_iso()}: {msg}")
             return False
-        # Some files cannot be read from NFS at all: start anyway, but never delete on NFS,
-        # so files missing locally are not removed there.
+        # Some files cannot be read from NFS at all: never delete on NFS, so files that are
+        # missing locally are not removed there.
         log(msg + f" Accepting after {n} attempts; deletions will NOT be propagated to NFS.")
         push_delete = False
-    db_problems = check_local_dbs()
-    READY.touch()
-    save_status(phase="ready", ready_since=now_iso(), pull_seconds=round(secs, 1), pull_stats=s,
-                pull_complete=not partial, push_delete=push_delete, db_problems=db_problems,
-                last_error=None if not db_problems else f"{now_iso()}: local DB problems: {db_problems}")
-    log(f"Initial copy done in {secs:.0f}s: {s.get('files')} entries, {s.get('transferred')} files copied. App can start.")
+    save_status(full_pull_phase="done", full_pull_done=now_iso(), full_pull_seconds=round(secs, 1),
+                full_pull_stats=s, push_delete=push_delete, full_pull_error=None)
+    log(f"Phase 2 done in {secs:.0f}s: {s.get('files')} entries, {s.get('transferred')} files copied.")
     return True
+
+
+def folders_pulled():
+    return load_status().get("full_pull_phase") == "done"
+
+
+def _pull_folders_loop():
+    while not _stop and not pull_folders():
+        _sleep(30)
 
 
 def check_local_dbs():
@@ -282,7 +324,12 @@ def _push(timeout, reason):
         log(f"Push: could not snapshot databases: {e}")
         sigs, changed = st.get("db_sigs", {}), []
     # 1. Files (databases excluded here: they go as snapshots below)
-    delete = ["--delete", f"--max-delete={MAX_DELETE}"] if st.get("push_delete", True) else []
+    if st.get("full_pull_phase") == "done":
+        delete = ["--delete", f"--max-delete={MAX_DELETE}"] if st.get("push_delete", True) else []
+    else:
+        # User folders are still being copied from NFS: the local tree is incomplete, so never
+        # delete there, and do not replace files that are newer on NFS.
+        delete = ["--update"]
     tmp = nfs_tmp_args()
     args = tmp + delete + excludes() + ["--exclude", "/*.sqlite", "--exclude", "/*.db", f"{LOCAL_DIR}/", f"{NFS_DIR}/"]
     rc, out, secs = rsync(args, timeout)
@@ -344,11 +391,14 @@ def daemon():
         log("Container restarted: the local copy is the current one; saving it to NFS.")
         push(reason="restart")
     else:
-        save_status(pull_attempts=0, pull_partial_count=0, consecutive_push_failures=0, db_sigs={})
-        while not _stop and not pull():
+        save_status(pull_attempts=0, pull_partial_count=0, consecutive_push_failures=0, db_sigs={},
+                    full_pull_phase="pending", full_pull_attempts=0)
+        while not _stop and not pull_essential():
             _sleep(30)
         if _stop:
             return
+    if not folders_pulled():
+        threading.Thread(target=_pull_folders_loop, daemon=True).start()
     diagnose.say(f"Diagnostics page: http(s)://<server>/diagnostics?key={diagnose.access_key()}")
     diag_pending = True   # the startup diagnostics ran before the data was here: run again
     while not _stop:

@@ -466,6 +466,7 @@ def diagnostics_json():
     if not _diag_allowed():
         return "Forbidden", 403
     rep, _ = diagnose.load_latest()
+    rep = dict(rep or {}, sync=diagnose.sync_status())
     return current_app.response_class(json.dumps(rep), mimetype="application/json")
 
 

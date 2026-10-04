@@ -1175,6 +1175,16 @@ def sync_status():
             if age > 3 * interval + 600:
                 level = "fail"
                 lines.append(f"Local changes NOT saved to NFS for {int(age // 60)} min.")
+        fp = st.get("full_pull_phase")
+        if fp and fp != "done":
+            level = "fail" if level == "fail" else "warn"
+            lines.append(f"User folders still being copied from NFS (attempt {st.get('full_pull_attempts')}, "
+                         f"started {st.get('full_pull_started')}): some students may not see all their projects yet."
+                         + (f" Last problem: {st['full_pull_error']}" if st.get("full_pull_error") else ""))
+        elif fp == "done":
+            fs = st.get("full_pull_stats") or {}
+            lines.append(f"User folders copied from NFS at {st.get('full_pull_done')} "
+                         f"({st.get('full_pull_seconds')} s, {fs.get('files')} entries).")
         if st.get("consecutive_push_failures"):
             level = "fail" if level == "fail" else "warn"
             lines.append(f"{st['consecutive_push_failures']} consecutive failed saves.")
@@ -1666,6 +1676,7 @@ def serve_page(banner, stop=lambda: False, public_html=None, create_key=True, po
                     return self._send(403, "Forbidden: missing or wrong ?key=")
                 if path.endswith(".json"):
                     rep, _ = load_latest()
+                    rep = dict(rep or {}, sync=sync_status())
                     return self._send(200, json.dumps(rep), "application/json")
                 return self._send(200, render_html(self._key(), html.escape(banner())))
             self._send(503, public_html)
