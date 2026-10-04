@@ -96,17 +96,47 @@ def doPassRecovery(email,randompasshash,clouddburl):
     return ret
 
 
+def writeWorkBackup(workdir, destfile):
+    """tar.gz of the work dir. SQLite databases are added as consistent snapshots (backup API),
+    since the app may be writing to them; their journal/WAL files and old backups are skipped."""
+    import os
+    import sqlite3
+    import tarfile
+    import tempfile
+    workdir, destfile = Path(workdir), Path(destfile)
+    destfile.parent.mkdir(parents=True, exist_ok=True)
+    part = destfile.with_name(destfile.name + ".part")
+    with tempfile.TemporaryDirectory(dir=destfile.parent) as snapdir, tarfile.open(part, "w:gz") as tar:
+        for p in sorted(workdir.iterdir()):
+            name = p.name
+            if name.startswith("workbackup") or name.endswith(("-journal", "-wal", "-shm")):
+                continue
+            if p.is_file() and p.suffix in (".sqlite", ".db"):
+                snap = Path(snapdir, name)
+                try:
+                    src = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=30)
+                    dst = sqlite3.connect(snap)
+                    try:
+                        src.backup(dst)
+                    finally:
+                        dst.close()
+                        src.close()
+                    tar.add(snap, arcname=name)
+                    continue
+                except sqlite3.Error:
+                    pass  # not a valid database: store the raw file
+            tar.add(p, arcname=name)
+    os.replace(part, destfile)
+
+
 @huey.task()
-def doWorkBackup(workdir,destdir):
+def doWorkBackup(workdir,destfile):
 
     ret = {"status":"Failed"}
 
     try:
-        bckfile = Path(destdir,"workbackup.tar")
-        if bckfile.exists():
-            bckfile.unlink()
-        shutil.make_archive(destdir + "/workbackup", 'tar', Path(workdir))        
+        writeWorkBackup(workdir, destfile)
         ret = {"status":"Success"}
     except BaseException as err:
-        ret = {"status": "Error", "message":f"EException: {err}"}
+        ret = {"status": "Error", "message":f"Exception: {err}"}
     return ret

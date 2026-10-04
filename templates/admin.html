@@ -196,11 +196,14 @@
                 $("#bckrunning").css("display", "block");
                 $("#btndbackup").prop('disabled', true);
                 $.post("/workbackup",{}).done( function (data) {
+                    $("#bckinfo").show();
                     if (data == "Starting") {                        
-                        $("#bckinfo").show();
                         $("#bckinfo").html("Starting...");
                         checkBackupStatus();
-                    }                    
+                    } else {
+                        $("#bckrunning").css("display", "none");
+                        $("#bckinfo").text(data);
+                    }
                 });
             }
 

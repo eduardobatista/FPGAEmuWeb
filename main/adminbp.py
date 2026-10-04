@@ -15,7 +15,7 @@ from sqlalchemy.exc import OperationalError
 import shutil
 from markupsafe import escape
 
-from .tasks import doWorkBackup
+from .tasks import doWorkBackup, writeWorkBackup
 from appp import huey
 
 from .authbp import checkHueyOn
@@ -358,27 +358,51 @@ def changerole():
     return "Role changed!"
 
 
+def _backupfile():
+    return Path(current_app.TEMPDIR) / "workbackup.tar.gz"
+
+
+def _userFoldersNotReady():
+    """With worksync (ENVCACHEDWORK=True), the local work dir is complete only after the user
+    folders were copied from NFS. Returns a message while that is not done."""
+    level_lines = diagnose.sync_status()
+    if level_lines is None:
+        return None
+    try:
+        st = json.loads(diagnose.WORKSYNC_STATUS.read_text())
+    except (OSError, ValueError):
+        st = {}
+    if st.get("full_pull_phase") == "done":
+        return None
+    return ("Backup not available yet: the user folders are still being copied from the network storage (NFS) "
+            "to the local disk, so a backup now would be incomplete. See Server Diagnostics (Data sync).")
+
+
 @adm.route('/workbackup', methods=['POST'])
 @login_required
 def workbackup():    
     if current_user.role != "Admin":
         return "Error! Not an Admin."
-    
+
+    notready = _userFoldersNotReady()
+    if notready:
+        return notready
+
     workdir = Path(current_app.WORKDIR)
-    bckfile = workdir / "workbackup.tar"
+    bckfile = _backupfile()
     if bckfile.exists():
         bckfile.unlink()
 
     if checkHueyOn():
-        task = doWorkBackup(str(workdir), str(workdir))        
+        task = doWorkBackup(str(workdir), str(bckfile))
         session["workbackup"] = task.id
         return "Starting"
     else:
         try: 
-            shutil.make_archive("workbackup", 'tar', workdir)        
+            writeWorkBackup(workdir, bckfile)
         except BaseException as ex:
             return (str(ex))
-        return send_from_directory(current_app.MAINPATH, 'workbackup.tar', as_attachment=True, max_age=0)
+        return send_from_directory(bckfile.parent, bckfile.name, as_attachment=True, max_age=0)
 
 
 @adm.route('/workbackupstatus')
@@ -402,12 +426,14 @@ def workbackupstatus(nohuey=False,resp=None):
 
 
 @adm.route('/workbackupdownload')
+@login_required
 def workbackupdownload(nocelery=False,resp=None):
     if current_user.role != "Admin":
         return "Error! Not an Admin."
-    # temppath = Path(current_app.MAINPATH,"temp")
-    workdir = Path(current_app.WORKDIR)
-    return send_from_directory(workdir, "workbackup.tar", as_attachment=True, max_age=0)
+    bckfile = _backupfile()
+    name = f"fpgaemu-workbackup-{datetime.fromtimestamp(bckfile.stat().st_mtime):%Y%m%d-%H%M}.tar.gz" \
+        if bckfile.exists() else bckfile.name
+    return send_from_directory(bckfile.parent, bckfile.name, as_attachment=True, max_age=0, download_name=name)
 
 
 @adm.route('/workcleanup')
