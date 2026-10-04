@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#eceeed;color:#161a19;font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:oklch(0.48 0.13 155);text-decoration:none}
+a:hover{color:oklch(0.40 0.13 155);text-decoration:underline}
+input{font-family:inherit}
+</style>
+</helmet>
+
+<section style="padding:72px;display:flex;flex-direction:column;gap:40px;width:2704px;box-sizing:border-box">
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:900px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461;letter-spacing:0.08em;text-transform:uppercase">Round 1 · Logo</div>
+    <h1 style="margin:0;font-size:40px;font-weight:600;letter-spacing:-0.015em">FPGAEmuWeb identity</h1>
+    <p style="margin:0;color:#5b6461;font-size:17px;line-height:1.5;text-wrap:pretty">Four marks sharing one wordmark. Each is shown on light and dark, as an app icon and as a 32 and 16 px favicon. The screens below use <a href="#1a">1a</a>; switch the logo in Tweaks to see the others in context.</p>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px">
+    <sc-for list="{{ logoCards }}" as="lc" hint-placeholder-count="4">
+      <div id="{{ lc.id }}" style="background:#ffffff;border:1px solid #dfe3e1;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e8ebe9">
+          <span style="font-weight:600;font-size:16px">{{ lc.name }}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;background:#161a19;color:#ffffff;padding:3px 9px;border-radius:5px;font-weight:600">{{ lc.id }}</span>
+        </div>
+        <div style="height:200px;display:flex;align-items:center;justify-content:center;background:#ffffff">
+          <dc-import name="Logo" variant="{{ lc.v }}" size="64" hint-size="300px,64px"></dc-import>
+        </div>
+        <div style="height:150px;display:flex;align-items:center;justify-content:center;background:#161a19">
+          <dc-import name="Logo" variant="{{ lc.v }}" size="48" tone="dark" accent="oklch(0.74 0.15 155)" hint-size="230px,48px"></dc-import>
+        </div>
+        <div style="padding:22px 20px;display:flex;align-items:flex-end;gap:18px;background:#f5f6f5;border-top:1px solid #e8ebe9">
+          <div style="width:88px;height:88px;border-radius:20px;background:#ffffff;border:1px solid #dfe3e1;display:flex;align-items:center;justify-content:center">
+            <dc-import name="Logo" variant="{{ lc.v }}" size="60" wordmark="{{ false }}" hint-size="60px,60px"></dc-import>
+          </div>
+          <div style="width:88px;height:88px;border-radius:20px;background:#161a19;display:flex;align-items:center;justify-content:center">
+            <dc-import name="Logo" variant="{{ lc.v }}" size="60" tone="dark" wordmark="{{ false }}" accent="oklch(0.74 0.15 155)" hint-size="60px,60px"></dc-import>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <dc-import name="Logo" variant="{{ lc.v }}" size="32" wordmark="{{ false }}" hint-size="32px,32px"></dc-import>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8a928f">32</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <dc-import name="Logo" variant="{{ lc.v }}" size="16" wordmark="{{ false }}" hint-size="16px,16px"></dc-import>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8a928f">16</span>
+          </div>
+        </div>
+        <p style="margin:0;padding:18px 20px 22px;font-size:14px;line-height:1.55;color:#4a5350;text-wrap:pretty">{{ lc.note }}</p>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:0 72px 96px;display:flex;flex-direction:column;gap:40px;width:2704px;box-sizing:border-box">
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:900px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461;letter-spacing:0.08em;text-transform:uppercase">Round 1 · Screens</div>
+    <h2 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-0.01em">Light interface restyle</h2>
+    <p style="margin:0;color:#5b6461;font-size:17px;line-height:1.5;text-wrap:pretty">Built from Bulma-shaped parts (navbar, box, table, buttons, inputs) so it can be applied as a theme over the current templates. Projects, editor tabs and the board are clickable.</p>
+  </header>
+
+  <div style="display:grid;grid-template-columns:1280px 1280px;gap:40px">
+
+    <!-- LOGIN -->
+    <div data-screen-label="Login" style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461">S1 · Login</div>
+      <div style="width:1280px;height:800px;background:#ffffff;border:1px solid #dfe3e1;border-radius:12px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr">
+        <div style="display:flex;flex-direction:column;padding:48px 64px">
+          <dc-import name="Logo" variant="{{ logo }}" size="34" hint-size="200px,34px"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:28px;max-width:380px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <h3 style="margin:0;font-size:30px;font-weight:600;letter-spacing:-0.01em">Sign in</h3>
+              <p style="margin:0;color:#5b6461;font-size:15px">Use the account provided by your instructor.</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <label style="display:flex;flex-direction:column;gap:7px;font-size:14px;font-weight:500">Email
+                <input placeholder="name@institution.edu" style="height:44px;border:1px solid #cfd5d2;border-radius:8px;padding:0 14px;font-size:15px;color:#161a19;outline:none" style-focus="border-color:oklch(0.53 0.13 155);box-shadow:0 0 0 3px oklch(0.92 0.05 155)">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:7px;font-size:14px;font-weight:500">Password
+                <input type="password" placeholder="••••••••" style="height:44px;border:1px solid #cfd5d2;border-radius:8px;padding:0 14px;font-size:15px;color:#161a19;outline:none" style-focus="border-color:oklch(0.53 0.13 155);box-shadow:0 0 0 3px oklch(0.92 0.05 155)">
+              </label>
+              <button style="height:46px;border:0;border-radius:8px;background:oklch(0.53 0.13 155);color:#ffffff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px" style-hover="background:oklch(0.47 0.13 155)">Sign in</button>
+            </div>
+          </div>
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#8a928f;max-width:440px">Developed by Prof. Eduardo L. O. Batista. Emulation backend based on FPGAEmu by Prof. Fabian L. Cabrera.</p>
+        </div>
+        <div style="background:#f3f5f4;border-left:1px solid #e8ebe9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;padding:48px">
+          <dc-import name="Logo" variant="{{ logo }}" size="140" wordmark="{{ false }}" hint-size="140px,140px"></dc-import>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+            <div style="font-size:22px;font-weight:600;letter-spacing:-0.01em">VHDL emulation and simulation in the browser</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461;letter-spacing:0.04em">edit · analyze · compile · emulate · simulate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div data-screen-label="Projects" style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461">S2 · Projects</div>
+      <div style="width:1280px;height:800px;background:#f5f6f5;border:1px solid #dfe3e1;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:60px;flex:none;background:#ffffff;border-bottom:1px solid #e1e4e2;display:flex;align-items:center;gap:32px;padding:0 24px">
+          <dc-import name="Logo" variant="{{ logo }}" size="26" hint-size="160px,26px"></dc-import>
+          <nav style="display:flex;gap:4px">
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;font-weight:500;color:#161a19;background:#eef1ef">Projects</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Editor</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Emulation</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Simulation</span>
+          </nav>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:14px;color:#5b6461">
+            <span>student@fpgaemu</span>
+            <div style="width:32px;height:32px;border-radius:50%;background:#e1e6e3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#3b4341">ST</div>
+          </div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:400px minmax(0,1fr);min-height:0">
+          <div style="background:#ffffff;border-right:1px solid #e1e4e2;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 22px 14px">
+              <div style="font-size:20px;font-weight:600">Projects</div>
+              <button style="height:34px;padding:0 14px;border:0;border-radius:7px;background:oklch(0.53 0.13 155);color:#ffffff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:oklch(0.47 0.13 155)">New project</button>
+            </div>
+            <div style="padding:0 12px;display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ projects }}" as="p" hint-placeholder-count="5">
+                <div onClick="{{ p.select }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;cursor:pointer;background:{{ p.bg }}">
+                  <div style="width:8px;height:8px;border-radius:50%;flex:none;background:{{ p.dot }}"></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500">{{ p.name }}</span>
+                    <span style="font-size:12px;color:#8a928f">{{ p.meta }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding:28px 32px;display:flex;flex-direction:column;gap:22px;min-width:0">
+            <div style="display:flex;align-items:flex-end;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:13px;color:#8a928f">Project</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600">{{ sel.name }}</span>
+              </div>
+              <span style="margin-bottom:5px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:20px;background:{{ sel.badgeBg }};color:{{ sel.badgeFg }}">{{ sel.status }}</span>
+              <div style="margin-left:auto;display:flex;gap:8px">
+                <button style="height:38px;padding:0 14px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Upload</button>
+                <button style="height:38px;padding:0 14px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">New file</button>
+                <button style="height:38px;padding:0 14px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Compile</button>
+                <button style="height:38px;padding:0 16px;border:0;border-radius:7px;background:oklch(0.53 0.13 155);color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:oklch(0.47 0.13 155)">Go to Emulation</button>
+              </div>
+            </div>
+            <div style="background:#ffffff;border:1px solid #e1e4e2;border-radius:10px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 140px 160px 200px;padding:12px 20px;background:#f8f9f8;border-bottom:1px solid #e1e4e2;font-size:12px;font-weight:600;color:#5b6461;letter-spacing:0.04em;text-transform:uppercase">
+                <span>File</span><span>Size</span><span>Modified</span><span style="text-align:right">Actions</span>
+              </div>
+              <sc-for list="{{ sel.files }}" as="f" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 140px 160px 200px;align-items:center;padding:14px 20px;border-bottom:1px solid #eef1ef;font-size:14px">
+                  <span style="display:flex;align-items:center;gap:10px">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#eef1ef;color:#5b6461">VHD</span>
+                    <span style="font-family:'IBM Plex Mono',monospace">{{ f.name }}</span>
+                  </span>
+                  <span style="color:#5b6461">{{ f.size }}</span>
+                  <span style="color:#5b6461">{{ f.mod }}</span>
+                  <span style="display:flex;justify-content:flex-end;gap:16px;font-size:13px">
+                    <a href="#">Edit</a><a href="#">Rename</a><a href="#" style="color:oklch(0.52 0.17 25)">Delete</a>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <p style="margin:0;font-size:13px;color:#8a928f">The top-level entity must be in <span style="font-family:'IBM Plex Mono',monospace;color:#3b4341">usertop.vhd</span>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITOR -->
+    <div data-screen-label="Editor" style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461">S3 · Editor</div>
+      <div style="width:1280px;height:800px;background:#f5f6f5;border:1px solid #dfe3e1;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:60px;flex:none;background:#ffffff;border-bottom:1px solid #e1e4e2;display:flex;align-items:center;gap:32px;padding:0 24px">
+          <dc-import name="Logo" variant="{{ logo }}" size="26" hint-size="160px,26px"></dc-import>
+          <nav style="display:flex;gap:4px">
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Projects</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;font-weight:500;color:#161a19;background:#eef1ef">Editor</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Emulation</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Simulation</span>
+          </nav>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:14px;color:#5b6461">
+            <span>student@fpgaemu</span>
+            <div style="width:32px;height:32px;border-radius:50%;background:#e1e6e3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#3b4341">ST</div>
+          </div>
+        </div>
+        <div style="height:56px;flex:none;background:#ffffff;border-bottom:1px solid #e1e4e2;display:flex;align-items:center;gap:8px;padding:0 20px">
+          <div style="display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#5b6461;margin-right:auto">
+            <span>counter_hex</span><span style="color:#b5bcb9">/</span><span style="color:#161a19;font-weight:500">usertop.vhd</span>
+            <span style="width:7px;height:7px;border-radius:50%;background:oklch(0.74 0.16 65)"></span>
+          </div>
+          <button style="height:36px;padding:0 13px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Templates</button>
+          <button style="height:36px;padding:0 13px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Save</button>
+          <button style="height:36px;padding:0 13px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Analyze current file</button>
+          <div style="width:1px;height:24px;background:#e1e4e2;margin:0 4px"></div>
+          <button style="height:36px;padding:0 13px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Compile</button>
+          <button style="height:36px;padding:0 15px;border:0;border-radius:7px;background:oklch(0.53 0.13 155);color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:oklch(0.47 0.13 155)">Go to Emulation</button>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0">
+          <div style="background:#ffffff;border-right:1px solid #e1e4e2;padding:16px 10px;display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:12px;font-weight:600;color:#8a928f;letter-spacing:0.05em;text-transform:uppercase;padding:0 10px 8px">Files</div>
+            <sc-for list="{{ editorFiles }}" as="f" hint-placeholder-count="4">
+              <div onClick="{{ f.select }}" style="padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }}">{{ f.name }}</div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;min-height:0">
+            <div style="flex:1;background:#ffffff;overflow:hidden;padding:14px 0;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:21px">
+              <sc-for list="{{ code }}" as="ln" hint-placeholder-count="20">
+                <div style="display:flex;min-height:21px;background:{{ ln.bg }}">
+                  <span style="width:56px;flex:none;text-align:right;padding-right:18px;color:#b5bcb9;user-select:none">{{ ln.n }}</span>
+                  <span style="white-space:pre"><sc-for list="{{ ln.toks }}" as="tk"><span style="color:{{ tk.c }};font-weight:{{ tk.w }}">{{ tk.t }}</span></sc-for></span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="height:150px;flex:none;border-top:1px solid #e1e4e2;background:#f8f9f8;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:18px;padding:0 18px;height:38px;border-bottom:1px solid #e8ebe9;font-size:13px">
+                <span style="font-weight:600;color:#161a19">Output</span>
+                <span style="color:#8a928f">GHDL 4.1</span>
+              </div>
+              <div style="padding:10px 18px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.75;color:#4a5350">
+                <div><span style="color:#8a928f">$</span> ghdl -a --std=08 usertop.vhd</div>
+                <div><span style="color:#8a928f">$</span> ghdl -e --std=08 usertop</div>
+                <div style="color:oklch(0.48 0.13 155);font-weight:500">Compilation finished without errors.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMULATION -->
+    <div data-screen-label="Emulation" style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461">S4 · Emulation</div>
+      <div style="width:1280px;height:800px;background:#f5f6f5;border:1px solid #dfe3e1;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:60px;flex:none;background:#ffffff;border-bottom:1px solid #e1e4e2;display:flex;align-items:center;gap:32px;padding:0 24px">
+          <dc-import name="Logo" variant="{{ logo }}" size="26" hint-size="160px,26px"></dc-import>
+          <nav style="display:flex;gap:4px">
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Projects</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Editor</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;font-weight:500;color:#161a19;background:#eef1ef">Emulation</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Simulation</span>
+          </nav>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:14px;color:#5b6461">
+            <span>student@fpgaemu</span>
+            <div style="width:32px;height:32px;border-radius:50%;background:#e1e6e3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#3b4341">ST</div>
+          </div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;min-height:0">
+          <div style="padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onClick="{{ toggleRun }}" style="height:40px;display:flex;align-items:center;gap:9px;border:0;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;padding:0 16px;border-radius:7px;background:{{ runBg }};color:#ffffff">
+                <span style="width:9px;height:9px;border-radius:{{ runIconRadius }};background:#ffffff"></span>{{ runLabel }}
+              </button>
+              <button onClick="{{ reset }}" style="height:40px;border:1px solid #cfd5d2;cursor:pointer;font-family:inherit;font-size:14px;padding:0 14px;border-radius:7px;background:#ffffff;color:#161a19" style-hover="background:#f2f4f3">Reset inputs</button>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461">
+                <span style="width:8px;height:8px;border-radius:50%;background:{{ statusDot }}"></span>{{ statusText }}
+              </div>
+            </div>
+
+            <div style="flex:1;background:#ffffff;border:1px solid #e1e4e2;border-radius:12px;padding:26px 28px;display:flex;flex-direction:column;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5b6461;letter-spacing:0.06em">HEX7 – HEX0</div>
+                <div style="display:flex;gap:12px;padding:16px 18px;background:#1a1d1c;border-radius:10px;align-self:flex-start">
+                  <sc-for list="{{ digits }}" as="d" hint-placeholder-count="8">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+                      <div style="position:relative;width:36px;height:62px">
+                        <div style="position:absolute;left:6px;top:1px;width:24px;height:5px;border-radius:2.5px;background:{{ d.a }}"></div>
+                        <div style="position:absolute;left:30px;top:6px;width:5px;height:23px;border-radius:2.5px;background:{{ d.b }}"></div>
+                        <div style="position:absolute;left:30px;top:33px;width:5px;height:23px;border-radius:2.5px;background:{{ d.c }}"></div>
+                        <div style="position:absolute;left:6px;top:56px;width:24px;height:5px;border-radius:2.5px;background:{{ d.d }}"></div>
+                        <div style="position:absolute;left:1px;top:33px;width:5px;height:23px;border-radius:2.5px;background:{{ d.e }}"></div>
+                        <div style="position:absolute;left:1px;top:6px;width:5px;height:23px;border-radius:2.5px;background:{{ d.f }}"></div>
+                        <div style="position:absolute;left:6px;top:28.5px;width:24px;height:5px;border-radius:2.5px;background:{{ d.g }}"></div>
+                      </div>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#7d8784">{{ d.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:36px">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5b6461;letter-spacing:0.06em">LEDR17 – LEDR0</div>
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ ledr }}" as="l" hint-placeholder-count="18">
+                      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:26px">
+                        <div style="width:14px;height:14px;border-radius:50%;background:{{ l.bg }};box-shadow:{{ l.glow }}"></div>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8a928f">{{ l.n }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5b6461;letter-spacing:0.06em">LEDG7 – LEDG0</div>
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ ledg }}" as="l" hint-placeholder-count="8">
+                      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:26px">
+                        <div style="width:14px;height:14px;border-radius:50%;background:{{ l.bg }};box-shadow:{{ l.glow }}"></div>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8a928f">{{ l.n }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:36px;align-items:flex-end">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5b6461;letter-spacing:0.06em">SW17 – SW0</div>
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ sw }}" as="s" hint-placeholder-count="18">
+                      <div onClick="{{ s.toggle }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;width:26px;cursor:pointer">
+                        <div style="width:20px;height:42px;border-radius:6px;background:{{ s.track }};border:1px solid #cfd5d2;display:flex;flex-direction:column;justify-content:{{ s.pos }};padding:2px;box-sizing:border-box">
+                          <div style="height:18px;border-radius:4px;background:{{ s.knob }};box-shadow:0 1px 2px rgba(0,0,0,0.2)"></div>
+                        </div>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8a928f">{{ s.n }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5b6461;letter-spacing:0.06em">KEY3 – KEY0</div>
+                  <div style="display:flex;gap:10px">
+                    <sc-for list="{{ keys }}" as="k" hint-placeholder-count="4">
+                      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                        <div onMouseDown="{{ k.down }}" onMouseUp="{{ k.up }}" onMouseLeave="{{ k.up }}" style="width:44px;height:44px;border-radius:9px;background:{{ k.bg }};border:1px solid #cfd5d2;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:{{ k.shadow }}">
+                          <div style="width:20px;height:20px;border-radius:50%;background:#2a302e"></div>
+                        </div>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8a928f">{{ k.n }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside style="background:#ffffff;border-left:1px solid #e1e4e2;display:flex;flex-direction:column">
+            <div style="padding:20px;border-bottom:1px solid #e8ebe9;display:flex;flex-direction:column;gap:12px">
+              <div style="font-size:12px;font-weight:600;color:#8a928f;letter-spacing:0.05em;text-transform:uppercase">Inputs</div>
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px">
+                <span style="color:#8a928f">SW hex</span><span>{{ swHex }}</span>
+                <span style="color:#8a928f">SW bin</span><span style="word-break:break-all">{{ swBin }}</span>
+                <span style="color:#8a928f">KEY</span><span>{{ keyBin }}</span>
+              </div>
+            </div>
+            <div style="padding:20px;border-bottom:1px solid #e8ebe9;display:flex;flex-direction:column;gap:12px">
+              <div style="font-size:12px;font-weight:600;color:#8a928f;letter-spacing:0.05em;text-transform:uppercase">Design</div>
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:13px">
+                <span style="color:#8a928f">Project</span><span style="font-family:'IBM Plex Mono',monospace">counter_hex</span>
+                <span style="color:#8a928f">Top</span><span style="font-family:'IBM Plex Mono',monospace">usertop</span>
+                <span style="color:#8a928f">Compiled</span><span>Today, 14:32</span>
+              </div>
+            </div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="font-size:12px;font-weight:600;color:#8a928f;letter-spacing:0.05em;text-transform:uppercase">Log</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.75;color:#4a5350">
+                <div>Emulator ready.</div>
+                <sc-for list="{{ log }}" as="m" hint-placeholder-count="0">
+                  <div>{{ m }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIMULATION -->
+    <div data-screen-label="Simulation" style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461">S5 · Simulation</div>
+      <div style="width:1280px;height:800px;background:#f5f6f5;border:1px solid #dfe3e1;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:60px;flex:none;background:#ffffff;border-bottom:1px solid #e1e4e2;display:flex;align-items:center;gap:32px;padding:0 24px">
+          <dc-import name="Logo" variant="{{ logo }}" size="26" hint-size="160px,26px"></dc-import>
+          <nav style="display:flex;gap:4px">
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Projects</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Editor</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;color:#5b6461">Emulation</span>
+            <span style="padding:8px 12px;border-radius:7px;font-size:14px;font-weight:500;color:#161a19;background:#eef1ef">Simulation</span>
+          </nav>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:14px;color:#5b6461">
+            <span>student@fpgaemu</span>
+            <div style="width:32px;height:32px;border-radius:50%;background:#e1e6e3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#3b4341">ST</div>
+          </div>
+        </div>
+        <div style="height:60px;flex:none;background:#ffffff;border-bottom:1px solid #e1e4e2;display:flex;align-items:center;gap:12px;padding:0 20px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5b6461;white-space:nowrap;flex:none">Testbench
+            <span style="height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid #cfd5d2;border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#161a19;background:#ffffff">tb_counter.vhd<span style="color:#8a928f;font-family:'IBM Plex Sans',sans-serif">▾</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5b6461;white-space:nowrap;flex:none">Stop time
+            <span style="height:36px;display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #cfd5d2;border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#161a19;background:#ffffff">2<span style="color:#8a928f">us</span></span>
+          </label>
+          <button onClick="{{ runSim }}" style="white-space:nowrap;flex:none;height:36px;padding:0 15px;border:0;border-radius:7px;background:oklch(0.53 0.13 155);color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:oklch(0.47 0.13 155)">{{ simLabel }}</button>
+          <div style="display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5b6461;margin-left:8px;white-space:nowrap;flex:none">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ simDot }}"></span>{{ simStatus }}
+          </div>
+          <button style="white-space:nowrap;flex:none;margin-left:auto;height:36px;padding:0 13px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Download VCD</button>
+          <button style="white-space:nowrap;flex:none;height:36px;padding:0 13px;border:1px solid #cfd5d2;border-radius:7px;background:#ffffff;font-family:inherit;font-size:14px;cursor:pointer;color:#161a19" style-hover="background:#f2f4f3">Open in new tab</button>
+        </div>
+        <div style="flex:1;padding:16px 20px 20px;display:flex;min-height:0">
+          <div style="flex:1;border:1px solid #d6dbd8;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#f7f8f7 0 10px,#eef1ef 10px 20px)">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 22px;background:#ffffff;border:1px solid #dfe3e1;border-radius:8px;font-family:'IBM Plex Mono',monospace;text-align:center;max-width:520px">
+              <span style="font-size:14px;color:#161a19;font-weight:500;white-space:nowrap">Surfer waveform viewer</span>
+              <span style="font-size:12px;color:#5b6461">embedded iframe · fills this area · loads the VCD from the last run</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;logo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;chip&quot;,&quot;grid&quot;,&quot;wave&quot;,&quot;chipwave&quot;],&quot;default&quot;:&quot;chip&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tickMs&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:50,&quot;max&quot;:1000,&quot;step&quot;:50,&quot;unit&quot;:&quot;ms&quot;,&quot;default&quot;:250,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { sw: Array(18).fill(false), keys: [false, false, false, false], running: false, count: 0, proj: 0, file: 0, log: [] };
+  componentDidMount() { this.startTick(); }
+  componentDidUpdate(p) { if (p.tickMs !== this.props.tickMs) this.startTick(); }
+  componentWillUnmount() { clearInterval(this.t); }
+  startTick() {
+    clearInterval(this.t);
+    this.t = setInterval(() => { if (this.state.running) this.setState(s => ({ count: (s.count + 1) & 0xffff })); }, Number(this.props.tickMs ?? 250));
+  }
+  addLog(m) { this.setState(s => ({ log: [...s.log, m].slice(-8) })); }
+
+  renderVals() {
+    const { sw, keys, running, count, proj, file, log } = this.state;
+    const ACC = 'oklch(0.53 0.13 155)';
+
+    const logoCards = [
+      { id: '1a', v: 'chip', name: 'Chip', note: 'A package with pins and a pin-1 dot; the green die is the configurable fabric. Reads as hardware at any size. Used in the screens below.' },
+      { id: '1b', v: 'grid', name: 'Logic grid', note: 'A 4×4 array of logic cells where the lit cells form an F. The amber cell works as a status LED and can animate while compiling.' },
+      { id: '1c', v: 'wave', name: 'Waveform', note: 'A digital clock signal on a dark tile, pointing to the simulation side of the tool. The simplest silhouette of the four.' },
+      { id: '1d', v: 'chipwave', name: 'Chip + waveform', note: 'The chip package with a clock signal on the die: emulation and simulation in one mark.' }
+    ];
+
+    const projData = [
+      { name: 'counter_hex', meta: '4 files · compiled 2 h ago', ok: true, files: [['usertop.vhd', '1.4 KB', 'Today, 14:31'], ['counter.vhd', '0.9 KB', 'Today, 14:12'], ['hex7seg.vhd', '1.1 KB', 'Yesterday'], ['tb_counter.vhd', '1.6 KB', 'Yesterday']] },
+      { name: 'traffic_light', meta: '2 files · compiled 3 d ago', ok: true, files: [['usertop.vhd', '2.2 KB', 'Sep 30'], ['fsm.vhd', '1.8 KB', 'Sep 30']] },
+      { name: 'alu_8bit', meta: '3 files · not compiled', ok: false, files: [['usertop.vhd', '1.0 KB', 'Sep 28'], ['alu.vhd', '2.7 KB', 'Sep 28'], ['tb_alu.vhd', '2.1 KB', 'Sep 27']] },
+      { name: 'uart_tx', meta: '2 files · compiled 1 w ago', ok: true, files: [['usertop.vhd', '1.2 KB', 'Sep 25'], ['uart_tx.vhd', '3.4 KB', 'Sep 25']] },
+      { name: 'vending_fsm', meta: '1 file · errors', ok: false, err: true, files: [['usertop.vhd', '2.9 KB', 'Sep 21']] }
+    ];
+    const projects = projData.map((p, i) => ({
+      name: p.name, meta: p.meta,
+      bg: i === proj ? 'oklch(0.96 0.025 155)' : 'transparent',
+      dot: p.err ? 'oklch(0.58 0.18 25)' : p.ok ? ACC : '#c3c9c6',
+      select: () => this.setState({ proj: i })
+    }));
+    const sp = projData[proj];
+    const sel = {
+      name: sp.name,
+      status: sp.err ? 'Errors' : sp.ok ? 'Compiled' : 'Not compiled',
+      badgeBg: sp.err ? 'oklch(0.95 0.03 25)' : sp.ok ? 'oklch(0.95 0.035 155)' : '#eef1ef',
+      badgeFg: sp.err ? 'oklch(0.48 0.16 25)' : sp.ok ? 'oklch(0.42 0.12 155)' : '#5b6461',
+      files: sp.files.map(f => ({ name: f[0], size: f[1], mod: f[2] }))
+    };
+
+    const fnames = ['usertop.vhd', 'counter.vhd', 'hex7seg.vhd', 'tb_counter.vhd'];
+    const editorFiles = fnames.map((n, i) => ({ name: n, bg: i === file ? 'oklch(0.96 0.025 155)' : 'transparent', fg: i === file ? '#161a19' : '#4a5350', select: () => this.setState({ file: i }) }));
+
+    const src = [
+      'library ieee;', 'use ieee.std_logic_1164.all;', 'use ieee.numeric_std.all;', '',
+      'entity usertop is', '  port (',
+      '    CLOCK_50 : in  std_logic;',
+      '    KEY      : in  std_logic_vector(3 downto 0);',
+      '    SW       : in  std_logic_vector(17 downto 0);',
+      '    LEDR     : out std_logic_vector(17 downto 0);',
+      '    LEDG     : out std_logic_vector(7 downto 0);',
+      '    HEX0     : out std_logic_vector(6 downto 0)',
+      '  );', 'end usertop;', '',
+      'architecture rtl of usertop is',
+      "  signal count : unsigned(15 downto 0) := (others => '0');",
+      'begin', '  -- switches drive the red LEDs directly', '  LEDR <= SW;',
+      '  LEDG(3 downto 0) <= not KEY;', '',
+      '  process (CLOCK_50)', '  begin', '    if rising_edge(CLOCK_50) then',
+      '      count <= count + 1;', '    end if;', '  end process;', 'end rtl;'
+    ];
+    const KW = new Set(['library','use','all','entity','is','port','in','out','end','architecture','of','signal','begin','process','if','then','downto','others','not','and','or']);
+    const TY = new Set(['std_logic','std_logic_vector','unsigned','signed','integer','ieee','std_logic_1164','numeric_std']);
+    const FN = new Set(['rising_edge','falling_edge']);
+    const code = src.map((l, i) => {
+      const toks = (l.match(/--.*$|'[^']'|"[^"]*"|\b\w+\b|\s+|./g) || []).map(t => {
+        const lw = t.toLowerCase();
+        let c = '#161a19', w = 400;
+        if (t.startsWith('--')) c = '#8a928f';
+        else if (t.startsWith("'") || t.startsWith('"')) c = 'oklch(0.52 0.14 50)';
+        else if (/^\d+$/.test(t)) c = 'oklch(0.52 0.14 50)';
+        else if (KW.has(lw)) { c = 'oklch(0.45 0.16 285)'; w = 500; }
+        else if (TY.has(lw)) c = 'oklch(0.48 0.10 205)';
+        else if (FN.has(lw)) c = 'oklch(0.46 0.13 155)';
+        return { t, c, w };
+      });
+      return { n: i + 1, toks, bg: i === 19 ? 'oklch(0.975 0.015 155)' : 'transparent' };
+    });
+
+    const SEG = ['1111110','0110000','1101101','1111001','0110011','1011011','1011111','1110000','1111111','1111011','1110111','0011111','1001110','0111101','1001111','1000111'];
+    const ON = 'oklch(0.66 0.22 25)', OFF = '#2d2726';
+    const swVal = sw.reduce((a, b, i) => a | (b ? 1 << i : 0), 0);
+    const nib = (v, i) => (v >> (4 * i)) & 15;
+    const digits = [7, 6, 5, 4, 3, 2, 1, 0].map(h => {
+      const blank = h >= 4 && !running && count === 0;
+      const val = h >= 4 ? nib(count, h - 4) : nib(swVal & 0xffff, h);
+      const s = blank ? '0000000' : SEG[val];
+      const o = {};
+      'abcdefg'.split('').forEach((k, j) => { o[k] = s[j] === '1' ? ON : OFF; });
+      o.label = 'HEX' + h;
+      return o;
+    });
+    const led = (on, col) => ({ bg: on ? col : '#e6e9e7', glow: on ? `0 0 8px ${col}` : 'inset 0 1px 2px rgba(0,0,0,0.12)' });
+    const ledr = Array.from({ length: 18 }, (_, k) => { const i = 17 - k; return { n: i, ...led(sw[i], 'oklch(0.63 0.22 25)') }; });
+    const ledg = Array.from({ length: 8 }, (_, k) => { const i = 7 - k; return { n: i, ...led(i < 4 && keys[i], 'oklch(0.70 0.19 150)') }; });
+    const swList = Array.from({ length: 18 }, (_, k) => {
+      const i = 17 - k;
+      return {
+        n: i, pos: sw[i] ? 'flex-start' : 'flex-end', knob: sw[i] ? ACC : '#ffffff', track: sw[i] ? 'oklch(0.94 0.04 155)' : '#f1f3f2',
+        toggle: () => this.setState(s => { const a = [...s.sw]; a[i] = !a[i]; return { sw: a }; })
+      };
+    });
+    const setKey = (i, v) => this.setState(s => { if (s.keys[i] === v) return null; const a = [...s.keys]; a[i] = v; return { keys: a }; });
+    const keyList = [3, 2, 1, 0].map(i => ({
+      n: i, bg: keys[i] ? '#e3e7e5' : '#f7f8f7', shadow: keys[i] ? 'inset 0 2px 3px rgba(0,0,0,0.15)' : '0 2px 0 #cfd5d2',
+      down: () => setKey(i, true), up: () => setKey(i, false)
+    }));
+
+    return {
+      logo: this.props.logo ?? 'chip',
+      logoCards, projects, sel, editorFiles, code,
+      digits, ledr, ledg, sw: swList, keys: keyList, log,
+      swHex: '0x' + swVal.toString(16).toUpperCase().padStart(5, '0'),
+      swBin: swVal.toString(2).padStart(18, '0'),
+      keyBin: keys.slice().reverse().map(k => (k ? '0' : '1')).join(''),
+      simLabel: this.state.sim === 'running' ? 'Running…' : 'Run simulation',
+      simDot: this.state.sim === 'running' ? 'oklch(0.74 0.16 65)' : this.state.sim === 'done' ? ACC : '#c3c9c6',
+      simStatus: this.state.sim === 'running' ? 'simulating…' : this.state.sim === 'done' ? 'done · 2 us · 14:36' : 'no results yet',
+      runSim: () => {
+        if (this.state.sim === 'running') return;
+        this.setState({ sim: 'running' });
+        clearTimeout(this.simT);
+        this.simT = setTimeout(() => this.setState({ sim: 'done' }), 1200);
+      },
+      running,
+      runLabel: running ? 'Stop emulation' : 'Start emulation',
+      runBg: running ? 'oklch(0.52 0.18 25)' : ACC,
+      runIconRadius: running ? '2px' : '50%',
+      statusDot: running ? ACC : '#c3c9c6',
+      statusText: running ? 'running · ' + count + ' cycles' : 'stopped',
+      toggleRun: () => { this.addLog(running ? 'Emulation stopped.' : 'Emulation started.'); this.setState(s => ({ running: !s.running })); },
+      reset: () => { this.addLog('Inputs reset.'); this.setState({ sw: Array(18).fill(false), keys: [false, false, false, false], count: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

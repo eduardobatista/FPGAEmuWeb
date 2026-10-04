@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;align-items:center;gap:{{ gap }}px">
+  <div style="width:{{ box }}px;height:{{ box }}px;flex:none;position:relative">
+    <div style="position:absolute;left:0;top:0;width:64px;height:64px;transform:{{ scale }};transform-origin:0 0">
+      <sc-if value="{{ hasChip }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ pins }}" as="p" hint-placeholder-count="12">
+          <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:{{ p.w }}px;height:{{ p.h }}px;border-radius:1.5px;background:{{ ink }}"></div>
+        </sc-for>
+        <div style="position:absolute;left:12px;top:12px;width:40px;height:40px;border-radius:7px;background:{{ ink }}"></div>
+        <div style="position:absolute;left:16px;top:16px;width:5px;height:5px;border-radius:50%;background:{{ hole }}"></div>
+      </sc-if>
+      <sc-if value="{{ isChip }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:24px;top:24px;width:16px;height:16px;border-radius:3px;background:{{ accent }}"></div>
+      </sc-if>
+      <sc-if value="{{ isChipWave }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:18px;top:26px;width:28px;height:13px;display:flex">
+          <sc-for list="{{ waveSmall }}" as="s" hint-placeholder-count="5">
+            <div style="box-sizing:border-box;height:100%;width:{{ s.w }}px;border-top:{{ s.bt }};border-left:{{ s.bl }};border-right:{{ s.br }};border-bottom:{{ s.bb }}"></div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isGrid }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:3px;top:3px;display:grid;grid-template-columns:repeat(4,12px);gap:3.5px">
+          <sc-for list="{{ cells }}" as="c" hint-placeholder-count="16">
+            <div style="width:12px;height:12px;border-radius:2.5px;background:{{ c.bg }}"></div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isWave }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:0;top:0;width:64px;height:64px;border-radius:15px;background:{{ tile }}"></div>
+        <div style="position:absolute;left:10px;top:21px;width:44px;height:22px;display:flex">
+          <sc-for list="{{ waveBig }}" as="s" hint-placeholder-count="5">
+            <div style="box-sizing:border-box;height:100%;width:{{ s.w }}px;border-top:{{ s.bt }};border-left:{{ s.bl }};border-right:{{ s.br }};border-bottom:{{ s.bb }}"></div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  <sc-if value="{{ wordmark }}" hint-placeholder-val="{{ true }}">
+    <div style="font-family:'IBM Plex Sans',sans-serif;font-size:{{ fs }}px;line-height:1;letter-spacing:-0.02em;white-space:nowrap;color:{{ ink }}"><span style="font-weight:700">FPGA</span><span style="font-weight:400">Emu</span><span style="font-weight:600;color:{{ accent }}">Web</span></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:320,&quot;height&quot;:120},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;chip&quot;,&quot;grid&quot;,&quot;wave&quot;,&quot;chipwave&quot;],&quot;default&quot;:&quot;chip&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:40,&quot;min&quot;:12,&quot;max&quot;:256,&quot;tsType&quot;:&quot;number&quot;},&quot;tone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;wordmark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.53 0.13 155)&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const v = this.props.variant ?? 'chip';
+    const size = Number(this.props.size ?? 40);
+    const dark = (this.props.tone ?? 'light') === 'dark';
+    const accent = this.props.accent ?? 'oklch(0.53 0.13 155)';
+    const ink = dark ? '#eef0ef' : '#161a19';
+    const pins = [];
+    [20, 30, 40].forEach(p => {
+      pins.push({ x: p, y: 4, w: 4, h: 9 }, { x: p, y: 51, w: 4, h: 9 }, { x: 4, y: p, w: 9, h: 4 }, { x: 51, y: p, w: 9, h: 4 });
+    });
+    const wave = (ws, st, col) => ws.map((w, i) => {
+      const hi = i % 2 === 1, b = `${st}px solid ${col}`;
+      return { w, bt: hi ? b : '0', bl: hi ? b : '0', br: hi ? b : '0', bb: hi ? '0' : b };
+    });
+    const F = [1,1,1,0, 1,0,0,0, 1,1,0,0, 1,0,0,2];
+    const off = dark ? '#33393a' : '#dde2df';
+    return {
+      gap: Math.round(size * 0.3),
+      box: size,
+      scale: `scale(${size / 64})`,
+      fs: Math.round(size * 0.52),
+      wordmark: this.props.wordmark ?? true,
+      ink, accent,
+      hole: dark ? '#161a19' : '#ffffff',
+      tile: dark ? '#2a302f' : '#161a19',
+      hasChip: v === 'chip' || v === 'chipwave',
+      isChip: v === 'chip', isChipWave: v === 'chipwave', isGrid: v === 'grid', isWave: v === 'wave',
+      pins,
+      waveSmall: wave([4, 7, 6, 7, 4], 2.5, accent),
+      waveBig: wave([7, 12, 6, 12, 7], 3.5, accent),
+      cells: F.map(c => ({ bg: c === 1 ? accent : c === 2 ? 'oklch(0.74 0.16 65)' : off }))
+    };
+  }
+}
+</script>
+</body>
+</html>
