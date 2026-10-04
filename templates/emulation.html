@@ -8,16 +8,23 @@
     .fe-emu-bar .button { height: 40px; }
     #iniciar { padding: 0 16px; }
 
-    .fe-board { flex: 1; background: var(--fe-surface); border: 1px solid var(--fe-border); border-radius: 12px;
-                padding: 26px 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; min-height: 420px; }
-    .fe-group { display: flex; flex-direction: column; gap: 10px; }
+    .fe-board { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; min-height: 0; }
+    .fe-zone { background: var(--fe-surface); border: 1px solid var(--fe-border); border-radius: 12px; overflow: hidden; }
+    .fe-zone-head { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #e8ebe9; background: var(--fe-surface-2); }
+    .fe-zone-mark { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .fe-zone.is-outputs .fe-zone-mark { background: #f1383e; }
+    .fe-zone.is-inputs .fe-zone-mark { background: var(--fe-accent); }
+    .fe-zone-title { font-size: 12px; font-weight: 600; color: var(--fe-ink); letter-spacing: .06em; text-transform: uppercase; }
+    .fe-zone-hint { font-size: 12px; color: var(--fe-faint); margin-left: auto; }
+    .fe-zone-body { padding: 20px 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+    .fe-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .fe-group-label { font-family: var(--fe-mono); font-size: 12px; color: var(--fe-muted); letter-spacing: .06em; }
-    .fe-row { display: flex; gap: 36px; align-items: flex-end; flex-wrap: wrap; }
+    .fe-row { display: flex; gap: 40px; align-items: flex-end; justify-content: center; flex-wrap: wrap; }
     .fe-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .fe-cell-label { font-family: var(--fe-mono); font-size: 10px; color: var(--fe-faint); }
 
     /* seven-segment displays */
-    .fe-hexplate { display: flex; gap: 12px; padding: 16px 18px; background: #1a1d1c; border-radius: 10px; align-self: flex-start; }
+    .fe-hexplate { display: flex; gap: 12px; padding: 16px 18px; background: #1a1d1c; border-radius: 10px; }
     .fe-hexplate .fe-cell { gap: 8px; }
     .fe-hexplate .fe-cell-label { color: #7d8784; }
     .fe-digit { position: relative; width: 36px; height: 62px; }
@@ -88,35 +95,52 @@
               </div>
 
               <div class="fe-board is-stopped" id="board">
-                <div class="fe-group">
-                  <div class="fe-group-label">HEX7 – HEX0</div>
-                  <div class="fe-hexplate" id="hexes"></div>
-                </div>
 
-                <div class="fe-row">
-                  <div class="fe-group">
-                    <div class="fe-group-label">LEDR17 – LEDR0</div>
-                    <div class="fe-leds" id="ledrs"></div>
+                <section class="fe-zone is-outputs" aria-label="Outputs">
+                  <header class="fe-zone-head">
+                    <span class="fe-zone-mark"></span>
+                    <span class="fe-zone-title">Outputs</span>
+                    <span class="fe-zone-hint">driven by your design</span>
+                  </header>
+                  <div class="fe-zone-body">
+                    <div class="fe-group">
+                      <div class="fe-group-label">HEX7 – HEX0</div>
+                      <div class="fe-hexplate" id="hexes"></div>
+                    </div>
+                    <div class="fe-group">
+                      <div class="fe-group-label">LEDR17 – LEDR0</div>
+                      <div class="fe-leds" id="ledrs"></div>
+                    </div>
                   </div>
-                </div>
+                </section>
 
-                <div class="fe-row">
-                  <div class="fe-group">
-                    <div class="fe-group-label">SW17 – SW0</div>
-                    <div class="fe-switches" id="switches"></div>
+                <section class="fe-zone is-inputs" aria-label="Inputs">
+                  <header class="fe-zone-head">
+                    <span class="fe-zone-mark"></span>
+                    <span class="fe-zone-title">Inputs</span>
+                    <span class="fe-zone-hint">click the switches · hold the keys</span>
+                  </header>
+                  <div class="fe-zone-body">
+                    <div class="fe-row">
+                      <div class="fe-group">
+                        <div class="fe-group-label">SW17 – SW0</div>
+                        <div class="fe-switches" id="switches"></div>
+                      </div>
+                      <div class="fe-group">
+                        <div class="fe-group-label">KEY3 – KEY0</div>
+                        <div class="fe-keys" id="keys"></div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="fe-group">
-                    <div class="fe-group-label">KEY3 – KEY0</div>
-                    <div class="fe-keys" id="keys"></div>
-                  </div>
-                </div>
+                </section>
+
               </div>
 
             </div>
 
             <aside class="fe-sidebar is-right fe-emu-side">
               <div class="fe-side-section">
-                <div class="section-label">Inputs</div>
+                <div class="section-label">Input values</div>
                 <div class="fe-kv is-mono">
                   <span>SW hex</span><span id="swhex">0x00000</span>
                   <span>SW bin</span><span id="swbin" style="word-break: break-all;">000000000000000000</span>
