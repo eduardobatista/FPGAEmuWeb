@@ -8,7 +8,8 @@
     .fe-emu-bar .button { height: 40px; }
     #iniciar { padding: 0 16px; }
 
-    .fe-board { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; min-height: 0; }
+    /* panels stay at the top; the remaining height is left empty below the Inputs */
+    .fe-board { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 16px; min-height: 0; }
     .fe-zone { background: var(--fe-surface); border: 1px solid var(--fe-border); border-radius: 12px; overflow: hidden; }
     .fe-zone-head { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #e8ebe9; background: var(--fe-surface-2); }
     .fe-zone-mark { width: 10px; height: 10px; border-radius: 3px; flex: none; }
