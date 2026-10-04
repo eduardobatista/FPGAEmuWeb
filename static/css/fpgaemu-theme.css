@@ -62,7 +62,8 @@ hr{background:var(--fe-border);height:1px}
 /* ---------- buttons ---------- */
 .button{height:38px;font-size:14px;border:1px solid var(--fe-border-input);border-radius:var(--fe-radius);background:var(--fe-surface);color:var(--fe-ink);padding:0 14px;box-shadow:none!important}
 .button:hover,.button.is-hovered{background:var(--fe-hover);border-color:var(--fe-border-input);color:var(--fe-ink)}
-.button:focus:not(:active),.button.is-focused:not(:active){border-color:var(--fe-accent);box-shadow:0 0 0 3px var(--fe-focus-ring)!important}
+.button:focus:not(:active),.button.is-focused:not(:active){box-shadow:none!important}
+.button:focus-visible:not(:active){border-color:var(--fe-accent);box-shadow:0 0 0 3px var(--fe-focus-ring)!important}
 .button.is-small{height:32px;font-size:13px;padding:0 11px;border-radius:var(--fe-radius)}
 .button.is-medium{height:40px;font-size:14px}
 .button[disabled],fieldset[disabled] .button{opacity:.5}

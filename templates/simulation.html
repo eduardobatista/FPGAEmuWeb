@@ -1,98 +1,65 @@
 {% extends "base.html" %}
 
+{% block styles %}
+  <style>
+    html, body { overflow: hidden; }
+    .fe-sim-body { flex: 1; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .fe-sim-log { flex: none; max-height: 140px; overflow-y: auto; background: var(--fe-surface); border: 1px solid var(--fe-border);
+                  border-radius: 10px; padding: 10px 16px; display: none; }
+    .fe-sim-log.is-visible { display: block; }
+    .fe-sim-log .fe-err { color: var(--fe-danger); }
+    .fe-sim-log .fe-ok { color: var(--fe-link); font-weight: 500; }
+    .fe-sim-view { flex: 1; min-height: 0; border: 1px solid #d6dbd8; border-radius: 10px; overflow: hidden; background: var(--fe-surface); }
+    #surferiframe { width: 100%; height: 100%; border: 0; display: block; }
+    .fe-toolbar .select.fe-mono-select select { font-family: var(--fe-mono); }
+    #runbtn.is-busy { pointer-events: none; opacity: .85; }
+  </style>
+{% endblock %}
+
 {% block content %}
 
-        <!-- <div class="container mt-4 mb-4">
-            <h5>Your <strong>id</strong> is {{ username }}.</h5>     
-        </div> -->
+        <div class="fe-app">
+          <div class="fe-toolbar is-tall">
+            <label class="fe-toolbar-label">Testbench
+              <div class="select fe-mono-select">
+                <select id="fileselect">
+                  {% for fname in filenames %}
+                    <option value="{{fname}}" {{'selected' if testentity == fname else ''}}>{{fname}}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </label>
+            <label class="fe-toolbar-label">Stop time
+              <div class="select fe-mono-select">
+                <select id="stoptime">
+                  <option value="200 ns" {{'selected' if stoptime == 200 else ''}}>200 ns</option>
+                  <option value="400 ns" {{'selected' if stoptime == 400 else ''}}>400 ns</option>
+                  <option value="600 ns" {{'selected' if stoptime == 600 else ''}}>600 ns</option>
+                  <option value="800 ns" {{'selected' if stoptime == 800 else ''}}>800 ns</option>
+                  <option value="1000 ns" {{'selected' if stoptime == 1000 else ''}}>1000 ns</option>
+                  <option value="2000 ns" {{'selected' if stoptime == 2000 else ''}}>2000 ns</option>
+                  <option value="3000 ns" {{'selected' if stoptime == 3000 else ''}}>3000 ns</option>
+                </select>
+              </div>
+            </label>
+            <button type="button" class="button is-primary" id="runbtn" onclick="runSimulation();">Run simulation</button>
+            <span class="fe-status" style="margin-left: 8px;"><span class="fe-dot" id="simdot"></span><span id="simstatus">no results yet</span></span>
+            <span class="fe-spacer"></span>
+            <button type="button" class="button" onclick="$('#simlog').toggleClass('is-visible');">Log</button>
+            <a class="button" id="dlbtn" href="/downloadsimfile" title="The .ghw file can also be opened with GTKWave">Download GHW</a>
+            <a class="button" href="/simresult" target="_blank">Open in new tab</a>
+          </div>
 
-        <div class="container is-max-desktop px-4">
-
-            <article class="message is-info mt-2 mb-2">
-                <div class="message-body py-3">
-                    <p class="text">The <strong>.ghw</strong> file resulting from your simulation can be opened
-                        using the <a href="http://gtkwave.sourceforge.net/" target="_BLANK">GTKWave</a> software.</p>
-                </div>
-            </article>
-
-            <div class="box mx-auto" style="max-width: 450px;">
-
-                <form class="" id="meuform" enctype="multipart/form-data" style="min-width: 250px;">
-
-                    <h4 class="title is-4 mb-4 has-text-centered">Simulation Options</h4>
-
-                    <div class="">
-
-                        <h6 class="title is-6 is-inline">Testbench file:</h6>
-                        <div class="select is-info is-fullwidth is-small">
-                            <select id="fileselect" class="" onchange="">
-                                {% for fname in filenames %}
-                                    <option value="{{fname}}" {{'selected' if testentity == fname else ''}}>{{fname}}</option>
-                                {% endfor %}
-                            </select> 
-                        </div>
-
-                        <article class="message is-danger is-light my-1 pr-1">
-                            <div class="message-body p-1 is-size-7">
-                                If selected file is not a <strong>testbench</strong>,
-                                    simulation will return empty.
-                            </div>
-                        </article>
-
-                    </div>
-    
-
-                    <div class="block mt-2 mb-0">
-                        <h6 class="title is-6 is-inline">Stop time:</h6>
-                        <!-- <input type="text" id="stoptime" class="input is-small" value="{{stoptime}}" maxlength="10">                         -->
-                        <div class="select is-info is-fullwidth is-small">
-                            <select id="stoptime" class="">
-                                <option value="200 ns" {{'selected' if stoptime == 200 else ''}}>200 ns</option>
-                                <option value="400 ns" {{'selected' if stoptime == 400 else ''}}>400 ns</option>
-                                <option value="600 ns" {{'selected' if stoptime == 600 else ''}}>600 ns</option>
-                                <option value="800 ns" {{'selected' if stoptime == 800 else ''}}>800 ns</option>
-                                <option value="1000 ns" {{'selected' if stoptime == 1000 else ''}}>1000 ns</option>
-                                <option value="2000 ns" {{'selected' if stoptime == 2000 else ''}}>2000 ns</option>
-                                <option value="3000 ns" {{'selected' if stoptime == 3000 else ''}}>3000 ns</option>
-                            </select>
-                        </div>
-                    </div>
-    
-                    <!-- <div class="block mt-2">
-                        <h6 class="title is-6 is-inline">Output file:</h6>
-                        <input type="text" id="outputfile" class="input is-small" value="output.ghw" disabled>
-                    </div> -->
-                    
-                    </div>
-                </form>
-
+          <div class="fe-sim-body">
+            <div class="fe-sim-log fe-log" id="simlog">
+              <div id="myspinner" class="loader is-inline-block mr-2" style="display: none; width: 12px; height: 12px;"></div>
+              <span id="status"></span>
             </div>
-            
-
-            <div class="container has-text-centered">
-                <button type="button" class="button is-danger mt-3" onclick="runSimulation();">Run simulation...</button>
-            </div>
-
-        </div>
-
-        <div class="modal is-clipped" id="simulationmodal">
-            <div class="modal-background"></div>
-            <div class="modal-card">
-              <header class="modal-card-head">
-                <p class="modal-card-title">Simulation</p>
-                <button class="delete" aria-label="close" onclick="$('#simulationmodal').removeClass('is-active');"></button>
-              </header>
-              <section class="modal-card-body">
-                <div id="myspinner" class="loader is-loading"></div>
-                <div id="status">    
-                </div>   
-              </section>
-              <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="$('#simulationmodal').removeClass('is-active');">Close</button>
-                <button id="gotoplot" type="button" class="button is-info is-small" onclick="location.href = '/simresult'">View Result</button>                
-              </footer>
+            <div class="fe-sim-view">
+              <iframe id="surferiframe" src="/static/surfer_wasm/index.html" title="Surfer waveform viewer"></iframe>
             </div>
           </div>
+        </div>
 
           <div class="modal is-clipped" id="modalError">
             <div class="modal-background"></div>
@@ -105,26 +72,49 @@
                 <p id="errorMessage">Modal body text goes here.</p>
               </section>
               <footer class="modal-card-foot">
-                <button class="button is-danger is-small" onclick="document.querySelector('#modalError').classList.remove('is-active');">Close</button>
+                <button id="bcloseerr" class="button" onclick="document.querySelector('#modalError').classList.remove('is-active');">Close</button>
               </footer>
             </div>
-          </div> 
+          </div>
 
 
 {% endblock %}
 
 {% block scripts %}
-    <!-- Socket.IO: -->
-    <!-- <script src="/static/socket.io.js"></script> -->
-    <!-- Your custom scripts (optional) -->
     <script type="text/javascript">
-
-        $(document).ready(function() {
-            // $('#saveasalert').hide();
-        });
 
         window.socket = 0;
         window.socketOn = false;
+        window.surferReady = false;
+        window.pendingLoad = false;
+
+        function setSimState(state, text) {
+            // state: "idle" | "running" | "done" | "error"
+            $("#simdot").toggleClass("is-busy", state == "running").toggleClass("is-ok", state == "done")
+                        .toggleClass("is-error", state == "error");
+            $("#simstatus").text(text);
+            $("#runbtn").text(state == "running" ? "Running…" : "Run simulation").toggleClass("is-busy", state == "running");
+        }
+
+        // Surfer (iframe) tells when it is ready; the result of the last run is loaded into it.
+        function loadResult() {
+            if (!window.surferReady) { window.pendingLoad = true; return; }
+            var frame = document.querySelector('#surferiframe').contentWindow;
+            frame.postMessage({command: "LoadUrl", url: window.location.origin + "/output.ghw?t=" + Date.now()}, "*");
+        }
+        window.addEventListener("message", (event) => {
+            if (event.data && event.data.command === "SurferReady") {
+                window.surferReady = true;
+                document.querySelector('#surferiframe').contentWindow.postMessage({command: "ToggleMenu"}, "*");
+                if (window.pendingLoad) { window.pendingLoad = false; loadResult(); }
+            }
+        });
+        $(document).ready(function() {
+            // Show the previous result, if there is one.
+            fetch("/output.ghw", {method: "HEAD"}).then(function (r) {
+                if (r.ok) { setSimState("done", "previous result"); loadResult(); }
+            }).catch(function () {});
+        });
 
         function openSocket() {
             if (location.protocol !== 'https:') {
@@ -132,57 +122,55 @@
             } else {
                 window.socket = io.connect('https://' + document.domain + ':' + location.port + '/stream');
             }
-            window.socketOn = true; 
+            window.socketOn = true;
             window.socket.on('disconnect',function() {
                 window.socketOn = false;
             });
-            window.socket.on('message', function(msg){     
+            window.socket.on('message', function(msg){
                 if ($('#status').html() == "") {
                     $('#status').html(String(msg));
                 } else {
                     $('#status').append('<br>'+String(msg));
-                }                
+                }
             });
             window.socket.on('errors', function(msg){
-                $('#status').append('<span style="color:red;">Errors:<br>'+String(msg)+"</span>");
+                $('#status').append('<br><span class="fe-err">Errors:<br>'+String(msg)+"</span>");
                 $("#myspinner").hide();
+                $("#simlog").addClass("is-visible");
+                setSimState("error", "errors · see log");
             });
             window.socket.on('success',function(msg){
-                $('#status').append(`
-                    <span style="color:blue;">
-                        Simulation successful!<br>
-                        You can download your file now.
-                    </span>
-                `);
-                $("#gotoemul").attr('disabled', false);
-                $("#gotoplot").attr('disabled', false);
+                $('#status').append('<br><span class="fe-ok">Simulation successful.</span>');
                 $("#myspinner").hide();
+                var t = new Date();
+                setSimState("done", "done · " + $('#stoptime').val().replace(" ", "") + " · " +
+                            String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"));
+                loadResult();
             });
             window.socket.on('error',function(msg){
                 errorMessage(msg);
             });
-      
+
         }
 
         function errorMessage(msg) {
-            $("#simulationmodal").removeClass("is-active");
             $("#errorMessage").html(msg);
             $("#modalError").addClass("is-active");
             $('#bcloseerr').focus();
+            $("#myspinner").hide();
+            setSimState("error", "error");
         }
 
 
         function runSimulation() {
-            $("#status").html("");
+            $("#status").html("If the selected file is not a testbench, the simulation will return empty.");
             $("#myspinner").show();
-            $("#gotoemul").attr('disabled', true);
-            $("#gotoplot").attr('disabled', true);
-            $("#simulationmodal").addClass("is-active");
+            setSimState("running", "simulating…");
             if (!window.socketOn) { openSocket(); }
             var selectedfile = $("#fileselect").children("option:selected").val();
-            window.socket.emit("Simulate",$('#stoptime').find(":selected").val(),selectedfile);    
+            window.socket.emit("Simulate",$('#stoptime').find(":selected").val(),selectedfile);
         }
-        
+
     </script>
-    
+
 {% endblock %}
