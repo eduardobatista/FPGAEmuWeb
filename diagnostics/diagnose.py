@@ -1140,6 +1140,8 @@ def _run_isolated(cid, title, fn, mode, timeout, d, report):
         pfile.unlink()
     except OSError:
         pass
+    report["current"] = f"{title} — starting"
+    report["step_started"] = time.time()
     r, w = os.pipe()
     pid = os.fork()
     if pid == 0:  # child
@@ -1232,7 +1234,8 @@ def run(args):
         print("Previous run looks dead (no heartbeat for 2 min); starting a new one.")
     say(f"Starting {args.mode} diagnostics ({args.reason})")
     report = {"started": now_iso(), "mode": args.mode, "reason": args.reason, "running": True,
-              "diag_dir": str(d), "pid": os.getpid(), "heartbeat": time.time(), "checks": []}
+              "diag_dir": str(d), "pid": os.getpid(), "heartbeat": time.time(), "checks": [],
+              "steps": [c[1] for c in CHECKS]}
     atomic_write(running, json.dumps(report))
     t_start = time.monotonic()
     for cid, title, fn, tq, tf in CHECKS:
@@ -1351,7 +1354,18 @@ def summary_html(key_qs=""):
         return "<p>No diagnostics report yet.</p>"
     parts = []
     if rep.get("in_progress"):
-        parts.append(f"<p><b>Running now:</b> {e(rep['in_progress'].get('current', ''))}…</p>")
+        ip = rep["in_progress"]
+        done = ip.get("checks", [])
+        nsteps = len(ip.get("steps") or CHECKS)
+        parts.append(f"<p><b>Running now</b> (step {min(len(done) + 1, nsteps)}/{nsteps}): "
+                     f"{e(ip.get('current', ''))}…</p>")
+        probs = [ch for ch in done if ch["status"] in ("warn", "fail")]
+        if probs:
+            parts.append("<p>Problems found so far in this run:</p><ul>")
+            for ch in probs:
+                parts.append(f"<li><b class='diag-{e(ch['status'])}'>{e(ch['status'].upper())}</b> "
+                             f"{e(ch['title'])}: {e(ch['summary'])}</li>")
+            parts.append("</ul>")
     if rep.get("started"):
         parts.append(f"<p>Last report: <b class='diag-{e(rep.get('overall', ''))}'>{e(str(rep.get('overall', '')).upper())}</b> "
                      f"— {e(rep.get('started', ''))} ({e(rep.get('mode', ''))}, {e(str(rep.get('reason', '')))})</p><ul>")
@@ -1385,6 +1399,52 @@ cursor:pointer}.muted{color:var(--muted)}.scroll{overflow-x:auto}
 """
 
 
+def _checks_html(checks, open_problems=True):
+    e = html.escape
+    out = []
+    for ch in checks:
+        st = ch["status"]
+        op = " open" if open_problems and st in ("warn", "fail") else ""
+        out.append(f"<div class='card'><details{op}><summary><span class='badge b-{e(st)}'>{e(st.upper())}</span>"
+                   f"<b>{e(ch['title'])}</b><span class='sum'>{e(ch['summary'])} · {ch['duration']} s</span></summary>")
+        if ch["details"]:
+            out.append("<div class='lines'>")
+            for lvl, txt in ch["details"]:
+                out.append(f"<div class='l-{e(lvl)}'>{e(txt)}</div>")
+            out.append("</div>")
+        out.append("</details></div>")
+    return out
+
+
+def _progress_html(ip):
+    """The run in progress: finished steps with results, the current step, the pending ones."""
+    e = html.escape
+    done = ip.get("checks", [])
+    steps = ip.get("steps") or [c[1] for c in CHECKS]
+    now = time.time()
+    hb_age = now - ip.get("heartbeat", now)
+    step_age = now - ip.get("step_started", now)
+    current = ip.get("current", "")
+    out = [f"<div class='card' style='border-color:var(--info)'>⏳ <b>Diagnostics running</b> — "
+           f"{e(ip.get('mode', ''))} mode, reason {e(str(ip.get('reason', '')))}, started {e(ip.get('started', ''))}. "
+           f"Step {min(len(done) + 1, len(steps))} of {len(steps)}. "
+           f"<span class='muted'>This page refreshes every 10 s.</span></div>"]
+    if hb_age > 120:
+        out.append(f"<div class='card' style='border-color:var(--fail)'><b>The diagnostics process stopped reporting "
+                   f"{int(hb_age)} s ago.</b> It is probably stuck itself (e.g. blocked on disk I/O). "
+                   f"Last known activity: {e(current)}</div>")
+    out += _checks_html(done, open_problems=True)
+    if len(done) < len(steps):
+        title, _, act = current.partition(" — ")
+        out.append(f"<div class='card'><span class='badge b-info'>NOW</span> <b>{e(title or steps[len(done)])}</b> "
+                   f"<span class='muted'>running for {int(step_age)} s</span>"
+                   f"<div class='lines'>{e(act)}</div></div>")
+        pending = steps[len(done) + 1:]
+        if pending:
+            out.append("<div class='card muted'>Pending: " + " · ".join(e(t) for t in pending) + "</div>")
+    return out
+
+
 def render_html(key="", banner="", run_url="/diagnostics/run", json_url="/diagnostics.json"):
     rep, d = load_latest()
     hist = load_history(d)
@@ -1404,30 +1464,20 @@ def render_html(key="", banner="", run_url="/diagnostics/run", json_url="/diagno
                "<button name='mode' value='full'>Run full check (slow, reads the whole image)</button></form> "
                f"<a href='{e(json_url)}{kq}'>JSON</a></div>")
     if running:
-        ip = rep["in_progress"]
-        out.append(f"<div class='card'>⏳ <b>Diagnostics running</b> ({e(ip.get('mode', ''))}, started {e(ip.get('started', ''))}): "
-                   f"{e(ip.get('current', ''))} — this page refreshes every 10 s.</div>")
+        out += _progress_html(rep["in_progress"])
     if not rep or not rep.get("started"):
         out.append("<div class='card'>No finished report yet.</div>")
     else:
         if rep.get("error"):
             out.append(f"<div class='card'>{e(rep['error'])}</div>")
         ov = rep.get("overall", "skip")
+        if running:
+            out.append("<h2 style='font-size:17px;margin:22px 0 4px'>Previous finished report</h2>")
         out.append(f"<div class='card'><span class='badge b-{e(ov)}'>{e(ov.upper())}</span> "
                    f"<b>{e(rep.get('started', ''))}</b> — mode <b>{e(rep.get('mode', ''))}</b>, "
                    f"reason {e(str(rep.get('reason', '')))}, took {rep.get('duration', '?')} s "
                    f"<span class='muted'>({e(rep.get('diag_dir', ''))})</span></div>")
-        for ch in rep.get("checks", []):
-            st = ch["status"]
-            op = " open" if st in ("warn", "fail") else ""
-            out.append(f"<div class='card'><details{op}><summary><span class='badge b-{e(st)}'>{e(st.upper())}</span>"
-                       f"<b>{e(ch['title'])}</b><span class='sum'>{e(ch['summary'])} · {ch['duration']} s</span></summary>")
-            if ch["details"]:
-                out.append("<div class='lines'>")
-                for lvl, txt in ch["details"]:
-                    out.append(f"<div class='l-{e(lvl)}'>{e(txt)}</div>")
-                out.append("</div>")
-            out.append("</details></div>")
+        out += _checks_html(rep.get("checks", []), open_problems=not running)
     if hist:
         ids = [c[0] for c in CHECKS]
         out.append("<div class='card'><b>History</b> <span class='muted'>(newest first — intermittent problems show up here)</span>"
