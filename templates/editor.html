@@ -23,7 +23,14 @@
       .fe-toolbar .dropdown-menu { min-width: 13rem; }
       .fe-toolbar .dropdown-item[disabled] { color: var(--fe-faint-2); pointer-events: none; }
       button.dropdown-item { border: 0; background: none; width: 100%; text-align: left; cursor: pointer; font-family: inherit; }
-      .fe-output { height: 150px; flex: none; border-top: 1px solid var(--fe-border); background: var(--fe-surface-2); display: flex; flex-direction: column; }
+      .fe-output { height: 150px; flex: none; border-top: 1px solid var(--fe-border); background: var(--fe-surface-2); display: flex; flex-direction: column; position: relative; }
+      /* drag the top edge of the Output panel to resize it (double-click: back to the default height) */
+      .fe-output-resizer { position: absolute; left: 0; right: 0; top: -4px; height: 8px; cursor: row-resize; z-index: 5; }
+      .fe-output-resizer::after { content: ""; position: absolute; left: 50%; top: 2px; width: 36px; height: 4px; margin-left: -18px;
+                                  border-radius: 2px; background: var(--fe-border-input); opacity: 0; transition: opacity .15s; }
+      .fe-output-resizer:hover::after, .fe-output.is-resizing .fe-output-resizer::after { opacity: 1; }
+      .fe-output.is-resizing, .fe-output-resizer:hover { border-top-color: var(--fe-accent); }
+      body.fe-resizing, body.fe-resizing * { cursor: row-resize !important; user-select: none !important; }
       .fe-output-head { display: flex; align-items: center; gap: 12px; padding: 0 18px; height: 38px; flex: none; border-bottom: 1px solid #e8ebe9; font-size: 13px; }
       .fe-output-head .fe-title { font-weight: 600; color: var(--fe-ink); }
       .fe-output-head .button { height: 26px; font-size: 12px; padding: 0 10px; }
@@ -138,6 +145,7 @@
               <div id="editor"></div>
               <!-- Output: same ids the editor logic used in the old compilation dialog -->
               <div class="fe-output" id="compilationmodal">
+                <div class="fe-output-resizer" id="outputresizer" title="Drag to resize · double-click to reset"></div>
                 <div class="fe-output-head">
                   <span class="fe-title">Output</span>
                   <span class="has-text-faint" id="cmodaltitle"></span>
@@ -348,6 +356,44 @@
         document.fonts && document.fonts.ready.then(function () { editor.renderer.updateFontSize(); });
 
         // Toolbar breadcrumb, unsaved-changes dot and file list highlight follow the editor state.
+        // Resizable Output panel; the height is remembered in this browser.
+        (function () {
+            var panel = document.getElementById("compilationmodal");
+            var handle = document.getElementById("outputresizer");
+            if (!panel || !handle) { return; }
+            var DEFAULT = 150, MIN = 60;
+            function maxHeight() { return panel.parentElement.clientHeight - 120; }
+            function setHeight(h) {
+                h = Math.max(MIN, Math.min(maxHeight(), Math.round(h)));
+                panel.style.height = h + "px";
+                editor.resize();
+                return h;
+            }
+            try { var saved = parseInt(localStorage.getItem("fe-output-height")); if (saved) { setHeight(saved); } } catch (e) {}
+            handle.addEventListener("pointerdown", function (e) {
+                e.preventDefault();
+                var startY = e.clientY, startH = panel.getBoundingClientRect().height;
+                handle.setPointerCapture(e.pointerId);
+                panel.classList.add("is-resizing"); document.body.classList.add("fe-resizing");
+                function move(ev) { setHeight(startH + (startY - ev.clientY)); }
+                function up() {
+                    handle.removeEventListener("pointermove", move);
+                    handle.removeEventListener("pointerup", up);
+                    panel.classList.remove("is-resizing"); document.body.classList.remove("fe-resizing");
+                    try { localStorage.setItem("fe-output-height", Math.round(panel.getBoundingClientRect().height)); } catch (e) {}
+                }
+                handle.addEventListener("pointermove", move);
+                handle.addEventListener("pointerup", up);
+            });
+            handle.addEventListener("dblclick", function () {
+                setHeight(DEFAULT);
+                try { localStorage.removeItem("fe-output-height"); } catch (e) {}
+            });
+            window.addEventListener("resize", function () {
+                if (panel.getBoundingClientRect().height > maxHeight()) { setHeight(maxHeight()); }
+            });
+        })();
+
         function syncFileUi() {
             var val = $("#fileselect").val();
             $(".fe-file-item").each(function () { $(this).toggleClass("is-active", this.dataset.file === val); });
