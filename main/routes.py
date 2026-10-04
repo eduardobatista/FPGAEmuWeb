@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
-from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash, abort, Response
+from flask import session, redirect, url_for, render_template, request, current_app, send_from_directory, flash, abort, Response, jsonify
+import tempfile
 from werkzeug.utils import secure_filename
 from zipfile import ZipFile
 from . import main
@@ -8,6 +9,7 @@ from .funcs import *
 from flask_login import login_required, current_user, AnonymousUserMixin
 from .models import User
 from appp import db
+from .diagram import list_entities, synthesize, display_names, fix_blackboxes, to_blocks, rename_modules, DiagramError
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -203,6 +205,45 @@ def mapper():
     # aux = getvhdfilelist(sessionpath,recursive=True)  # list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
     filenames = [x.relative_to(sessionpath) for x in aux]
     return render_template('mapper.html',username=current_user.email,filenames=filenames,socketiofile=getsocketiofile())
+
+@main.route('/diagram')
+@login_required
+def diagram():
+    sessionpath = getuserpath()
+    curproject = getcurrentproject(sessionpath)
+    if curproject == "":
+        aux = getvhdfilelist(sessionpath,recursive=True)
+    else:
+        aux = getvhdfilelist(sessionpath / curproject)
+    entities = list_entities(aux, sessionpath)
+    return render_template('diagram.html',entities=entities,currentproject=curproject,
+                           selected=request.args.get('entity',''))
+
+@main.route('/diagram/data')
+@login_required
+def diagramdata():
+    """Netlist of an entity for the block diagram. The sources are all VHDL files in the
+    folder (project) of the file that declares the entity."""
+    sessionpath = getuserpath()
+    relfile = request.args.get('file','')
+    entity = request.args.get('entity','')
+    vhdfile = sessionpath / relfile
+    if (relfile == "") or (not isTraversalSecure(vhdfile, sessionpath)) or (not vhdfile.is_file()):
+        return jsonify(error="File not found.")
+    folder = vhdfile.parent
+    sources = sorted(list(folder.glob("*.vhd")) + list(folder.glob("*.vhdl")))
+    try:
+        with tempfile.TemporaryDirectory(dir=current_app.TEMPDIR, prefix="diagram-") as workdir:
+            netlist = synthesize(sources, entity, workdir)
+    except DiagramError as err:
+        current_app.logger.info(f"{current_user.email}: Block diagram of {entity} failed.")
+        return jsonify(error=str(err))
+    warnings = fix_blackboxes(netlist)
+    names = display_names(netlist, [e for _, e in list_entities(sources, folder)])
+    top = next((m for m, v in netlist["modules"].items() if v.get("attributes", {}).get("top")), entity)
+    current_app.logger.info(f"{current_user.email}: Block diagram of {relfile}:{entity}.")
+    return jsonify(top=names.get(top, top), warnings=warnings, rtl=rename_modules(netlist, names),
+                   blocks=rename_modules(to_blocks(netlist), names))
 
 @main.route("/downloadproject/<pname>")
 @login_required

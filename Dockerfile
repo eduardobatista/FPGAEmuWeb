@@ -19,6 +19,8 @@ COPY nginxdefault.conf /etc/nginx/sites-enabled/default
 WORKDIR /home/fpgaemuweb
 RUN uv sync --locked && \
     ln -sf /home/surferdist /home/fpgaemuweb/static/surfer_wasm/dist
+# Yosys (block diagrams) runs as WebAssembly: compile it once here, not on the first diagram.
+RUN .venv/bin/yowasp-yosys -V
 # COPY ./celerybash /usr/local/bin/celery
 # RUN ln -s /home/fpgaemuweb/.venv/bin/celery /usr/local/bin/celery
 
