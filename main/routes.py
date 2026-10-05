@@ -10,6 +10,7 @@ from flask_login import login_required, current_user, AnonymousUserMixin
 from .models import User
 from appp import db
 from .diagram import list_entities, synthesize, display_names, fix_blackboxes, normalize_constants, to_blocks, rename_modules, DiagramError
+from .fsm import extract_fsms
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -245,6 +246,26 @@ def diagramdata():
     current_app.logger.info(f"{current_user.email}: Block diagram of {relfile}:{entity}.")
     return jsonify(top=names.get(top, top), warnings=warnings, rtl=rename_modules(netlist, names),
                    blocks=rename_modules(to_blocks(netlist), names))
+
+@main.route('/diagram/fsm')
+@login_required
+def diagramfsm():
+    """State machines of an entity (state diagrams), read from the analyzed VHDL."""
+    sessionpath = getuserpath()
+    relfile = request.args.get('file','')
+    entity = request.args.get('entity','')
+    vhdfile = sessionpath / relfile
+    if (relfile == "") or (not isTraversalSecure(vhdfile, sessionpath)) or (not vhdfile.is_file()):
+        return jsonify(error="File not found.")
+    folder = vhdfile.parent
+    sources = sorted(list(folder.glob("*.vhd")) + list(folder.glob("*.vhdl")))
+    try:
+        with tempfile.TemporaryDirectory(dir=current_app.TEMPDIR, prefix="fsm-") as workdir:
+            fsms = extract_fsms(sources, vhdfile, entity, workdir)
+    except DiagramError as err:
+        return jsonify(error=str(err))
+    current_app.logger.info(f"{current_user.email}: State diagram of {relfile}:{entity} ({len(fsms)} FSM).")
+    return jsonify(fsms=fsms)
 
 @main.route("/downloadproject/<pname>")
 @login_required

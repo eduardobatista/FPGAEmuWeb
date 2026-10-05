@@ -88,6 +88,23 @@ def _run(cmd, cwd, timeout=TIMEOUT):
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
+def analyze_files(vhd_files, workdir):
+    """Analyzes the files into the work library in `workdir`, file by file, in passes: a file that
+    uses `entity work.x` needs x analyzed first, and a broken file the entity does not depend on
+    must not prevent the diagram. Returns {file: error output} of the files that failed."""
+    pending, failed = [str(f) for f in vhd_files], {}
+    while pending:
+        failed = {}
+        for f in pending:
+            rc, out = _run(["ghdl", "-a"] + GHDL_FLAGS + [f], workdir)
+            if rc != 0:
+                failed[f] = out
+        if len(failed) == len(pending):
+            break
+        pending = list(failed)
+    return failed
+
+
 def synthesize(vhd_files, top, workdir):
     """Yosys JSON netlist of entity `top`, using all `vhd_files` (the project) as sources."""
     workdir = Path(workdir)
@@ -100,18 +117,7 @@ def synthesize(vhd_files, top, workdir):
             msg = msg.replace(d, "")
         return msg.replace(str(workdir) + "/", "").strip()
 
-    # Analyze file by file, in passes: a file that uses `entity work.x` needs x analyzed first,
-    # and a broken file the entity does not depend on must not prevent the diagram.
-    pending, failed = [str(f) for f in vhd_files], {}
-    while pending:
-        failed = {}
-        for f in pending:
-            rc, out = _run(["ghdl", "-a"] + GHDL_FLAGS + [f], workdir)
-            if rc != 0:
-                failed[f] = out
-        if len(failed) == len(pending):
-            break
-        pending = list(failed)
+    failed = analyze_files(vhd_files, workdir)
     with open(workdir / "design.v", "wb") as v:
         try:
             # --latches: student code often infers latches; they can still be drawn.
