@@ -69,6 +69,7 @@
     .fe-emu-side { display: flex; flex-direction: column; }
     .fe-emu-side .fe-side-section:last-child { border-bottom: 0; flex: 1; min-height: 0; overflow: auto; }
     #status:empty::before { content: "Emulator ready."; }
+    #status .fe-err { color: var(--fe-danger); }
     .fe-kbd-hint { font-size: 12px; color: var(--fe-faint); }
     .fe-kbd-hint kbd { font-family: var(--fe-mono); font-size: 11px; background: var(--fe-nav-active); border-radius: 4px; padding: 1px 5px; color: var(--fe-muted); }
 
@@ -352,7 +353,8 @@
 
                 });
                 window.socket.on('error', function(msg){
-                    $('#status').append('<br>Error:<br>'+String(msg));
+                    $('#status').append(($('#status').html() == "" ? "" : "<br>") +
+                                        '<span class="fe-err">Error: ' + String(msg) + '</span>');
                 });
                 window.socket.on('status', function(msg){
                     if (msg.startsWith("Parado")) {
