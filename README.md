@@ -11,7 +11,7 @@ FPGAEmuWeb is a web-based VHDL environment built on [GHDL](https://github.com/gh
 - **Projects and editor**: VHDL files organized in projects, with an editor ([Ace](https://ace.c9.io/)) that highlights syntax and analyzes or compiles the project in one click.
 - **Emulation**: the top-level entity drives 8 seven-segment displays and 18 LEDs, and reads 18 switches and 4 keys, in real time. Ports can be remapped with the **Mapper**.
 - **Simulation**: runs a testbench and shows the result in the [Surfer](https://surfer-project.org/) waveform viewer; the `.ghw` file can also be downloaded for [GTKWave](https://gtkwave.sourceforge.net/).
-- **Block diagrams**: any synthesizable entity drawn as blocks (its components) or RTL (gates, multiplexers, flip-flops), with navigation into sub-blocks.
+- **Diagrams**: any synthesizable entity drawn as blocks (its components) or RTL (gates, multiplexers, flip-flops), with navigation into sub-blocks, and its state machines drawn as state diagrams, with the transition conditions as written in the code.
 - **Classes**: user accounts, roles (student, professor, admin) and the *view as* mode for professors to open students' projects.
 
 | Projects | Editor |
