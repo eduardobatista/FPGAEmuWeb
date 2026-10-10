@@ -68,9 +68,8 @@
     /* while the emulation is not running, the board is inactive: dimmed and not clickable */
     .fe-board.is-stopped .fe-zone-body { opacity: .4; filter: grayscale(1); pointer-events: none; user-select: none; }
     .fe-board.is-stopped .fe-zone-hint { visibility: hidden; }
-    .fe-board-notice { display: none; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 10px;
-                       background: var(--fe-surface-2); border: 1px dashed var(--fe-border-input); color: var(--fe-muted); font-size: 14px; }
-    .fe-board.is-stopped .fe-board-notice { display: flex; }
+    .fe-board-notice { display: flex; align-items: center; gap: 8px; margin-left: 6px; min-width: 0; color: var(--fe-muted); font-size: 14px; }
+    .fe-board-notice.is-hidden { display: none; }
     .fe-board-notice b { color: var(--fe-ink); font-weight: 600; }
 
     .fe-emu-side { display: flex; flex-direction: column; }
@@ -99,15 +98,14 @@
                   <span class="fe-btn-icon is-dot" id="iniciaricon"></span><span id="iniciarlabel">Start emulation</span>
                 </button>
                 <button type="button" class="button" id="resetbtn" onclick="resetInputs();" disabled>Reset inputs</button>
+                <span class="fe-board-notice" id="boardnotice">
+                  <span class="fe-dot"></span><span id="boardnoticetext">The emulation is not running. Click <b>Start emulation</b> to activate the inputs and outputs.</span>
+                </span>
                 <span class="fe-spacer"></span>
                 <span class="fe-status"><span class="fe-dot" id="emudot"></span><span id="emustatus">stopped</span></span>
               </div>
 
               <div class="fe-board is-stopped" id="board">
-
-                <div class="fe-board-notice" id="boardnotice">
-                  <span class="fe-dot"></span><span id="boardnoticetext">The emulation is not running. Click <b>Start emulation</b> to activate the inputs and outputs.</span>
-                </div>
 
                 <section class="fe-zone is-outputs" aria-label="Outputs">
                   <header class="fe-zone-head">
@@ -259,6 +257,7 @@
             $("#emustatus").text(state == "starting" ? "starting…" : state);
             $("#board").toggleClass("is-stopped", state != "running");
             $("#switches input, #keys button, #resetbtn").prop("disabled", state != "running");
+            $("#boardnotice").toggleClass("is-hidden", state == "running");
             $("#boardnoticetext").html(state == "starting" ? "Starting the emulation…" :
                 "The emulation is not running. Click <b>Start emulation</b> to activate the inputs and outputs.");
             if (state != "running") {
