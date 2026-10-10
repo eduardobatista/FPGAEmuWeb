@@ -65,6 +65,13 @@
 
     .fe-board.is-stopped .fe-seg.is-on { background: #2d2726; box-shadow: none; }
     .fe-board.is-stopped .fe-led.is-on { background: #e6e9e7; box-shadow: inset 0 1px 2px rgba(0,0,0,.12); }
+    /* while the emulation is not running, the board is inactive: dimmed and not clickable */
+    .fe-board.is-stopped .fe-zone-body { opacity: .4; filter: grayscale(1); pointer-events: none; user-select: none; }
+    .fe-board.is-stopped .fe-zone-hint { visibility: hidden; }
+    .fe-board-notice { display: none; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 10px;
+                       background: var(--fe-surface-2); border: 1px dashed var(--fe-border-input); color: var(--fe-muted); font-size: 14px; }
+    .fe-board.is-stopped .fe-board-notice { display: flex; }
+    .fe-board-notice b { color: var(--fe-ink); font-weight: 600; }
 
     .fe-emu-side { display: flex; flex-direction: column; }
     .fe-emu-side .fe-side-section:last-child { border-bottom: 0; flex: 1; min-height: 0; overflow: auto; }
@@ -91,12 +98,16 @@
                 <button id="iniciar" type="button" class="button is-primary" onclick="$('#iniciar').prop('disabled',true); Emular();">
                   <span class="fe-btn-icon is-dot" id="iniciaricon"></span><span id="iniciarlabel">Start emulation</span>
                 </button>
-                <button type="button" class="button" onclick="resetInputs();">Reset inputs</button>
+                <button type="button" class="button" id="resetbtn" onclick="resetInputs();" disabled>Reset inputs</button>
                 <span class="fe-spacer"></span>
                 <span class="fe-status"><span class="fe-dot" id="emudot"></span><span id="emustatus">stopped</span></span>
               </div>
 
               <div class="fe-board is-stopped" id="board">
+
+                <div class="fe-board-notice" id="boardnotice">
+                  <span class="fe-dot"></span><span id="boardnoticetext">The emulation is not running. Click <b>Start emulation</b> to activate the inputs and outputs.</span>
+                </div>
 
                 <section class="fe-zone is-outputs" aria-label="Outputs">
                   <header class="fe-zone-head">
@@ -179,6 +190,7 @@
 
         document.addEventListener("keydown", function(event) {
             if (event.target.tagName === "INPUT" && event.target.type !== "checkbox") { return; }
+            if ($("#board").hasClass("is-stopped")) { return; }
             if (/^[0-9]$/.test(event.key)) {
                 $("#SW" + event.key).click();
             } else if (/^[a-hA-H]$/.test(event.key)) {
@@ -246,6 +258,15 @@
             $("#emudot").toggleClass("is-ok", state == "running").toggleClass("is-busy", state == "starting");
             $("#emustatus").text(state == "starting" ? "starting…" : state);
             $("#board").toggleClass("is-stopped", state != "running");
+            $("#switches input, #keys button, #resetbtn").prop("disabled", state != "running");
+            $("#boardnoticetext").html(state == "starting" ? "Starting the emulation…" :
+                "The emulation is not running. Click <b>Start emulation</b> to activate the inputs and outputs.");
+            if (state != "running") {
+                // keys held when the emulation stops are released
+                window.keysDown = [false, false, false, false];
+                $("#keys .fe-key").removeClass("is-pressed");
+                updateInputsPanel();
+            }
         }
 
         $(document).ready(function() {
@@ -286,7 +307,7 @@
                     </div>
                 `);
             }
-            updateInputsPanel();
+            setRunUi("stopped");
         });
 
         function mousedown(element) {
