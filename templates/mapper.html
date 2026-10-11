@@ -7,6 +7,10 @@
         font-size: large;
         font-weight: bold;
     }
+    /* result of Save, on the same line as the buttons (does not move them) */
+    #alerts { font-size: 14px; margin-left: 4px; margin-bottom: .5rem; }
+    #alerts.is-info { color: var(--fe-link); }
+    #alerts.is-danger { color: var(--fe-danger); font-weight: 600; }
 </style>
 
 {% endblock %}
@@ -40,15 +44,10 @@
 
             <div id="portmap" class="container" style="text-size-adjust: 70%;"></div>
 
-            <article class="message is-danger p-2 mt-2 mb-0" id="alerts" style="display: none;">
-                <div class="message-body has-text-weight-bold">
-                    Mapping has errors.
-                </div>
-            </article>
-
             <div class="buttons mt-4">
             <button id="bSave" class='button' onclick="buildmap()">Save</button>
             <button id="bCompile" class='button is-primary' onclick="settop()" disabled>Set as top level and compile</button>
+            <span id="alerts" class="is-danger" style="display: none;" role="status"></span>
             </div>
 
         </div>  
@@ -233,7 +232,7 @@
                 }
             }); 
             window.socket.on('mapsavesuccess', function(msg){
-                $("#alerts").html("Map saved successfully!<br><strong>Don't forget to recompile</strong>.");
+                $("#alerts").html("Map saved. <strong>Don't forget to recompile.</strong>");
                 $("#alerts").removeClass("is-danger").addClass("is-info").delay(100).fadeIn(300);
                 $("#bCompile").prop("disabled",false);
             });
