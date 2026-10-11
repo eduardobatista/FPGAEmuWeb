@@ -99,7 +99,7 @@
                 </button>
                 <button type="button" class="button" id="resetbtn" onclick="resetInputs();" disabled>Reset inputs</button>
                 <span class="fe-board-notice" id="boardnotice">
-                  <span class="fe-dot"></span><span id="boardnoticetext">Not running. Click <b>Start emulation</b> to activate inputs and outputs.</span>
+                  <span class="fe-dot"></span><span id="boardnoticetext">Emulation not running. Click <b>Start emulation</b>.</span>
                 </span>
                 <span class="fe-spacer"></span>
                 <span class="fe-status"><span class="fe-dot" id="emudot"></span><span id="emustatus">stopped</span></span>
@@ -259,7 +259,7 @@
             $("#switches input, #keys button, #resetbtn").prop("disabled", state != "running");
             $("#boardnotice").toggleClass("is-hidden", state == "running");
             $("#boardnoticetext").html(state == "starting" ? "Starting the emulation…" :
-                "Not running. Click <b>Start emulation</b> to activate inputs and outputs.");
+                "Emulation not running. Click <b>Start emulation</b>.");
             if (state != "running") {
                 // keys held when the emulation stops are released
                 window.keysDown = [false, false, false, false];
