@@ -65,12 +65,32 @@
 
     .fe-board.is-stopped .fe-seg.is-on { background: #2d2726; box-shadow: none; }
     .fe-board.is-stopped .fe-led.is-on { background: #e6e9e7; box-shadow: inset 0 1px 2px rgba(0,0,0,.12); }
-    /* while the emulation is not running, the board is inactive: dimmed and not clickable */
-    .fe-board.is-stopped .fe-zone-body { opacity: .4; filter: grayscale(1); pointer-events: none; user-select: none; }
+    /* while the emulation is not running, the board is inactive: dimmed (the Mapper labels stay readable) */
+    .fe-board.is-stopped .fe-group > :not(.fe-maprow) { opacity: .4; filter: grayscale(1); user-select: none; }
+    .fe-board.is-stopped .fe-sw, .fe-board.is-stopped .fe-key { cursor: default; }
     .fe-board.is-stopped .fe-zone-hint { visibility: hidden; }
     .fe-board-notice { display: flex; align-items: center; gap: 8px; margin-left: 6px; min-width: 0; color: var(--fe-muted); font-size: 14px; }
     .fe-board-notice.is-hidden { display: none; }
     .fe-board-notice b { color: var(--fe-ink); font-weight: 600; }
+
+    /* Mapper: a bracket under the elements of each mapped port, with its name; labels that do not fit
+       side by side go to the next line (with a leader line to their bracket) */
+    .fe-maprow { position: relative; align-self: stretch; margin-top: -4px; }
+    .fe-mapbracket { position: absolute; top: 0; height: 6px; border: 1.5px solid currentColor; border-top: 0; border-radius: 0 0 4px 4px; }
+    .fe-mapleader { position: absolute; top: 6px; width: 0; border-left: 1px solid currentColor; opacity: .6; }
+    .fe-maplabel { position: absolute; font-family: var(--fe-mono); font-size: 11px; font-weight: 600; line-height: 14px; white-space: nowrap;
+                   overflow: hidden; text-overflow: ellipsis; padding: 0 2px; border-radius: 3px; cursor: default; }
+    .fe-maplabel.is-maphi { background: currentColor; }
+    .fe-maplabel.is-maphi span { color: #ffffff; }
+    .fe-cell.is-unmapped { opacity: .35; }
+    .fe-cell.is-maphi { outline: 2px solid var(--fe-mapc); outline-offset: 2px; border-radius: 6px; }
+    .fe-mapsection { flex: none; }
+    .fe-mapkv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-content: start; align-items: center;
+                font-family: var(--fe-mono); font-size: 12px; max-height: 210px; overflow-y: auto; }
+    .fe-mapkv .fe-mapport { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fe-mapkv .fe-mapchip { width: 8px; height: 8px; border-radius: 2px; flex: none; background: currentColor; }
+    .fe-mapkv .fe-maptarget { color: var(--fe-muted); white-space: nowrap; }
+    .fe-mapedit { display: inline-block; margin-top: 10px; font-size: 12px; }
 
     .fe-emu-side { display: flex; flex-direction: column; }
     .fe-emu-side .fe-side-section:last-child { border-bottom: 0; flex: 1; min-height: 0; overflow: auto; }
@@ -166,6 +186,13 @@
                   <span>Top</span><span class="is-mono">{{ top.split('/')[-1] if top else '—' }}</span>
                 </div>
               </div>
+              {% if portmap %}
+              <div class="fe-side-section fe-mapsection">
+                <div class="section-label">Mapper</div>
+                <div class="fe-mapkv" id="mapkv"></div>
+                <a class="fe-mapedit" href="/mapper">Edit in the Mapper</a>
+              </div>
+              {% endif %}
               <div class="fe-side-section">
                 <div class="section-label">Log</div>
                 <div id="status" class="fe-log"></div>
@@ -196,6 +223,145 @@
                 $("#SW" + keynum).click();
             }
         });
+
+        // Mapper configuration of the top-level entity ([] when the Mapper is not enabled for it)
+        window.portmap = {{ portmap|tojson }};
+        var MAP_COLORS = ["#2563eb", "#b45309", "#7c3aed", "#0f766e", "#be185d", "#4d7c0f", "#0e7490", "#9f1239"];
+
+        // DOM cell of a board element: target is SW / KEY / LEDR / HEXn.
+        function boardCell(target, bit) {
+            var el = null;
+            if (target == "SW") { el = document.getElementById("SW" + bit); }
+            else if (target == "KEY") { el = document.getElementById("KEY" + bit); }
+            else if (target == "LEDR") { el = document.getElementById("ledr" + bit); }
+            else if (/^HEX[0-7]$/.test(target)) { el = document.getElementById(target.toLowerCase() + "-0"); }
+            return el ? el.closest(".fe-cell") : null;
+        }
+
+        function esc(t) { return $("<div>").text(t).html(); }
+
+        // Brackets and labels of the mapped ports, under each group of elements (switches, keys, LEDs, displays).
+        function drawPortmap() {
+            $(".fe-maprow").remove();
+            $(".fe-cell").removeClass("is-unmapped is-maphi").each(function () { this.removeAttribute("data-maptip"); });
+            if (!window.portmap.length) { return; }
+            var groups = {};  // row element id -> {cells: Set, units: {spankey: unit}}
+            window.portmap.forEach(function (m, i) {
+                m.color = MAP_COLORS[i % MAP_COLORS.length];
+                if (m.msb === null) { return; }  // clocks: only in the sidebar
+                var lo = (m.lsb === null) ? m.msb : Math.min(m.msb, m.lsb), hi = (m.lsb === null) ? m.msb : Math.max(m.msb, m.lsb);
+                var ishex = /^HEX/.test(m.target), isin = (m.target == "SW" || m.target == "KEY");
+                var cells = [];
+                for (var b = lo; b <= (ishex ? lo : hi); b++) {
+                    var cell = boardCell(m.target, b);
+                    if (!cell) { continue; }
+                    cells.push(cell);
+                    var portbit = ishex ? (m.lsb === null ? m.port + "(" + m.msb + ")" : m.port) : (m.lsb === null ? m.port : m.port + "(" + (b - lo) + ")");
+                    var tip = ishex ? (m.target + " ← " + portbit) : (m.target + b + (isin ? " → " : " ← ") + portbit);
+                    var prev = cell.getAttribute("data-maptip");
+                    cell.setAttribute("data-maptip", prev ? prev + "\n" + tip : tip);
+                    cell.style.setProperty("--fe-mapc", m.color);
+                    $(cell).attr("data-mapport", ($(cell).attr("data-mapport") || "") + " p" + i);
+                }
+                if (!cells.length) { return; }
+                var row = cells[0].parentNode.closest(".fe-switches, .fe-keys, .fe-leds, .fe-hexplate");
+                var g = groups[row.id || row.className] = groups[row.id || row.className] || {row: row, cells: [], units: {}};
+                var key = cells.map(function (c) { return $(c).index(); }).sort().join(",");
+                var u = g.units[key] = g.units[key] || {cells: cells, names: [], ids: [], color: m.color};
+                u.names.push(m.port); u.ids.push("p" + i);
+            });
+            Object.keys(groups).forEach(function (gk) { layoutGroup(groups[gk]); });
+            // elements left out of the mapping do nothing: they look faded
+            $("#switches, #keys, #ledrs, #hexes").children(".fe-cell").each(function () {
+                $(this).toggleClass("is-unmapped", !this.hasAttribute("data-maptip"));
+            });
+            $(".fe-cell[data-maptip]").each(function () {
+                this.title = this.getAttribute("data-maptip");
+                $(this).find(".fe-key").attr("title", this.title);
+            });
+        }
+
+        function layoutGroup(g) {
+            var row = g.row, maprow = $('<div class="fe-maprow"></div>').insertAfter(row)[0];
+            var base = maprow.getBoundingClientRect(), width = base.width;
+            var LINE = 15, TOP = 9, GAP = 6, MAXROWS = 4, MAXW = 160;
+            var rows = [];   // rows[r] = occupied [x0, x1] intervals
+            var free = function (r, x0, x1) { return !(rows[r] || []).some(function (iv) { return x0 < iv[1] + GAP && x1 > iv[0] - GAP; }); };
+            var take = function (r, x0, x1) { (rows[r] = rows[r] || []).push([x0, x1]); };
+            var units = Object.keys(g.units).map(function (k) { return g.units[k]; });
+            units.forEach(function (u) {
+                var rects = u.cells.map(function (c) { return c.getBoundingClientRect(); });
+                u.x0 = Math.min.apply(null, rects.map(function (r) { return r.left; })) - base.left + 2;
+                u.x1 = Math.max.apply(null, rects.map(function (r) { return r.right; })) - base.left - 2;
+            });
+            units.sort(function (a, b) { return a.x0 - b.x0; });
+            var nrows = 1;
+            units.forEach(function (u) {
+                var mid = (u.x0 + u.x1) / 2;
+                $('<div class="fe-mapbracket"></div>').css({left: u.x0, width: u.x1 - u.x0, color: u.color}).appendTo(maprow);
+                var lab = $('<div class="fe-maplabel"></div>').css({color: u.color, maxWidth: MAXW}).attr("data-ids", u.ids.join(" "))
+                    .attr("title", u.names.join(", ")).append($("<span>").text(u.names.join(", "))).appendTo(maprow);
+                var w = Math.min(lab[0].offsetWidth, MAXW);
+                // label positions: centered on the bracket, or starting / ending at it; the leader line goes
+                // down from the bracket to a label on a lower line, through a point no label above covers
+                var place = function (w, needleader) {
+                    var cands = [mid - w / 2, u.x0, u.x1 - w].map(function (x) { return Math.max(0, Math.min(width - w, x)); });
+                    for (var r = 0; r < MAXROWS; r++) {
+                        for (var c = 0; c < cands.length; c++) {
+                            var x0 = cands[c], x1 = x0 + w;
+                            if (!free(r, x0, x1)) { continue; }
+                            var lx = null;
+                            if (r > 0) {
+                                var a = Math.max(u.x0 + 3, x0 + 3), b = Math.min(u.x1 - 3, x1 - 3);
+                                for (var x = Math.round(Math.min(Math.max(mid, a), b)), k = 0; a <= b && k <= b - a; k++) {
+                                    var xx = (k % 2) ? x + (k + 1) / 2 : x - k / 2;   // from the middle outwards
+                                    if (xx < a || xx > b) { continue; }
+                                    var ok = true;
+                                    for (var q = 0; q < r; q++) { if (!free(q, xx - 1, xx + 1)) { ok = false; break; } }
+                                    if (ok) { lx = xx; break; }
+                                }
+                                if (lx === null && needleader) { continue; }
+                            }
+                            return {r: r, x0: x0, x1: x1, lx: lx};
+                        }
+                    }
+                    return null;
+                };
+                // the full name if there is room in some line (best with a leader line), otherwise the name
+                // shortened to the width of the bracket; the full name is always in the tooltip and in the sidebar
+                var bw = Math.max(u.x1 - u.x0, 24);
+                var p = place(w, true) || place(w, false) || (w > bw ? place(bw, false) : null);
+                if (!p) { p = {r: MAXROWS - 1, x0: Math.max(0, mid - bw / 2), lx: null}; p.x1 = p.x0 + bw; }
+                if (p.x1 - p.x0 < w) { lab.css("maxWidth", p.x1 - p.x0); }
+                take(p.r, p.x0, p.x1);
+                lab.css({left: p.x0, top: TOP + p.r * LINE});
+                if (p.lx !== null && p.r > 0) {
+                    for (var q = 0; q < p.r; q++) { take(q, p.lx - 1, p.lx + 1); }
+                    $('<div class="fe-mapleader"></div>').css({left: p.lx, height: TOP + p.r * LINE - 6, color: u.color}).appendTo(maprow);
+                }
+                nrows = Math.max(nrows, p.r + 1);
+                // hovering the label highlights the elements of the port
+                lab.on("mouseenter", function () { u.cells.forEach(function (c) { $(c).addClass("is-maphi"); }); })
+                   .on("mouseleave", function () { u.cells.forEach(function (c) { $(c).removeClass("is-maphi"); }); });
+            });
+            maprow.style.height = (TOP + nrows * LINE) + "px";
+        }
+
+        // hovering an element highlights the label of its port
+        $(document).on("mouseenter", ".fe-cell[data-mapport]", function () {
+            $(this).attr("data-mapport").trim().split(" ").forEach(function (id) {
+                $(".fe-maplabel").filter(function () { return (" " + $(this).attr("data-ids") + " ").indexOf(" " + id + " ") >= 0; }).addClass("is-maphi");
+            });
+        }).on("mouseleave", ".fe-cell[data-mapport]", function () { $(".fe-maplabel").removeClass("is-maphi"); });
+
+        function fillMapSidebar() {
+            $("#mapkv").html(window.portmap.map(function (m) {
+                var arrow = /^CLK/.test(m.target) || m.target == "SW" || m.target == "KEY" ? "←" : "→";
+                var target = (m.msb === null) ? m.target : m.target + "(" + m.msb + (m.lsb === null ? "" : " downto " + m.lsb) + ")";
+                return `<span class="fe-mapport" style="color: ${m.color}" title="${esc(m.port)}"><span class="fe-mapchip"></span><span style="color: var(--fe-ink); overflow: hidden; text-overflow: ellipsis;">${esc(m.port)}</span></span>` +
+                       `<span class="fe-maptarget" title="${esc(target)}">${arrow} ${esc(target)}</span>`;
+            }).join(""));
+        }
 
         window.LEDRState = [0,0,0];
         window.HEXState = [0,0,0,0,0,0,0,0];
@@ -307,6 +473,9 @@
                 `);
             }
             setRunUi("stopped");
+            drawPortmap();
+            fillMapSidebar();
+            if (document.fonts) { document.fonts.ready.then(drawPortmap); }
         });
 
         function mousedown(element) {

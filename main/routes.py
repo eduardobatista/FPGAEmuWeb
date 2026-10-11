@@ -153,7 +153,32 @@ def aabout():
 @login_required
 def emular():
     userpath = getuserpath()
-    return render_template('emulation.html',username=current_user.email,socketiofile=getsocketiofile())
+    return render_template('emulation.html',username=current_user.email,socketiofile=getsocketiofile(),
+                           portmap=activeportmap(userpath, current_user.topLevelEntity or ''))
+
+def activeportmap(userpath, toplevel):
+    """Port mapping of the top-level entity, when the Mapper is enabled for it:
+    [{"port", "target", "msb", "lsb"}] (msb/lsb are None for a clock, lsb is None for a single bit)."""
+    mapfile = userpath / (toplevel + ".vhd.map")
+    if (toplevel == "") or (not isTraversalSecure(mapfile, userpath)):
+        return []
+    try:
+        data = getexistingportmap(userpath, toplevel + ".vhd")
+    except Exception:
+        return []
+    if data[0] != "enabled":
+        return []
+    ret = []
+    for item in data[1:]:
+        try:
+            port, target, bits = item[0].strip(), item[1].strip(), [int(b) for b in item[2:] if b.strip() != ""]
+        except (IndexError, ValueError):
+            continue
+        if target.upper().startswith("CLK"):
+            ret.append({"port": port, "target": target, "msb": None, "lsb": None})
+        elif bits:
+            ret.append({"port": port, "target": target, "msb": bits[0], "lsb": bits[1] if len(bits) > 1 else None})
+    return ret
 
 @main.route('/simulation')
 @login_required
