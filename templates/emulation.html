@@ -10,14 +10,16 @@
 
     /* panels stay at the top; the remaining height is left empty below the Inputs */
     .fe-board { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 16px; min-height: 0; }
-    .fe-zone { background: var(--fe-surface); border: 1px solid var(--fe-border); border-radius: 12px; overflow: hidden; }
-    .fe-zone-head { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #e8ebe9; background: var(--fe-surface-2); }
+    /* the zone title runs vertically (bottom to top) in a strip on the left of the box */
+    .fe-zone { display: flex; background: var(--fe-surface); border: 1px solid var(--fe-border); border-radius: 12px; overflow: hidden; }
+    .fe-zone-head { flex: none; width: 38px; display: flex; flex-direction: column-reverse; align-items: center; justify-content: center; gap: 10px;
+                    padding: 16px 0; border-right: 1px solid #e8ebe9; background: var(--fe-surface-2); cursor: default; }
     .fe-zone-mark { width: 10px; height: 10px; border-radius: 3px; flex: none; }
     .fe-zone.is-outputs .fe-zone-mark { background: #f1383e; }
     .fe-zone.is-inputs .fe-zone-mark { background: var(--fe-accent); }
-    .fe-zone-title { font-size: 12px; font-weight: 600; color: var(--fe-ink); letter-spacing: .06em; text-transform: uppercase; }
-    .fe-zone-hint { font-size: 12px; color: var(--fe-faint); margin-left: auto; }
-    .fe-zone-body { padding: 20px 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+    .fe-zone-title { font-size: 12px; font-weight: 600; color: var(--fe-ink); letter-spacing: .06em; text-transform: uppercase;
+                     writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
+    .fe-zone-body { flex: 1; min-width: 0; padding: 20px 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
     .fe-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .fe-group-label { font-family: var(--fe-mono); font-size: 12px; color: var(--fe-muted); letter-spacing: .06em; }
     .fe-row { display: flex; gap: 40px; align-items: flex-end; justify-content: center; flex-wrap: wrap; }
@@ -68,7 +70,6 @@
     /* while the emulation is not running, the board is inactive: dimmed (the Mapper labels stay readable) */
     .fe-board.is-stopped .fe-group > :not(.fe-maprow) { opacity: .4; filter: grayscale(1); user-select: none; }
     .fe-board.is-stopped .fe-sw, .fe-board.is-stopped .fe-key { cursor: default; }
-    .fe-board.is-stopped .fe-zone-hint { visibility: hidden; }
     .fe-board-notice { display: flex; align-items: center; gap: 8px; margin-left: 6px; min-width: 0; color: var(--fe-muted); font-size: 14px; }
     .fe-board-notice.is-hidden { display: none; }
     .fe-board-notice b { color: var(--fe-ink); font-weight: 600; }
@@ -141,10 +142,9 @@
               <div class="fe-board is-stopped" id="board">
 
                 <section class="fe-zone is-outputs" aria-label="Outputs">
-                  <header class="fe-zone-head">
+                  <header class="fe-zone-head" title="Outputs: driven by your design">
                     <span class="fe-zone-mark"></span>
                     <span class="fe-zone-title">Outputs</span>
-                    <span class="fe-zone-hint">driven by your design</span>
                   </header>
                   <div class="fe-zone-body">
                     <div class="fe-group">
@@ -159,10 +159,9 @@
                 </section>
 
                 <section class="fe-zone is-inputs" aria-label="Inputs">
-                  <header class="fe-zone-head">
+                  <header class="fe-zone-head" title="Inputs: click the switches, hold the keys">
                     <span class="fe-zone-mark"></span>
                     <span class="fe-zone-title">Inputs</span>
-                    <span class="fe-zone-hint">click the switches · hold the keys</span>
                   </header>
                   <div class="fe-zone-body">
                     <div class="fe-row">
