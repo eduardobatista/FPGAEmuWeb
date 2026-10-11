@@ -92,6 +92,19 @@
     .fe-mapkv .fe-maptarget { color: var(--fe-muted); white-space: nowrap; }
     .fe-mapedit { display: inline-block; margin-top: 10px; font-size: 12px; }
 
+    /* sidebar sections that fold (the state is remembered in this browser) */
+    .fe-sechead { display: flex; align-items: center; gap: 8px; }
+    .fe-sectoggle { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+    .fe-sectoggle:hover .section-label { color: var(--fe-muted); }
+    .fe-sectoggle:focus-visible { outline: 2px solid var(--fe-focus-ring); outline-offset: 2px; border-radius: 4px; }
+    .fe-chev { width: 6px; height: 6px; border-right: 1.5px solid var(--fe-faint); border-bottom: 1.5px solid var(--fe-faint);
+               transform: rotate(45deg); margin: -3px 2px 0 1px; transition: transform .12s; }
+    .fe-side-section.is-collapsed .fe-chev { transform: rotate(-45deg); margin-top: 0; }
+    .fe-secbody { display: flex; flex-direction: column; gap: 12px; }
+    .fe-side-section.is-collapsed .fe-secbody { display: none; }
+    .fe-hintsck { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fe-muted); cursor: pointer; white-space: nowrap; }
+    .fe-hintsck input { accent-color: var(--fe-accent); margin: 0; }
+
     .fe-emu-side { display: flex; flex-direction: column; }
     .fe-emu-side .fe-side-section:last-child { border-bottom: 0; flex: 1; min-height: 0; overflow: auto; }
     #status:empty::before { content: "Emulator ready."; }
@@ -170,27 +183,36 @@
             </div>
 
             <aside class="fe-sidebar is-right fe-emu-side">
-              <div class="fe-side-section">
-                <div class="section-label">Input values</div>
-                <div class="fe-kv is-mono">
-                  <span>SW hex</span><span id="swhex">0x00000</span>
-                  <span>SW bin</span><span id="swbin" style="word-break: break-all;">000000000000000000</span>
-                  <span>KEY</span><span id="keybin">1111</span>
+              <div class="fe-side-section is-collapsible" data-sec="design">
+                <div class="fe-sechead"><button type="button" class="fe-sectoggle" aria-expanded="true"><span class="fe-chev"></span><span class="section-label">Design</span></button></div>
+                <div class="fe-secbody">
+                  <div class="fe-kv">
+                    <span>Project</span><span class="is-mono">{{ top.split('/')[0] if '/' in top else '—' }}</span>
+                    <span>Top</span><span class="is-mono">{{ top.split('/')[-1] if top else '—' }}</span>
+                  </div>
                 </div>
-                <div class="fe-kbd-hint">Keys <kbd>0</kbd>–<kbd>9</kbd> and <kbd>A</kbd>–<kbd>H</kbd> toggle SW0–SW17.</div>
               </div>
-              <div class="fe-side-section">
-                <div class="section-label">Design</div>
-                <div class="fe-kv">
-                  <span>Project</span><span class="is-mono">{{ top.split('/')[0] if '/' in top else '—' }}</span>
-                  <span>Top</span><span class="is-mono">{{ top.split('/')[-1] if top else '—' }}</span>
+              <div class="fe-side-section is-collapsible" data-sec="inputs">
+                <div class="fe-sechead"><button type="button" class="fe-sectoggle" aria-expanded="true"><span class="fe-chev"></span><span class="section-label">Input values</span></button></div>
+                <div class="fe-secbody">
+                  <div class="fe-kv is-mono">
+                    <span>SW hex</span><span id="swhex">0x00000</span>
+                    <span>SW bin</span><span id="swbin" style="word-break: break-all;">000000000000000000</span>
+                    <span>KEY</span><span id="keybin">1111</span>
+                  </div>
+                  <div class="fe-kbd-hint">Keys <kbd>0</kbd>–<kbd>9</kbd> and <kbd>A</kbd>–<kbd>H</kbd> toggle SW0–SW17.</div>
                 </div>
               </div>
               {% if portmap %}
-              <div class="fe-side-section fe-mapsection">
-                <div class="section-label">Mapper</div>
-                <div class="fe-mapkv" id="mapkv"></div>
-                <a class="fe-mapedit" href="/mapper">Edit in the Mapper</a>
+              <div class="fe-side-section is-collapsible fe-mapsection" data-sec="mapper">
+                <div class="fe-sechead">
+                  <button type="button" class="fe-sectoggle" aria-expanded="true"><span class="fe-chev"></span><span class="section-label">Mapper</span></button>
+                  <label class="fe-hintsck" title="Port names under the switches, keys, LEDs and displays"><input type="checkbox" id="maphints" checked> Hints on the board</label>
+                </div>
+                <div class="fe-secbody">
+                  <div class="fe-mapkv" id="mapkv"></div>
+                  <a class="fe-mapedit" href="/mapper">Edit in the Mapper</a>
+                </div>
               </div>
               {% endif %}
               <div class="fe-side-section">
@@ -227,6 +249,12 @@
         // Mapper configuration of the top-level entity ([] when the Mapper is not enabled for it)
         window.portmap = {{ portmap|tojson }};
         var MAP_COLORS = ["#2563eb", "#b45309", "#7c3aed", "#0f766e", "#be185d", "#4d7c0f", "#0e7490", "#9f1239"];
+        window.portmap.forEach(function (m, i) { m.color = MAP_COLORS[i % MAP_COLORS.length]; });
+
+        // per-browser preferences of this page (Mapper hints, folded sidebar sections)
+        function loadPref(key, dflt) { try { var v = localStorage.getItem("fe-emu-" + key); return v === null ? dflt : JSON.parse(v); } catch (e) { return dflt; } }
+        function savePref(key, value) { try { localStorage.setItem("fe-emu-" + key, JSON.stringify(value)); } catch (e) {} }
+        window.mapHints = loadPref("maphints", true);
 
         // DOM cell of a board element: target is SW / KEY / LEDR / HEXn.
         function boardCell(target, bit) {
@@ -243,11 +271,15 @@
         // Brackets and labels of the mapped ports, under each group of elements (switches, keys, LEDs, displays).
         function drawPortmap() {
             $(".fe-maprow").remove();
-            $(".fe-cell").removeClass("is-unmapped is-maphi").each(function () { this.removeAttribute("data-maptip"); });
-            if (!window.portmap.length) { return; }
+            $(".fe-cell[data-maptip]").each(function () {
+                this.title = this.getAttribute("data-title0") || "";
+                $(this).find(".fe-key").attr("title", this.title);
+                this.removeAttribute("data-maptip"); this.removeAttribute("data-mapport");
+            });
+            $(".fe-cell").removeClass("is-unmapped is-maphi");
+            if (!window.portmap.length || !window.mapHints) { return; }
             var groups = {};  // row element id -> {cells: Set, units: {spankey: unit}}
             window.portmap.forEach(function (m, i) {
-                m.color = MAP_COLORS[i % MAP_COLORS.length];
                 if (m.msb === null) { return; }  // clocks: only in the sidebar
                 var lo = (m.lsb === null) ? m.msb : Math.min(m.msb, m.lsb), hi = (m.lsb === null) ? m.msb : Math.max(m.msb, m.lsb);
                 var ishex = /^HEX/.test(m.target), isin = (m.target == "SW" || m.target == "KEY");
@@ -276,6 +308,7 @@
                 $(this).toggleClass("is-unmapped", !this.hasAttribute("data-maptip"));
             });
             $(".fe-cell[data-maptip]").each(function () {
+                if (!this.hasAttribute("data-title0")) { this.setAttribute("data-title0", this.title || ""); }
                 this.title = this.getAttribute("data-maptip");
                 $(this).find(".fe-key").attr("title", this.title);
             });
@@ -473,6 +506,21 @@
                 `);
             }
             setRunUi("stopped");
+            var folded = loadPref("folded", []);
+            $(".fe-side-section.is-collapsible").each(function () {
+                var sec = this, fold = folded.indexOf(sec.getAttribute("data-sec")) >= 0;
+                $(sec).toggleClass("is-collapsed", fold).find(".fe-sectoggle").attr("aria-expanded", String(!fold));
+            });
+            $(".fe-sectoggle").on("click", function () {
+                var sec = $(this).closest(".fe-side-section").toggleClass("is-collapsed");
+                $(this).attr("aria-expanded", String(!sec.hasClass("is-collapsed")));
+                savePref("folded", $(".fe-side-section.is-collapsed").map(function () { return this.getAttribute("data-sec"); }).get());
+            });
+            $("#maphints").prop("checked", window.mapHints).on("change", function () {
+                window.mapHints = this.checked;
+                savePref("maphints", window.mapHints);
+                drawPortmap();
+            });
             drawPortmap();
             fillMapSidebar();
             if (document.fonts) { document.fonts.ready.then(drawPortmap); }
