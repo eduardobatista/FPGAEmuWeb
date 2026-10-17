@@ -475,6 +475,11 @@
                 errorMessage(String(msg));
             });
             window.socket.on('filerenamed',function(msg){
+                // the open project was renamed: open it again under its new name
+                if (window.renamingProject && window.filetorename == "{{currentproject}}") {
+                    location.href = '/openproject/' + encodeURIComponent(msg);
+                    return;
+                }
                 location.href = '/';
             });
             window.socket.on('projectcreated',function(msg){
@@ -538,15 +543,19 @@
             } else {
                 $("#projectselectdiv").hide();
             }
-            window.filetorename = fname;            
-            $("#filenameas").val(fname.split("/")[1]);
+            window.filetorename = fname;
+            // a project (folder) has no "/" in its name; a file is "project/name.vhd"
+            window.renamingProject = (fname.indexOf("/") < 0) && !fname.endsWith(".vhd");
+            $("#filenameas").val(window.renamingProject ? fname : fname.split("/")[1]);
             $("#modalSaveAs").addClass("is-active"); //.modal();
             $("#filenameas").focus();            
         }
 
         function renameTo() {           
             $('#saveasalert').hide();
-            if ("{{currentproject}}" != "") {
+            if (window.renamingProject) {
+                val = $("#filenameas").val();
+            } else if ("{{currentproject}}" != "") {
                 val = "{{currentproject}}/" + $("#filenameas").val();
             } else {
                 val = $("#filenameas").val();

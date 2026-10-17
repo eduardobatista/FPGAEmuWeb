@@ -96,11 +96,21 @@ def renamefile(dataa):
             emit("error","New and old names must have the same suffix.")
             return
         if (filetorename.suffix == "") or (filetorename.suffix == ".vhd"): 
-            filetorename.rename(Path(sessionpath,dataa['filenameto']))
-            if filetorename.suffix == ".vhd":
-                filetorenamemap = Path(sessionpath,dataa['filename'] + ".map")
-                if filetorenamemap.exists():
-                    filetorenamemap.rename(Path(sessionpath,dataa['filenameto'] + ".map"))
+            if filenameto.exists():
+                emit("error",f"{dataa['filenameto']} already exists.")
+                return
+            if isTraversalSecure(filenameto, filetorename):
+                emit("error","A project cannot be moved into itself.")
+                return
+            try:
+                filetorename.rename(filenameto)
+                if filetorename.suffix == ".vhd":
+                    filetorenamemap = Path(sessionpath,dataa['filename'] + ".map")
+                    if filetorenamemap.exists():
+                        filetorenamemap.rename(Path(sessionpath,dataa['filenameto'] + ".map"))
+            except OSError as err:
+                emit("error",f"Rename failed: {err.strerror}.")
+                return
             emit("filerenamed",dataa['filenameto'])
         else: 
             emit("error",f"Renaming files with suffix {filetorename.suffix} is not allowed.")
