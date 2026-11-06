@@ -1291,12 +1291,133 @@ def _sync_card():
             f"<div class='lines'>" + "".join(f"<div>{e(l)}</div>" for l in lines) + "</div></div>")
 
 
+
+SANDBOX_PROBE = r"""
+import ctypes, json, os, platform, sys
+libc = ctypes.CDLL(None, use_errno=True)
+res = {"arch": platform.machine(), "kernel": platform.release(), "uid": os.getuid()}
+try:
+    for l in open("/proc/self/status"):
+        if l.startswith(("Seccomp:", "NoNewPrivs:")):
+            k, v = l.split(":")
+            res[k.lower()] = v.strip()
+except OSError:
+    pass
+def child(fn):
+    pid = os.fork()
+    if pid == 0:
+        os._exit(fn())
+    return os.waitpid(pid, 0)[1] >> 8
+CLONE_NEWUSER, CLONE_NEWNS, CLONE_NEWNET, CLONE_NEWPID = 0x10000000, 0x20000, 0x40000000, 0x20000000
+def userns():
+    if libc.unshare(CLONE_NEWUSER) != 0:
+        return ctypes.get_errno()
+    if libc.unshare(CLONE_NEWNS | CLONE_NEWNET) != 0:
+        return 200
+    return 0
+rc = child(userns)
+res["userns"] = "allowed" if rc == 0 else f"blocked (errno {rc})"
+abi = libc.syscall(444, None, 0, 1)   # landlock_create_ruleset(LANDLOCK_CREATE_RULESET_VERSION)
+res["landlock"] = f"abi {abi}" if abi > 0 else f"unavailable (errno {ctypes.get_errno()})"
+for name, path in (("apparmor", "/proc/self/attr/current"),
+                   ("max_user_namespaces", "/proc/sys/user/max_user_namespaces"),
+                   ("apparmor_restrict_userns", "/proc/sys/kernel/apparmor_restrict_unprivileged_userns"),
+                   ("unprivileged_userns_clone", "/proc/sys/kernel/unprivileged_userns_clone")):
+    try:
+        res[name] = open(path).read().strip("\x00\n ")
+    except OSError:
+        res[name] = "n/a"
+print(json.dumps(res))
+"""
+
+# Run through a subprocess with a timeout: touches work/, which may be a stalled NFS.
+# Prints no file names (the user folders are named after e-mail addresses).
+WORKDIR_PROBE = r"""
+import collections, json, os, stat, sys
+root = sys.argv[1]
+res = {}
+best = ""
+for line in open("/proc/self/mounts"):
+    parts = line.split()
+    if (root + "/").startswith(parts[1].rstrip("/") + "/") and len(parts[1]) >= len(best):
+        best = parts[1]
+        opts = [o for o in parts[3].split(",") if o.split("=")[0] in ("ro", "rw", "vers", "sec", "nosuid", "noexec")]
+        res["fstype"], res["options"] = parts[2], ",".join(opts)
+owners = collections.Counter()
+modes = collections.Counter()
+with os.scandir(root) as it:
+    for e in it:
+        st = e.stat(follow_symlinks=False)
+        kind = "dir" if stat.S_ISDIR(st.st_mode) else "file"
+        owners[f"{kind} uid={st.st_uid}"] += 1
+        modes[f"{kind} {stat.S_IMODE(st.st_mode):o}"] += 1
+res["owners"], res["modes"] = dict(owners), dict(modes)
+probe = os.path.join(root, f".fpgaemu-diag-chown-{os.getpid()}")
+if os.geteuid() != 0:
+    res["chown"] = "not tested (not root)"
+else:
+    try:
+        with open(probe, "w") as f:
+            f.write("x")
+        res["created_as_uid"] = os.stat(probe).st_uid
+        try:
+            os.chown(probe, 61001, 61001)
+            res["chown"] = "ok" if os.stat(probe).st_uid == 61001 else "ignored by the filesystem"
+            os.chmod(probe, 0o600)
+            with open(probe) as f:
+                f.read()
+            res["root_reads_0600_of_other_uid"] = True
+        except PermissionError as e:
+            res.setdefault("chown", f"denied (errno {e.errno})")
+            res["root_reads_0600_of_other_uid"] = False
+        except OSError as e:
+            res.setdefault("chown", f"failed (errno {e.errno})")
+    finally:
+        try:
+            os.unlink(probe)
+        except OSError:
+            pass
+print(json.dumps(res))
+"""
+
+
+def check_sandbox(c, mode):
+    """What this server allows for the sandbox of the code sent by users. Remote replacement for
+    running commands on the host: everything needed to choose the mode is on this page."""
+    rc, out, _ = run_cmd([sys.executable, "-c", SANDBOX_PROBE], timeout=30)
+    try:
+        host = json.loads(out)
+    except ValueError:
+        c.warn(f"Host probe failed: {' | '.join(tail(out, 3))}")
+        host = {}
+    for k, v in host.items():
+        c.info(f"{k}: {v}")
+    if host.get("userns", "").startswith("allowed"):
+        verdict = "namespaces allowed: full sandbox (bwrap) possible"
+    elif host.get("landlock", "").startswith("abi"):
+        verdict = "namespaces blocked: fallback sandbox (separate uid, seccomp, Landlock)"
+    else:
+        verdict = "namespaces and Landlock unavailable: fallback sandbox without filesystem view restriction"
+        c.warn(verdict)
+    for wd in (APP_DIR / "work", APP_DIR / "cachedwork"):
+        if not wd.is_dir():
+            continue
+        rc, out, _ = run_cmd([sys.executable, "-c", WORKDIR_PROBE, str(wd)], timeout=60)
+        try:
+            for k, v in json.loads(out).items():
+                c.info(f"{wd.name}: {k}: {v}")
+        except ValueError:
+            c.warn(f"{wd.name}: probe failed or timed out (rc={rc}).")
+    c.summary = verdict
+
+
 # (id, title, function, timeout in seconds for quick mode, for full mode)
 CHECKS = [
     ("environment", "Environment", check_environment, 60, 60),
     ("memory", "Memory, OOM and cgroup limits", check_memory, 60, 60),
     ("filesystems", "Filesystems: read-only mounts, free space", check_filesystems, 120, 120),
     ("worksync", "Data sync between local disk and NFS (worksync)", check_worksync, 30, 30),
+    ("sandbox", "Sandbox of user code: what this server allows", check_sandbox, 150, 150),
     ("io", "Disk write/read-back test", check_io, 300, 600),
     ("kernel", "Kernel log (dmesg)", check_kernel_log, 60, 60),
     ("databases", "Local SQLite databases (locks, integrity)", check_databases, 900, 1800),
