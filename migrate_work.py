@@ -39,6 +39,7 @@ WEB_USER = "fpgaweb"
 FOLDER_TIMEOUT = int(os.environ.get("MIGRATE_FOLDER_TIMEOUT", "600"))
 LIST_TIMEOUT = int(os.environ.get("MIGRATE_LIST_TIMEOUT", "600"))
 RETRY_SECONDS = int(os.environ.get("MIGRATE_RETRY_SECONDS", "300"))
+MAX_RETRY_SECONDS = 3600
 
 
 def web_ids():
@@ -156,10 +157,11 @@ def list_root(root):
 
 
 def scan(root, uid, gid, dry=False, on_progress=None):
-    """One pass. Returns (counts, folders that did not finish, or None if root could not be listed)."""
+    """One pass. Returns (counts, folders that did not finish, or None if root could not be listed,
+    whether the top of root is fine: without that, the app could not use its database and keys)."""
     listed = list_root(root)
     if listed is None:
-        return collections.Counter(), None
+        return collections.Counter(), None, False
     folders, files = listed
     counts = collections.Counter()
     # The top comes first: it has the keys, and closes work/ to the sandbox user at once.
@@ -180,6 +182,7 @@ def scan(root, uid, gid, dry=False, on_progress=None):
         unfinished.append("top")
     else:
         counts += r
+    top_ok = r is not None and counts["failed"] == 0 and counts["skipped_hardlinks"] == 0
     for i, name in enumerate(sorted(folders)):
         r = run_worker(root, uid, gid, dry, [name], FOLDER_TIMEOUT)
         if r is None:
@@ -188,7 +191,7 @@ def scan(root, uid, gid, dry=False, on_progress=None):
             counts += r
         if on_progress and i % 50 == 0:
             on_progress(i, len(folders), counts, unfinished)
-    return counts, unfinished
+    return counts, unfinished, top_ok
 
 
 def write_status(**st):
@@ -209,7 +212,10 @@ def read_status():
 
 def status_line():
     st = read_status()
-    return f"Migration of work/: {st.get('state', 'not started')}, {st.get('done', '?')} of {st.get('total', '?')} folders."
+    line = f"Migration of work/: {st.get('state', 'not started')}, {st.get('done', '?')} of {st.get('total', '?')} folders."
+    if st.get("app_can_start") is False:
+        line += " The app cannot start: the database or keys at the top of work/ could not be given to its user."
+    return line
 
 
 def probe():
@@ -240,6 +246,7 @@ def daemon():
     def finish():
         READY.touch()
         os.chmod(READY, 0o644)
+    delay = RETRY_SECONDS
     while True:
         try:
             rc = subprocess.run(["test", "-e", str(marker)], timeout=300).returncode
@@ -261,7 +268,7 @@ def daemon():
             def progress(i, total, counts, unfinished):
                 write_status(state="running", chown_possible=True, done=i, total=total, counts=counts,
                              unfinished=len(unfinished))
-            counts, unfinished = scan(NFS_DIR, uid, gid, on_progress=progress)
+            counts, unfinished, top_ok = scan(NFS_DIR, uid, gid, on_progress=progress)
             if unfinished is not None and not unfinished and counts["failed"] == 0:
                 fd = os.open(marker, os.O_WRONLY | os.O_CREAT, 0o600)
                 os.fchown(fd, uid, gid)
@@ -270,10 +277,16 @@ def daemon():
                 finish()
                 print(f"migrate_work: work/ done: {dict(counts)}", flush=True)
                 return 0
-            write_status(state="retrying", chown_possible=True, counts=counts,
+            # One folder that fails must not keep the site closed for everyone: without a cache
+            # the app waits for READY, so give it after the first pass if the top is fine. No
+            # marker, so worksync keeps its root and this keeps trying.
+            if unfinished is not None and top_ok:
+                finish()
+            write_status(state="retrying", chown_possible=True, counts=counts, app_can_start=top_ok,
                          unfinished=None if unfinished is None else len(unfinished))
             print(f"migrate_work: incomplete, will retry: {dict(counts)}", flush=True)
-        time.sleep(RETRY_SECONDS)
+        time.sleep(delay)
+        delay = min(delay * 2, MAX_RETRY_SECONDS)     # each try reads the whole tree, maybe on NFS
 
 
 def main():
@@ -287,7 +300,7 @@ def main():
     elif cmd == "local":
         if LOCAL_DIR.is_dir():
             uid, gid = web_ids()
-            counts, unfinished = scan(LOCAL_DIR, uid, gid)
+            counts, unfinished, _ = scan(LOCAL_DIR, uid, gid)
             print(f"migrate_work: cachedwork/: {dict(counts)}, unfinished: {len(unfinished or [])}", flush=True)
     elif cmd == "daemon":
         return daemon()
@@ -295,7 +308,7 @@ def main():
         args = sys.argv[2:]
         root = Path(args[args.index("--root") + 1]) if "--root" in args else NFS_DIR
         uid, gid = web_ids()
-        counts, unfinished = scan(root, uid, gid, dry="--dry-run" in args)
+        counts, unfinished, _ = scan(root, uid, gid, dry="--dry-run" in args)
         print(json.dumps({"counts": counts, "unfinished": None if unfinished is None else len(unfinished)}, indent=1))
     else:
         print(__doc__)

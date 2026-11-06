@@ -116,9 +116,10 @@ def main():
     ev, d = alice.wait("/emul", ("started", "error"), 40)
     check("emulation starts (FIFO)", ev == "started", d)
     if ev == "started":
+        # As the page does on "started". Without a request, the emulator only writes on changes.
+        alice.sio.emit("initstate", 0xF00000, namespace="/emul")
         first = alice.wait("/emul", ("bytes",), 10)[0]
         check("emulation: output arrives", first == "bytes")
-        alice.sio.emit("initstate", "x", namespace="/emul")
         alice.clear()
         alice.sio.emit("action", "s01", namespace="/emul")
         check("emulation: input changes output", alice.wait("/emul", ("bytes",), 10)[0] == "bytes")
@@ -127,6 +128,18 @@ def main():
         check("emulation stops", ev == "status", d)
         time.sleep(1.5)
         check("emulation: job gone", "fpgatest" not in procs())
+        good = 0
+        for _ in range(10):      # start, first output, stop: the FIFO handshake must not be flaky
+            alice.clear()
+            alice.sio.send("Emular", namespace="/emul")
+            if alice.wait("/emul", ("started", "error"), 30)[0] == "started":
+                alice.sio.emit("initstate", 0xF00000, namespace="/emul")
+                if alice.wait("/emul", ("bytes",), 10)[0] == "bytes":
+                    good += 1
+            alice.sio.send("Parar", namespace="/emul")
+            alice.wait("/emul", ("status",), 15)
+            time.sleep(0.3)
+        check("emulation: 10 start/stop cycles", good == 10, good)
 
     alice.clear()
     alice.sio.emit("Simulate", ("500 ns", "proj/usertest.vhd"), namespace="/stream")

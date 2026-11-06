@@ -39,6 +39,8 @@ docker run --rm -v $V:/w --entrypoint sh $IMG -c '
   cp /bin/true legacy3@example.invalid/suid; chmod 4755 legacy3@example.invalid/suid
   echo x > legacy3@example.invalid/hl1; ln legacy3@example.invalid/hl1 legacy3@example.invalid/hl2
   mkfifo legacy3@example.invalid/oldfifo
+  printf "\377\376u\000s\000e\000" > legacy3@example.invalid/utf16.vhd
+  printf "use\000ieee" > legacy3@example.invalid/damaged.vhd
   chown -R 0:0 .'
 echo "=== dry-run counts only, no names"
 docker run --rm -v $V:/home/fpgaemuweb/work --entrypoint /usr/bin/python3 $IMG /home/fpgaemuweb/migrate_work.py scan --dry-run | tee /tmp/dry.$$ | tr -d '\n '; echo
@@ -83,7 +85,17 @@ for c in d.get("checks",[]):
         for lv,t in c["details"]:
             if t.startswith(("sandbox","migration","work:")): print("   ",lv,t[:170])
 PY2
-grep -c 'FAKE-\|CANARY' /tmp/dj.$$ | sed 's/^/secrets in report: /'; rm -f /tmp/dg.$$ /tmp/dj.$$
+grep -c 'FAKE-\|CANARY' /tmp/dj.$$ | sed 's/^/secrets in report: /'
+python3 - /tmp/dj.$$ <<'PY2' || fail=1
+import json,sys
+w=[c for c in json.load(open(sys.argv[1]))["checks"] if c["id"]=="workdata"][0]
+utf16=[(l,t) for l,t in w["details"] if "utf16.vhd" in t]
+dmg=[(l,t) for l,t in w["details"] if "damaged.vhd" in t]
+ok=len(utf16)==1 and utf16[0][0]=="info" and "UTF-16" in utf16[0][1] and len(dmg)==1 and dmg[0][0]=="fail"
+print(("PASS" if ok else "FAIL")+"  NUL notice: UTF-16 is info, other NUL is fail")
+sys.exit(0 if ok else 1)
+PY2
+rm -f /tmp/dg.$$ /tmp/dj.$$
 
 echo "=== backup as in production: docker exec + tar, as root"
 docker exec $C tar -C /home/fpgaemuweb -czf - work cachedwork > /tmp/bk.$$.tgz; rc=$?; echo "tar rc=$rc"; [ $rc -eq 0 ] || [ $rc -eq 1 ] || fail=1
@@ -116,6 +128,34 @@ docker run -d --name $C-nc $OPTS -v $V2:/home/fpgaemuweb/work -e ENVCACHEDWORK=F
 ok=0; for i in $(seq 1 60); do docker exec $C-nc sh -c "python3 -c \"import urllib.request as u;print(u.urlopen('http://127.0.0.1:5000/login').read()[:300])\"" 2>/dev/null | grep -qi 'starting' || { docker exec $C-nc sh -c "python3 -c \"import urllib.request as u;u.urlopen('http://127.0.0.1:5000/login')\"" >/dev/null 2>&1 && { ok=1; break; }; }; sleep 1; done
 [ $ok = 1 ] && echo "PASS app up" || { echo "FAIL app not up"; docker logs $C-nc 2>&1 | tail -10 | cut -c1-150; fail=1; }
 docker exec $C-nc stat -c "%U %a" /home/fpgaemuweb/work /home/fpgaemuweb/work/seckeyb; docker rm -f $C-nc >/dev/null; docker volume rm $V2 >/dev/null
+
+# The starting page answers 503: its body counts too.
+page() { docker exec $1 python3 -c "
+import urllib.request as u, urllib.error as e
+try:
+    print(u.urlopen('http://127.0.0.1:5000/login').read().decode('utf-8','replace'))
+except e.HTTPError as x:
+    print(x.read().decode('utf-8','replace'))" 2>/dev/null; }
+echo "=== without cache: a folder whose chown fails does not keep the site closed"
+V3=$V-ro; V4=$V-rod; docker volume create $V3 >/dev/null; docker volume create $V4 >/dev/null
+docker run --rm -v $V4:/d --entrypoint sh $IMG -c 'echo s > /d/x.vhd'
+docker run --rm -v $V3:/w --entrypoint sh $IMG -c 'mkdir -p /w/good6@example.invalid; echo s > /w/good6@example.invalid/y.vhd'
+docker run -d --name $C-ro $OPTS -v $V3:/home/fpgaemuweb/work -v $V4:/home/fpgaemuweb/work/stuck7@example.invalid:ro -e ENVCACHEDWORK=False -e MIGRATE_RETRY_SECONDS=2 $IMG >/dev/null
+ok=0; for i in $(seq 1 90); do t=$(page $C-ro); if [ -n "$t" ] && ! echo "$t" | grep -qi 'is starting'; then ok=1; break; fi; sleep 1; done
+[ $ok = 1 ] && echo "PASS app opened despite the failure" || { echo "FAIL app stayed closed"; docker logs $C-ro 2>&1 | tail -8 | cut -c1-150; fail=1; }
+docker exec $C-ro python3 /home/fpgaemuweb/migrate_work.py status | tr -d '\n ' ; echo
+docker exec $C-ro test -e /home/fpgaemuweb/work/.fpgaemu-owner-migrated && { echo "FAIL marker written with failures"; fail=1; } || echo "PASS no marker"
+docker exec $C-ro stat -c "%U %a" /home/fpgaemuweb/work/good6@example.invalid/y.vhd | grep -q '^fpgaweb 600' && echo "PASS other folders migrated" || { echo "FAIL other folders"; fail=1; }
+docker logs $C-ro 2>&1 | grep -c 'example.invalid' | sed 's/^/names in container log: /'
+docker rm -f $C-ro >/dev/null
+
+echo "=== without cache: a failure in the keys keeps the starting page, and it says why"
+T=$(mktemp); echo K > "$T"; chmod 644 "$T"
+docker run -d --name $C-top $OPTS -v $V3:/home/fpgaemuweb/work -v "$T":/home/fpgaemuweb/work/seckeyb:ro -e ENVCACHEDWORK=False -e MIGRATE_RETRY_SECONDS=2 $IMG >/dev/null
+closed=0; for i in $(seq 1 30); do t=$(page $C-top); echo "$t" | grep -qi 'is starting' && closed=1; sleep 1; done
+t=$(page $C-top); echo "$t" | grep -qi 'is starting' && [ $closed = 1 ] && echo "PASS stays on the starting page" || { echo "FAIL page: $(echo "$t" | head -c 200)"; fail=1; }
+docker exec $C-top python3 /home/fpgaemuweb/migrate_work.py status | grep -q '"app_can_start": false' && echo "PASS status tells why" || { echo "FAIL status"; fail=1; }
+docker rm -f $C-top >/dev/null; rm -f "$T"; docker volume rm $V3 $V4 >/dev/null
 [ "${KEEP:-}" = 1 ] || { docker rm -f $C >/dev/null; docker volume rm $V >/dev/null; }
 [ $fail -eq 0 ] && echo "ALL OK ($MODE)" || echo "FAILURES ($MODE)"
 exit $fail

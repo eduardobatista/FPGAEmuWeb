@@ -1042,8 +1042,11 @@ def check_workdata(c, mode):
                 slow.append((secs, str(p), size))
             if all_zero:
                 c.fail(f"File contains only zero bytes (typical of lost data): {p} ({size} B)")
+            elif is_text and has_nul and head[:2] in (b"\xff\xfe", b"\xfe\xff"):
+                # Saved by an editor as UTF-16: full of NULs, but nothing is wrong with the disk.
+                c.info(f"Text file is UTF-16, not corruption (GHDL cannot read it; save it as UTF-8): {p}")
             elif is_text and has_nul:
-                c.fail(f"Text file contains NUL bytes (possible corruption): {p}")
+                c.fail(f"Text file contains NUL bytes and has no UTF-16 mark (possible corruption): {p}")
             elif suffix in (".vhd", ".vhdl", ".map") and size <= len(head):
                 try:
                     head.decode("utf-8")
@@ -1417,6 +1420,11 @@ def _sandbox_runtime(c):
     try:
         st = json.loads(mig.read_text())
         c.info(f"migration of work/: {st.get('state')}; counts: {st.get('counts')}; unfinished: {st.get('unfinished', 0)}")
+        if st.get("state") == "retrying" and (st.get("counts", {}).get("failed") or st.get("unfinished")):
+            add = c.fail if st.get("app_can_start") is False else c.warn
+            add(f"work/ migration incomplete, retrying: {st.get('counts', {}).get('failed', 0)} entries failed, "
+                f"{st.get('unfinished') or 0} folders did not finish. Those stay with their old owner, and worksync as root."
+                + (" The app cannot start until the top of work/ is fixed." if st.get("app_can_start") is False else ""))
         if st.get("chown_possible") is False:
             c.warn("work/ cannot be migrated (root cannot chown there): worksync keeps running as root.")
         elif st.get("counts", {}).get("skipped_hardlinks") or st.get("counts", {}).get("skipped_special"):

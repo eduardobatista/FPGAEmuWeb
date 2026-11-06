@@ -49,6 +49,11 @@ Automatic and in the background (`migrate_work.py`, program `workmigrate`), no c
 3. On success, a marker `work/.fpgaemu-owner-migrated`. **`worksync` stays as root until it finds
    the marker when it starts**, and needs one more restart to drop root.
 
+Without a cache (`ENVCACHEDWORK` not True) the app waits for the first pass, showing a "starting"
+page. A folder that fails does not hold it: the app opens, that folder stays with its old owner,
+and the migration keeps trying, at growing intervals up to one hour, without leaving the marker.
+Only a failure at the top of `work/` (database, keys) keeps the page, since the app needs them.
+
 While it stays as root it behaves as before, and files it writes get the right owner. If NFS does
 not let root chown (`root_squash`), nothing is changed, the section says so, and `worksync` stays
 as root. The app itself never runs as root.
