@@ -37,9 +37,11 @@ Requires GHDL 3.0 or later (with synthesis support, `ghdl --synth`, for the bloc
 
 ```
 uv sync
-uv run python start.py debug
+FPGAEMU_SANDBOX=off uv run python start.py debug
 uv run huey_consumer worker.huey    # background tasks, in another terminal
 ```
+
+`FPGAEMU_SANDBOX=off` runs the VHDL with no protection at all, as your own user: use it only for code you trust, on your own machine. Without it, a local run refuses to compile, as it finds no sandbox service. The container always uses the sandbox ([deploy/README.md](deploy/README.md)).
 
 FPGAEmuWeb is then available at http://127.0.0.1:5000. The Surfer waveform viewer is only bundled in the Docker image (`static/surfer_wasm/dist`); without it, download the simulation result instead.
 

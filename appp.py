@@ -17,7 +17,7 @@ logger = logging.getLogger('FPGAEmuWeb')
 logger.setLevel(logging.INFO)
 
 # huey = RedisHuey('fpgaemuweb', url=os.environ.get("REDIS_URL", "redis://redis:6379/0"))
-huey = SqliteHuey(filename="huey.db")
+huey = SqliteHuey(filename=os.environ.get("HUEY_DB", "huey.db"))
 
 
 def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
@@ -59,9 +59,9 @@ def create_app(debug=False,mainpath="",workdir="",recaptchakeys=None):
         logger.info("SECKEY does not exist, creating new...")
         skey = os.urandom(16)
         app.config['SECRET_KEY'] = skey
-        f = open(seckeyfile,"wb")
-        f.write(skey)
-        f.close()
+        fd = os.open(seckeyfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(skey)
 
     app.config['MAX_CONTENT_LENGTH'] = 1000000
         

@@ -11,6 +11,7 @@ from .models import User
 from appp import db
 from .diagram import list_entities, synthesize, display_names, fix_blackboxes, normalize_constants, to_blocks, rename_modules, DiagramError
 from .fsm import extract_fsms
+from . import sandbox
 
 def getuserpath():
     if (current_user.viewAs is None) or (current_user.viewAs == ''):
@@ -259,7 +260,7 @@ def diagramdata():
     folder = vhdfile.parent
     sources = sorted(list(folder.glob("*.vhd")) + list(folder.glob("*.vhdl")))
     try:
-        with tempfile.TemporaryDirectory(dir=current_app.TEMPDIR, prefix="diagram-") as workdir:
+        with sandbox.tempjob(current_app.TEMPDIR) as workdir:
             netlist = synthesize(sources, entity, workdir)
     except DiagramError as err:
         current_app.logger.info(f"{current_user.email}: Block diagram of {entity} failed.")
@@ -285,7 +286,7 @@ def diagramfsm():
     folder = vhdfile.parent
     sources = sorted(list(folder.glob("*.vhd")) + list(folder.glob("*.vhdl")))
     try:
-        with tempfile.TemporaryDirectory(dir=current_app.TEMPDIR, prefix="fsm-") as workdir:
+        with sandbox.tempjob(current_app.TEMPDIR) as workdir:
             fsms = extract_fsms(sources, vhdfile, entity, workdir)
     except DiagramError as err:
         return jsonify(error=str(err))

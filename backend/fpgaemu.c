@@ -203,7 +203,10 @@ void init_gui()
    // if (getcwd(cwd, sizeof(cwd)) != NULL) {
    //     printf("Current working dir: %s\n", cwd);
    // }
-   int pid = getpid();   
+   // The sandbox has its own PID namespace, where getpid() means nothing to the web app, which
+   // creates the FIFOs and gives their id here.
+   const char * fifoid = getenv("FPGAEMU_FIFO_ID");
+   int pid = (fifoid != NULL) ? atoi(fifoid) : getpid();
    char * myfifo = malloc(20);
    sprintf(myfifo,"myfifo%d",pid);
    char * myfifo2 = malloc(20);

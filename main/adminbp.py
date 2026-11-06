@@ -15,6 +15,7 @@ from sqlalchemy.exc import OperationalError
 import shutil
 from markupsafe import escape
 
+from . import sandbox
 from .tasks import doWorkBackup, writeWorkBackup
 from appp import huey
 
@@ -47,6 +48,12 @@ def killProc(pid):
     if (current_user.role == "Admin"):
         try:
             psutil.Process(pid).kill()
+        except psutil.AccessDenied:
+            # Not a process of the web app's user: jobs in the sandbox are killed by their service.
+            try:
+                return "Done." if sandbox.kill_pid(pid) else "Not allowed."
+            except sandbox.SandboxError as err:
+                return str(err)
         except Exception as err:
             return str(err)
         return "Done."

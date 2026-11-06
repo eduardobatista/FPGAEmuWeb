@@ -3,11 +3,15 @@ import time
 import subprocess
 import select
 import os
+import secrets
 import shutil
+import stat
 import sys
 from pathlib import Path
 
 from appp import socketio,logger
+from . import sandbox
+from .sandbox import SandboxError
 
 
 fpgatesttemplate = '''
@@ -80,9 +84,6 @@ validports = {'CLOCK_50':['in',1],
 def createFpgaTest2(sessionpath,temppath,toplevelentity):
     toplevel = Path(sessionpath,toplevelentity + ".vhd")
     if not toplevel.exists(): return f"Error: Top level entity not found.";
-    fpgatestfile = Path(temppath,'fpgatest.aux')
-    if fpgatestfile.exists(): fpgatestfile.unlink()
-
     try:
 
         portlist = getportlist(sessionpath,toplevelentity + ".vhd")
@@ -128,9 +129,8 @@ def createFpgaTest2(sessionpath,temppath,toplevelentity):
                     portmaptxt = portmaptxt + f" {port['name']}({port['typesize']-1} downto 0) => {port['name']}({port['typesize']-1} downto 0),"
             portmaptxt = portmaptxt[:-1] + ");"
 
-        fpgatest = open(fpgatestfile, 'w')
-        fpgatest.write(fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity))
-        fpgatest.close()
+        sandbox.write_job_file(temppath, 'fpgatest.aux',
+                               fpgatesttemplate.replace('{{portmap}}',portmaptxt).replace('{{toplevelentity}}',toplevelentity).encode())
         return "Ok!"
     
     except BaseException as err:
@@ -246,101 +246,95 @@ def cleanfilelist(sessionpath,toplevelfile,filelist):
             filelist.pop(k) 
     # print(filelist)
 
+def tempdir(mainpath):
+    return Path(mainpath,"temp")
+
 def gettemppath(mainpath,userid,clear=True):
-    temppath = Path(mainpath,"temp",userid)
-    if temppath.exists():
-        shutil.rmtree(temppath)
-    temppath.mkdir(parents=True,exist_ok=True)
-    return temppath
+    """Job directory of the user's build, emptied. See sandbox.py: the user's code writes there."""
+    return sandbox.reset_user_build(tempdir(mainpath),userid)
+
+def cleanmsg(data):
+    """Tool output for the page, without the job's paths (the copy of the sources is in .src)."""
+    return data.decode('unicode_escape').replace(sandbox.SRC_DIR + "/","").replace('\n','\n<br>')
 
 def compilefile(sessionpath,mainpath,userid,toplevelentity="usertop"):
     socketio.emit("message",f'Top level entity is <strong style="color:red">{toplevelentity}</strong>.',namespace="/stream",room=userid)
     compilerpath = Path(mainpath,'backend','fpgacompileweb')
     curproject = ""
-    # temppath = Path(mainpath,"temp",userid)
     temppath = gettemppath(mainpath,userid)
     if "/" in toplevelentity:
         aux = toplevelentity.split("/")
         toplevelentity = aux[1]
         curproject = aux[0]  
-        temppath = temppath / curproject 
         sessionpath = sessionpath / curproject
-    temppath.mkdir(parents=True,exist_ok=True)
-    retcode = createFpgaTest2(sessionpath,temppath,toplevelentity)
-    if retcode == "Ok!":
-        pass
-    else:
-        socketio.emit('errors', retcode, namespace="/stream", room=userid)
-        return
-    aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
-    # cleanfilelist(sessionpath,'usertop.vhd',aux)
-    filenames = [str(x) for x in aux]
-    # print(filenames)
-    proc = subprocess.Popen(
-                [compilerpath,temppath] + filenames + ['fpgatest.aux'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-        )
-    # rline = 'start'
-    socketio.emit("message",'Compiling...',namespace="/stream",room=userid)
-    socketio.sleep(0.1)
+    proc = None
     try:
-        outs, errs = proc.communicate(timeout=15)
-        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=userid)
+        temppath = sandbox.project_dir(temppath,curproject)
+        retcode = createFpgaTest2(sessionpath,temppath,toplevelentity)
+        if retcode != "Ok!":
+            socketio.emit('errors', retcode, namespace="/stream", room=userid)
+            return
+        aux = list(sessionpath.glob("*.vhd")) + list(sessionpath.glob("*.vhdl"))
+        filenames = sandbox.stage_sources(aux,temppath)
+        proc = sandbox.start("tool",[compilerpath,'.'] + filenames + ['fpgatest.aux'],temppath,timeout=20)
+        socketio.emit("message",'Compiling...',namespace="/stream",room=userid)
         socketio.sleep(0.1)
-        errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
-        errstring = errstring.replace(str(Path(filenames[0]).parent) + "/","")
+        outs, errs = proc.communicate(timeout=15)
+        socketio.emit("message",cleanmsg(outs),namespace="/stream",room=userid)
+        socketio.sleep(0.1)
+        errstring = cleanmsg(errs)
         if errstring != "":            
             socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Compilation of {toplevelentity} with errors.")
         else: 
             socketio.emit("success","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful compilation of {toplevelentity}.")
+    except SandboxError as ex:
+        logger.error(f"Sandbox: {ex}")
+        socketio.emit("errors",f"Compilation is unavailable: {ex}.",namespace="/stream",room=userid)
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=userid)
-    proc.kill()
-    outs, errs = proc.communicate()
+    finally:
+        if proc:
+            proc.kill()
 
 
 def analyzefile(sessionpath,mainpath,filename,userid):
-    # temppath = Path(mainpath,"temp",userid)
-    # temppath.mkdir(parents=True,exist_ok=True)
     temppath = gettemppath(mainpath,userid)
     compilerpath = Path(mainpath,'backend','analyze.sh')
-    proc = subprocess.Popen(
-                [compilerpath,temppath,Path(sessionpath,filename).absolute()],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-        )
-    socketio.emit("message",'Analyzing...',namespace="/stream",room=userid)
-    socketio.sleep(0.1)
+    source = Path(sessionpath,filename).absolute()
+    proc = None
     try:
-        outs, errs = proc.communicate(timeout=10)
-        socketio.emit("message",outs.decode('unicode_escape').replace('\n','\n<br>'),namespace="/stream",room=userid)
+        files = sandbox.stage_sources([source],temppath)
+        if not files:
+            socketio.emit("errors",f"File {source.name} not found.",namespace="/stream",room=userid)
+            return
+        proc = sandbox.start("tool",[compilerpath,'.',files[0]],temppath,timeout=15)
+        socketio.emit("message",'Analyzing...',namespace="/stream",room=userid)
         socketio.sleep(0.1)
-        errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
-        errstring = errstring.replace(str(Path(sessionpath,filename).parent) + "/","")
+        outs, errs = proc.communicate(timeout=10)
+        socketio.emit("message",cleanmsg(outs),namespace="/stream",room=userid)
+        socketio.sleep(0.1)
+        errstring = cleanmsg(errs)
         if errstring != "":            
             socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Analysis of {filename} with errors.")
         else: 
             socketio.emit("asuccess","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful analysis of {filename}.")
+    except SandboxError as ex:
+        logger.error(f"Sandbox: {ex}")
+        socketio.emit("errors",f"Analysis is unavailable: {ex}.",namespace="/stream",room=userid)
     except Exception as ex: # TimeoutExpired
-        socketio.emit("errors",str(ex),namespace="/stream",room=userid)    
-    proc.kill()    
-    outs, errs = proc.communicate()
+        socketio.emit("errors",str(ex),namespace="/stream",room=userid)
+    finally:
+        if proc:
+            proc.kill()
 
 
 def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curproject=""):
     simulatorpath = Path(mainpath,'backend','simulate.sh')
-    if curproject == "":
-        # temppath = Path(mainpath,"temp",userid)
-        temppath = gettemppath(mainpath,userid)
-    else:
-        # temppath = Path(mainpath,"temp",userid,curproject)
-        temppath = gettemppath(mainpath,userid) / curproject
-        temppath.mkdir(parents=True,exist_ok=True)
+    temppath = gettemppath(mainpath,userid)
     if "ns" not in stoptime:
         socketio.emit("errors","Simulator limitation: stop time must be in nano seconds.",namespace="/stream",room=userid)
         return    
@@ -352,31 +346,25 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curpr
             return
     except:
         socketio.emit("errors","Error parsing stop time.",namespace="/stream",room=userid)    
-    aux = list((sessionpath / curproject).glob("*.vhd"))
-    # cleanfilelist(sessionpath,'usertop.vhd',aux)
-    filenames = [str(x) for x in aux]
-    proc = subprocess.Popen(
-                [simulatorpath,temppath,stoptime,simentity] + filenames,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-        )
-    rline = 'start'
-    socketio.emit("message",'Running simulation...',namespace="/stream",room=userid)
-    socketio.sleep(0.1)
-    hasError = False
-    errmsgs = ""
+        return
+    proc = None
     try:
+        temppath = sandbox.project_dir(temppath,curproject)
+        filenames = sandbox.stage_sources((sessionpath / curproject).glob("*.vhd"),temppath)
+        proc = sandbox.start("sim",[simulatorpath,'.',stoptime,simentity] + filenames,temppath,timeout=20)
+        socketio.emit("message",'Running simulation...',namespace="/stream",room=userid)
+        socketio.sleep(0.1)
+        hasError = False
+        errmsgs = ""
         outs, errs = proc.communicate(timeout=15)
-        outstring = outs.decode('unicode_escape').replace('\n','\n<br>')
+        outstring = cleanmsg(outs)
         if ":error:" in outstring:
             hasError = True
             errmsgs = outstring
         else:
-            outstring = outstring.replace(str(Path(filenames[0]).parent) + "/","")
             socketio.emit("message",outstring,namespace="/stream",room=userid)
             socketio.sleep(0.1)
-        errstring = errs.decode('unicode_escape').replace('\n','\n<br>')
-        errstring = errstring.replace(str(Path(filenames[0]).parent) + "/","")
+        errstring = cleanmsg(errs)
         if errstring != "":
             socketio.emit("errors",errstring,namespace="/stream",room=userid)
             logger.info(f"{userid}: Simulation of {simentity} with errors.")            
@@ -384,29 +372,27 @@ def simulatefile(sessionpath,mainpath,stoptime,userid,simentity="usertest",curpr
             socketio.emit("errors",errmsgs,namespace="/stream",room=userid)
             logger.info(f"{userid}: Simulation of {simentity} with errors.")
         else:
-            if curproject != "":
-                destfile = temppath.parent  / "output.ghw"
-                if destfile.exists():
-                    destfile.unlink()
-                shutil.move(temppath / "output.ghw", destfile)
+            # The web app serves this copy, in a place the user's code cannot touch.
+            sandbox.copy_output(temppath,"output.ghw",sandbox.user_private_dir(tempdir(mainpath),userid) / "output.ghw")
             socketio.emit("success","done",namespace="/stream",room=userid)
             logger.info(f"{userid}: Successful simulation of {simentity}.")
+    except SandboxError as ex:
+        logger.error(f"Sandbox: {ex}")
+        socketio.emit("errors",f"Simulation is unavailable: {ex}.",namespace="/stream",room=userid)
     except subprocess.TimeoutExpired as ex:
         socketio.emit("errors",str(ex),namespace="/stream",room=userid)
         logger.info(f"{userid}: Simulation of {simentity} with errors.")
     except Exception as ex: # TimeoutExpired
         socketio.emit("errors",str(ex),namespace="/stream",room=userid)
         logger.info(f"{userid}: Simulation of {simentity} with errors.")    
-    proc.kill()
-    outs, errs = proc.communicate()
+    finally:
+        if proc:
+            proc.kill()
 
 
 emulprocs = {}
 fifowrite = {}
 def doEmulation(username,mainpath,curproject="",toplevelentity=""):
-    temppath = Path(mainpath,'temp',username)
-    if curproject != "":
-        temppath = temppath / curproject
     keysprocs = emulprocs.keys()
     if len(keysprocs) >= 25:
         socketio.emit('error',f'Too many emulations running, please try again in a minute or two.',namespace="/emul",room=username)
@@ -416,45 +402,54 @@ def doEmulation(username,mainpath,curproject="",toplevelentity=""):
         socketio.emit('error',f'Emulation already running for {username}.',namespace="/emul",room=username)
         socketio.emit('status','Parado',namespace="/emul", room=username)
         return        
-    try: 
-        for k in temppath.rglob("myfifo*"):
-            k.unlink();
-    except Exception as ex:
-        pass
-    fpgatestpath = Path(temppath,'fpgatest')
-    if not fpgatestpath.exists():
+    build = sandbox.user_build(tempdir(mainpath),username,create=False)
+    temppath = None
+    if build is not None:
+        try:
+            temppath = sandbox.project_dir(build,curproject)
+        except SandboxError:
+            pass
+    try:
+        if temppath is None or not stat.S_ISREG(os.lstat(temppath / 'fpgatest').st_mode):
+            raise FileNotFoundError
+    except OSError:
         socketio.emit('error',f'Compilation required before emulation.',namespace="/emul",room=username)
         socketio.emit('status','Parado',namespace="/emul", room=username)
         return
     logger.info(f"{username}: Starting emulation.")
+    fiforead = None
+    poller = None
     try:
-        proc = subprocess.Popen(
-                    [fpgatestpath],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=temppath 
-            )
+        for k in os.listdir(temppath):
+            if k.startswith("myfifo"):
+                os.unlink(temppath / k)
+        # myfifo<id> (emulator -> page) and myfifo2<id> (page -> emulator). In the sandbox the
+        # emulator cannot tell its PID to this process, so it is told the id. Both ends are opened
+        # here, before it starts: from then on, what the job does to these names does not matter.
+        fifoid = secrets.randbelow(900000000) + 100000000
+        fiforead = sandbox.open_fifo(sandbox.make_fifo(temppath,f'myfifo{fifoid}'),os.O_RDONLY)
+        fifowrite[username] = sandbox.open_fifo(sandbox.make_fifo(temppath,f'myfifo2{fifoid}'),os.O_RDWR)
+        proc = sandbox.start("emul",['./fpgatest'],temppath,env={"FPGAEMU_FIFO_ID":str(fifoid)},discard=True)
         emulprocs[username] = proc
-        socketio.sleep(0.2)  
-
-        fiforead = os.open(Path(temppath,'myfifo'+str(proc.pid)), os.O_RDONLY | os.O_NONBLOCK)
-        # poller = select.epoll()
         poller = select.poll()
         poller.register(fiforead)
-        poller.poll()
+        # Waits for the "ok" of init_gui(), which comes when the VHDL touches the first port.
+        deadline = time.time() + 20
+        while True:
+            events = poller.poll(100)
+            if (len(events) > 0) and ((events[0][1] & select.POLLIN) != 0):
+                break
+            if (proc.poll() is not None) or (time.time() >= deadline):
+                raise RuntimeError("Emulator did not start.")
+            socketio.sleep(0.05)
         os.read(fiforead,3).decode()
-        socketio.sleep(0.2)
-        fifowrite[username] = os.open(Path(temppath,'myfifo2'+str(proc.pid)), os.O_WRONLY | os.O_NONBLOCK) 
         lasttime = time.time()    
         run = True
         socketio.emit('message',f'Emulation of <strong>{toplevelentity}</strong> started.',namespace="/emul",room=username)
         socketio.emit('started','Ok!',namespace="/emul",room=username)
-        # print("Running!!!!") 
         while run:
             events = poller.poll(50) 
-            # print(events)
             if (len(events) > 0):   
-                # logger.info(f"Event: {events[0][1]} - {select.POLLHUP}.{select.POLLERR}.{select.POLLNVAL}.{select.POLLRDHUP}.")             
                 if (events[0][1] & (select.POLLHUP | select.POLLERR | select.POLLNVAL | select.POLLRDHUP | select.POLLOUT)) != 0:
                     run = False
                 elif (events[0][1] & select.POLLIN) != 0:
@@ -466,6 +461,9 @@ def doEmulation(username,mainpath,curproject="",toplevelentity=""):
                     socketio.emit('error','Inactivity timeout...',namespace="/emul", room=username)                
                     run = False
             socketio.sleep(0.1)
+    except SandboxError as ex:
+        logger.error(f"Sandbox: {ex}")
+        socketio.emit('error',f"Emulation is unavailable: {ex}.",namespace="/emul",room=username)
     except FileNotFoundError as err:
         socketio.emit('error','Error opening pipe.',namespace="/emul", room=username)  
     except Exception as ex:
@@ -475,12 +473,12 @@ def doEmulation(username,mainpath,curproject="",toplevelentity=""):
         logger.error("Unexpected error:", sys.exc_info()[0])
     closeEmul(username)
     socketio.emit('status','Parado',namespace="/emul", room=username)
-    if poller:
+    if poller and (fiforead is not None):
         poller.unregister(fiforead)
     if username in fifowrite.keys():
         os.close(fifowrite[username])
         del fifowrite[username]
-    if fiforead:
+    if fiforead is not None:
         os.close(fiforead)
     # socketio.disconnect(namespace="/emul",room=username)
 
@@ -505,30 +503,29 @@ def getsocketiofile():
     socketiofile = 'socket.io.js'
     return socketiofile
 
+def runghwdump(script,username,mainpath,filename):
+    """Output of a ghwdump script on the user's simulation output, in a job with only a copy of it.
+    None if it fails."""
+    filename = Path(filename).name
+    tdir = tempdir(mainpath)
+    with sandbox.tempjob(tdir) as job:
+        sandbox.write_job_file(job,filename,(tdir / username / filename).read_bytes())
+        proc = sandbox.start("tool",[Path(mainpath,'backend',script),'.',filename],job,timeout=15)
+        try:
+            outs, errs = proc.communicate(timeout=10)
+        finally:
+            proc.kill()
+    return None if errs.decode('unicode_escape') != "" else outs.decode('unicode_escape')
+
 def getghwhierarchy(username,mainpath,filename):
-    ghwhpath = Path(mainpath,'backend','ghwhierarchy.sh')   
-    temppath = Path(mainpath,'temp',username)
-    proc = subprocess.Popen(
-                [ghwhpath,temppath,filename],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-        )
     rline = 'START\n'
     try:
-        outs, errs = proc.communicate(timeout=10)
-        errstring = errs.decode('unicode_escape') #.replace('\n','\n<br>') 
-        if errstring != "":
-            proc.kill()
-            outs, errs = proc.communicate()
+        aux = runghwdump('ghwhierarchy.sh',username,mainpath,filename)
+        if aux is None:
             return f"Error 1 reading {filename}."
-        else:
-            rline = rline + outs.decode('unicode_escape')
+        rline = rline + aux
     except Exception as ex:
-        proc.kill()
-        outs, errs = proc.communicate()
         return f"Error 2 reading {filename}."
-    proc.kill()
-    outs, errs = proc.communicate()
 
     filedata = rline.split('\n')
     # print(filedata)
@@ -570,29 +567,14 @@ def getghwhierarchy(username,mainpath,filename):
         
 
 def getghwsignals(username,mainpath,filename,groups):
-    ghwhpath = Path(mainpath,'backend','ghwgetsignals.sh')   
-    temppath = Path(mainpath,'temp',username)
-    proc = subprocess.Popen(
-                [ghwhpath,temppath,filename],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-        )
     rline = ''
     try:
-        outs, errs = proc.communicate(timeout=10)
-        errstring = errs.decode('unicode_escape') #.replace('\n','\n<br>') 
-        if errstring != "":
-            proc.kill()
-            outs, errs = proc.communicate()
+        aux = runghwdump('ghwgetsignals.sh',username,mainpath,filename)
+        if aux is None:
             return f"Error 1 reading {filename}."
-        else:
-            rline = rline + outs.decode('unicode_escape')
+        rline = rline + aux
     except Exception as ex:
-        proc.kill()
-        outs, errs = proc.communicate()
         return f"Error 2 reading {filename}."
-    proc.kill()
-    outs, errs = proc.communicate()
        
     filedata = rline.split('Time is ')
     # Identifying signals

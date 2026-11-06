@@ -50,7 +50,7 @@ MANIFEST_ROOTS = [
     APP_DIR,
     Path("/usr/local"),                    # GHDL
     Path("/home/surferdist"),              # Surfer (waveform viewer)
-    Path("/root/.local/share/uv/python"),  # Python interpreter managed by uv
+    Path(os.environ.get("UV_PYTHON_INSTALL_DIR", "/opt/uv-python")),  # Python interpreter managed by uv
     Path("/bin/uv"),
     Path("/bin/uvx"),
 ]
@@ -1241,8 +1241,7 @@ def sync_status():
             failed = st.get("folders_failed") or {}
             lines.append(f"User folders being copied from NFS ({fp}): {st.get('folders_done', 0)} of "
                          f"{st.get('folders_total', '?')} done, pass {st.get('full_pull_attempts')}"
-                         + (f", now {st['current_folder']}" if st.get("current_folder") else "")
-                         + (f", {len(failed)} failed so far (retried later)" if failed else "")
+                                      + (f", {len(failed)} failed so far (retried later)" if failed else "")
                          + ". Students whose folder was not copied yet may not see their projects.")
             if st.get("full_pull_error"):
                 lines.append(f"Last folder problem: {st['full_pull_error']}")
@@ -1409,6 +1408,54 @@ def check_sandbox(c, mode):
         except ValueError:
             c.warn(f"{wd.name}: probe failed or timed out (rc={rc}).")
     c.summary = verdict
+    _sandbox_runtime(c)
+
+
+def _sandbox_runtime(c):
+    """State of the sandbox service and of the migration of work/ (absent in old images)."""
+    mig = APP_DIR / ".worksync" / "migration.json"
+    try:
+        st = json.loads(mig.read_text())
+        c.info(f"migration of work/: {st.get('state')}; counts: {st.get('counts')}; unfinished: {st.get('unfinished', 0)}")
+        if st.get("chown_possible") is False:
+            c.warn("work/ cannot be migrated (root cannot chown there): worksync keeps running as root.")
+        elif st.get("counts", {}).get("skipped_hardlinks") or st.get("counts", {}).get("skipped_special"):
+            c.warn("work/ has hard links or special files that were left as they were: nothing legitimate creates them.")
+    except (OSError, ValueError):
+        pass
+    sock = os.environ.get("FPGAEMU_SANDBOX_SOCKET", "/run/fpgaemu/sandbox.sock")
+    if not Path("/run/fpgaemu").is_dir():
+        c.info("sandbox service: not in this image")
+        return
+    import socket as _socket
+    import struct as _struct
+    try:
+        s = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+        s.settimeout(10)
+        s.connect(sock)
+        s.sendall(b'{"op": "status"}\n')
+        buf = b""
+        while len(buf) < 5 or len(buf) < 5 + _struct.unpack("=I", buf[1:5])[0]:
+            d = s.recv(65536)
+            if not d:
+                break
+            buf += d
+        s.close()
+        st = json.loads(buf[5:])
+    except (OSError, ValueError, _struct.error) as e:
+        c.fail(f"sandbox service does not answer: {type(e).__name__}. Compilation and emulation are unavailable.")
+        c.summary = "sandbox service down"
+        return
+    mode = st.get("mode")
+    c.info(f"sandbox: mode {mode}: {st.get('reason')}; self-test: {st.get('tests')}")
+    if mode is None:
+        c.fail("No sandbox mode can be enforced here: compilation, simulation and emulation are refused.")
+    elif mode == "fallback":
+        c.warn("Fallback sandbox: jobs share the PID space. To get the full one, see deploy/README.md."
+               + (f" bwrap said: {st['bwrap_error']}" if st.get("bwrap_error") else ""))
+        if not st.get("tests", {}).get("restricted_filesystem"):
+            c.fail("No Landlock on this kernel: user code sees all world-readable files of the image.")
+    c.summary = f"sandbox mode: {mode}"
 
 
 # (id, title, function, timeout in seconds for quick mode, for full mode)

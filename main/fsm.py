@@ -16,7 +16,8 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from .diagram import GHDL_FLAGS, DiagramError, _run, analyze_files
+from . import sandbox
+from .diagram import GHDL_FLAGS, DiagramError, _exec, analyze_files
 
 EDGE_FUNCTIONS = {"rising_edge", "falling_edge"}
 PROCESS_KINDS = {"sensitized_process_statement", "process_statement"}
@@ -27,10 +28,11 @@ IF_RE = re.compile(r"\b(?:els)?if\b", re.IGNORECASE)
 class _Tree:
     """The XML of one analyzed file, with id lookup and source text access."""
 
-    def __init__(self, xml_text, root_dir):
+    def __init__(self, xml_text, sources):
         self.root = ET.fromstring(xml_text)
         self.ids = {e.get("id"): e for e in self.root.iter() if e.get("id")}
-        self.root_dir = Path(root_dir)
+        # The XML comes from the sandbox: its file names only select among the user's sources.
+        self.sources = {Path(f).name: Path(f) for f in sources}
         self._lines = {}
 
     def ref(self, e, tag):
@@ -39,9 +41,10 @@ class _Tree:
 
     def lines(self, fname):
         if fname not in self._lines:
-            p = Path(fname)
-            p = p if p.is_absolute() else self.root_dir / p
+            p = self.sources.get(Path(fname or "").name)
             try:
+                if p is None:
+                    raise OSError
                 # GHDL counts columns with tabs expanded to 8 (students indent with tabs)
                 self._lines[fname] = [l.expandtabs(8) for l in p.read_text(errors="replace").splitlines()]
             except OSError:
@@ -341,11 +344,13 @@ def extract_fsms(vhd_files, entity_file, entity, workdir):
     if not re.fullmatch(r"\w+", entity):
         raise DiagramError("Invalid entity name.")
     workdir = Path(workdir)
-    failed = analyze_files(vhd_files, workdir)
-    rc, out = _run(["ghdl", "--file-to-xml"] + GHDL_FLAGS + [str(entity_file)], workdir)
+    staged = sandbox.stage_sources(vhd_files, workdir)
+    target = f"{sandbox.SRC_DIR}/{Path(entity_file).name}"
+    failed = analyze_files(staged, workdir)
+    rc, xml, err = _exec(["ghdl", "--file-to-xml"] + GHDL_FLAGS + [target], workdir, 60)
+    out = xml.decode("utf-8", "replace")
     if rc != 0 or not out.lstrip().startswith("<"):
-        msg = out.replace(str(Path(entity_file).parent) + "/", "").strip()
-        if str(entity_file) in failed:
-            msg = failed[str(entity_file)].replace(str(Path(entity_file).parent) + "/", "").strip()
+        msg = failed.get(target) or (out + err.decode("utf-8", "replace"))
+        msg = msg.replace(sandbox.SRC_DIR + "/", "").strip()
         raise DiagramError(f"Could not read '{Path(entity_file).name}':\n{msg[-2000:]}")
-    return _find_fsms(_Tree(out, workdir), entity)
+    return _find_fsms(_Tree(out, vhd_files), entity)

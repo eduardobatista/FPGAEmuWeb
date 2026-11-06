@@ -14,6 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import sandbox
+
 GHDL_FLAGS = ["-fexplicit", "--ieee=synopsys"]   # same as backend/analyze.sh and simulate.sh
 TIMEOUT = 60
 
@@ -80,12 +82,25 @@ def _yosys():
     return str(exe) if exe.exists() else (shutil.which("yowasp-yosys") or "yowasp-yosys")
 
 
-def _run(cmd, cwd, timeout=TIMEOUT):
+def _exec(cmd, cwd, timeout, profile="tool"):
+    """(return code, stdout, stderr) of a command in the sandbox."""
+    job = None
     try:
-        p = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
+        job = sandbox.start(profile, cmd, cwd, timeout=timeout + 5)
+        out, err = job.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         raise DiagramError(f"Timeout ({timeout} s) running {Path(cmd[0]).name}.")
-    return p.returncode, p.stdout.decode("utf-8", "replace")
+    except sandbox.SandboxError as e:
+        raise DiagramError(f"Diagrams are unavailable: {e}.")
+    finally:
+        if job:
+            job.kill()
+    return job.returncode, out, err
+
+
+def _run(cmd, cwd, timeout=TIMEOUT, profile="tool"):
+    rc, out, err = _exec(cmd, cwd, timeout, profile)
+    return rc, (out + err).decode("utf-8", "replace")
 
 
 def analyze_files(vhd_files, workdir):
@@ -110,37 +125,34 @@ def synthesize(vhd_files, top, workdir):
     workdir = Path(workdir)
     if not re.fullmatch(r"\w+", top):
         raise DiagramError("Invalid entity name.")
-    srcdirs = {str(Path(f).parent) + "/" for f in vhd_files}
+    srcdirs = {sandbox.SRC_DIR + "/"}
 
     def clean(msg):
         for d in srcdirs:
             msg = msg.replace(d, "")
-        return msg.replace(str(workdir) + "/", "").strip()
+        return msg.strip()
 
-    failed = analyze_files(vhd_files, workdir)
-    with open(workdir / "design.v", "wb") as v:
-        try:
-            # --latches: student code often infers latches; they can still be drawn.
-            p = subprocess.run(["ghdl", "--synth"] + GHDL_FLAGS + ["--latches", "--out=verilog", top], cwd=workdir,
-                               stdout=v, stderr=subprocess.PIPE, timeout=TIMEOUT)
-        except subprocess.TimeoutExpired:
-            raise DiagramError(f"Timeout ({TIMEOUT} s) synthesizing {top}.")
-    if p.returncode != 0:
+    failed = analyze_files(sandbox.stage_sources(vhd_files, workdir), workdir)
+    # --latches: student code often infers latches; they can still be drawn.
+    rc, verilog, err = _exec(["ghdl", "--synth"] + GHDL_FLAGS + ["--latches", "--out=verilog", top], workdir, TIMEOUT)
+    if rc != 0:
         msg = (f"Synthesis of '{top}' failed (only synthesizable code can be drawn; "
-               f"testbenches with 'wait for' are not):\n" + clean(p.stderr.decode("utf-8", "replace")))
+               f"testbenches with 'wait for' are not):\n" + clean(err.decode("utf-8", "replace")))
         if failed:
             msg += "\n\nFiles of the folder with errors (fix them if the entity uses them):\n" + \
                    "\n".join(clean(out) for out in failed.values())
         raise DiagramError(msg)
-    vfile = workdir / "design.v"
-    vfile.write_text(_escape_verilog_keywords(vfile.read_text(errors="replace")))
+    sandbox.write_job_file(workdir, "design.v", _escape_verilog_keywords(verilog.decode("utf-8", "replace")).encode())
     # YoWASP runs sandboxed: it only sees the current directory, so use relative paths.
     rc, out = _run([_yosys(), "-q", "-p",
                     f"read_verilog design.v; hierarchy -top {top}; proc; opt_clean; write_json design.json"],
-                   workdir, timeout=120)
-    if rc != 0 or not (workdir / "design.json").exists():
+                   workdir, timeout=120, profile="yosys")
+    try:
+        if rc != 0:
+            raise OSError
+        return json.loads(sandbox.read_output(workdir, "design.json"))
+    except (OSError, ValueError):
         raise DiagramError("Netlist generation (yosys) failed:\n" + clean(out))
-    return json.loads((workdir / "design.json").read_text())
 
 
 def display_names(netlist, entities):

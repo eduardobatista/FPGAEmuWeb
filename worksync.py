@@ -41,6 +41,7 @@ from pathlib import Path
 APP_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(APP_DIR))
 from diagnostics import diagnose  # noqa: E402  (stdlib only)
+import migrate_work  # noqa: E402  (stdlib only)
 
 NFS_DIR = APP_DIR / "work"
 LOCAL_DIR = APP_DIR / "cachedwork"
@@ -71,6 +72,11 @@ RSYNC = ["rsync", "-rlt", "--omit-dir-times", "--stats"]
 LOCAL_TMP = STATE_DIR / "tmp"                 # same filesystem as cachedwork/
 NFS_TMP_NAME = ".worksync-tmp"                # inside work/ (same filesystem: atomic rename)
 EXCLUDES.append(NFS_TMP_NAME)
+EXCLUDES.append(migrate_work.MARKER)
+# See select_identity(): extra rsync options while this process still runs as root.
+PULL_OWNER_ARGS = []
+PUSH_OWNER_ARGS = None      # None: not known yet whether chown works on NFS
+EMAIL_RE = re.compile(r"[^\s/\"'<>]+@[^\s/\"'<>]+")
 
 
 def enabled():
@@ -171,7 +177,8 @@ def stats(text):
 
 
 def errors(text, n=8):
-    return [l for l in text.splitlines() if l.startswith("rsync") or "error" in l.lower()][-n:]
+    """Error lines of rsync, for logs and status: the paths in them have the students' e-mails."""
+    return [EMAIL_RE.sub("<user>", l) for l in text.splitlines() if l.startswith("rsync") or "error" in l.lower()][-n:]
 
 
 def excludes():
@@ -278,7 +285,7 @@ def pull_essential():
     save_status(phase="pulling essential files", pull_attempts=attempt, pull_started=now_iso())
     log(f"Phase 1: copying top-level files (databases, keys) NFS -> local, attempt {attempt}...")
     LOCAL_DIR.mkdir(parents=True, exist_ok=True)
-    rc, out, secs = rsync(local_tmp_args() + ["--exclude", "/*/"] + excludes() + [f"{NFS_DIR}/", f"{LOCAL_DIR}/"],
+    rc, out, secs = rsync(local_tmp_args() + PULL_OWNER_ARGS + ["--exclude", "/*/"] + excludes() + [f"{NFS_DIR}/", f"{LOCAL_DIR}/"],
                           ESSENTIAL_TIMEOUT)
     if rc not in (0, 24):
         err = f"timed out after {ESSENTIAL_TIMEOUT}s (NFS stalled?)" if rc is None else \
@@ -330,7 +337,7 @@ def list_nfs_folders():
 def pull_folder(name):
     """Copies one user folder NFS -> local without overwriting newer local files.
     Returns 'ok', 'partial' (some files unreadable) or 'failed'."""
-    rc, out, secs = rsync(local_tmp_args() + ["--update"] + excludes() + [f"{NFS_DIR}/{name}/", f"{LOCAL_DIR}/{name}/"],
+    rc, out, secs = rsync(local_tmp_args() + PULL_OWNER_ARGS + ["--update"] + excludes() + [f"{NFS_DIR}/{name}/", f"{LOCAL_DIR}/{name}/"],
                           FOLDER_TIMEOUT)
     if rc in (0, 24) or rc == 23:
         # Files not changed locally since the app started are identical to NFS: index them.
@@ -373,21 +380,22 @@ def pull_folders_loop():
         for i, name in enumerate(pending):
             if _stop:
                 return
-            save_status(folders_done=len(names) - len(pending) + i, current_folder=name)
+            save_status(folders_done=len(names) - len(pending) + i)
             result, err, secs = pull_folder(name)
             if result == "ok" or (result == "partial" and attempts.get(name, 0) + 1 >= FOLDER_PARTIAL_ACCEPT):
                 mark_folder_done(name)
                 attempts.pop(name, None)
                 if result == "partial":
-                    log(f"Phase 2: folder {name} has unreadable files on NFS; accepted with what could be read ({err}).")
+                    # NFS has files the local copy lacks: reconciliation must not delete them.
+                    save_status(partial_folders=load_status().get("partial_folders", 0) + 1)
+                    log(f"Phase 2: folder #{names.index(name)} has unreadable files on NFS; accepted with what could be read ({err}).")
             else:
                 attempts[name] = attempts.get(name, 0) + 1
-                log(f"Phase 2: folder {name} failed (attempt {attempts[name]}, {secs:.0f}s): {err}")
-                save_status(full_pull_error=f"{now_iso()}: {name}: {err}")
-            save_status(folders_failed={k: v for k, v in attempts.items()})
+                log(f"Phase 2: folder #{names.index(name)} failed (attempt {attempts[name]}, {secs:.0f}s): {err}")
+                save_status(full_pull_error=f"{now_iso()}: folder #{names.index(name)}: {err}")
+            save_status(folders_failed={str(names.index(k)): v for k, v in attempts.items()})
             if (i + 1) % 100 == 0:
                 log(f"Phase 2: {len(names) - len(pending) + i + 1}/{len(names)} folders copied.")
-        save_status(current_folder=None)
         if [n for n in names if n not in folders_done()]:
             _sleep(60)
 
@@ -459,7 +467,7 @@ def _push_dbs(st, tmp, timeout):
         return st.get("db_sigs", {}), [], 0, ""
     if not changed:
         return sigs, [], 0, ""
-    rc, out, _ = rsync(tmp + [f"{SNAP_DIR}/" + n for n in changed] + [f"{NFS_DIR}/"], timeout)
+    rc, out, _ = rsync(tmp + push_owner_args() + [f"{SNAP_DIR}/" + n for n in changed] + [f"{NFS_DIR}/"], timeout)
     return sigs, changed, rc, out
 
 
@@ -520,7 +528,7 @@ def push(timeout=PUSH_TIMEOUT, reason="periodic"):
     if changed:
         listfile = _write_list(changed)
         rc, out, _ = run(["rsync", "-lt", "--omit-dir-times", "--from0", f"--files-from={listfile}",
-                          "--ignore-missing-args"] + tmp + [f"{LOCAL_DIR}/", f"{NFS_DIR}/"], timeout)
+                          "--ignore-missing-args"] + push_owner_args() + tmp + [f"{LOCAL_DIR}/", f"{NFS_DIR}/"], timeout)
         os.unlink(listfile)
         if rc not in (0, 24):
             return _push_failed(st, "push timed out after %ds (NFS stalled?)" % timeout if rc is None else
@@ -573,8 +581,11 @@ def _reconcile(timeout, reason):
     phase2_done = st.get("full_pull_phase") == "done"
     done = folders_done()
     args = nfs_tmp_args() + excludes() + ["--exclude", "/*.sqlite", "--exclude", "/*.db"]
-    if phase2_done:
+    args += push_owner_args()
+    if phase2_done and not st.get("partial_folders"):
         args += ["--delete", f"--max-delete={MAX_DELETE}"]
+    elif phase2_done:
+        log(f"Reconciliation without deletions: {st['partial_folders']} folders were copied only in part from NFS.")
     else:
         # Folders not copied from NFS yet: leave them alone (local copy incomplete).
         args += ["--update"] + [a for n in os.listdir(LOCAL_DIR)
@@ -623,7 +634,48 @@ def _sleep(seconds):
         time.sleep(1)
 
 
+def select_identity():
+    """Starts as root; continues as the web app's user once work/ belongs to it.
+
+    The first time a server runs this version, its work/ still has folders of root. Without root
+    they could not be read, and the local copy would miss files (which reconciliation would then
+    delete on NFS). So until migrate_work.py finishes and leaves its marker on NFS, this process
+    keeps root, as before, but gives the files the right owner. The next start drops root."""
+    global PULL_OWNER_ARGS
+    if os.geteuid() != 0:
+        return
+    uid, gid = migrate_work.web_ids()
+    done = not enabled()
+    if not done:
+        rc, _, _ = run(["test", "-e", str(NFS_DIR / migrate_work.MARKER)], 60)
+        done = rc == 0
+    if done:
+        run(["chown", "-R", "--no-dereference", f"{uid}:{gid}", str(STATE_DIR)], 300)
+        os.setgroups(os.getgrouplist(migrate_work.WEB_USER, gid))
+        os.setgid(gid)
+        os.setuid(uid)
+        os.umask(0o077)
+        log("work/ is migrated: running without root.")
+    else:
+        PULL_OWNER_ARGS = [f"--chown={uid}:{gid}", "--chmod=go-rwx"]
+        log("work/ is not migrated yet: running as root, see the migration status in the diagnostics.")
+
+
+def push_owner_args():
+    """As root: new files on NFS get the web app's user, if NFS lets root do that (no root_squash)."""
+    global PUSH_OWNER_ARGS
+    if not PULL_OWNER_ARGS:
+        return []
+    if PUSH_OWNER_ARGS is None:
+        rc, _, _ = run(["/usr/bin/python3", str(APP_DIR / "migrate_work.py"), "probe"], 60)
+        if rc is None:
+            return []     # stalled: ask again on the next push
+        PUSH_OWNER_ARGS = PULL_OWNER_ARGS if rc == 0 else PULL_OWNER_ARGS[1:]
+    return PUSH_OWNER_ARGS
+
+
 def daemon():
+    select_identity()
     if not enabled():
         log("ENVCACHEDWORK is not True: the app works directly on work/; nothing to sync.")
         diagnose.say(f"Diagnostics page: http(s)://<server>/diagnostics?key={diagnose.access_key()}")
@@ -638,7 +690,7 @@ def daemon():
         log("Container restarted: the local copy is the current one; saving its changes to NFS.")
         push(reason="restart")
     else:
-        save_status(pull_attempts=0, consecutive_push_failures=0, db_sigs={}, full_pull_phase="pending",
+        save_status(pull_attempts=0, consecutive_push_failures=0, db_sigs={}, full_pull_phase="pending", partial_folders=0,
                     full_pull_attempts=0, folders_failed={})
         while not _stop and not pull_essential():
             _sleep(30)
@@ -663,6 +715,12 @@ def daemon():
 
 
 def wait_ready(cmd):
+    if not enabled() and os.geteuid() != 0 and not migrate_work.READY.exists():
+        # The app works directly on work/: it needs the migration done.
+        diagnose.serve_page(lambda: f"FPGAEmu is starting: preparing the data. {migrate_work.status_line()}",
+                            stop=migrate_work.READY.exists,
+                            public_html="<h1>FPGAEmu is starting</h1><p>Please try again in a few minutes.</p>",
+                            create_key=False)
     if enabled() and not READY.exists():
         def banner():
             st = load_status()

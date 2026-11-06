@@ -20,22 +20,17 @@ import sys
 
 MAINPATH = os.path.dirname(os.path.abspath(__file__))
 # print('Compiling the backend...')
-ghwhierarchypath = Path(MAINPATH,'backend','ghwhierarchy.sh')
-ghwhierarchypath.chmod(0o744)
-ghwsignalspath = Path(MAINPATH,'backend','ghwgetsignals.sh')
-ghwsignalspath.chmod(0o744)
-analyzerpath = Path(MAINPATH,'backend','analyze.sh')
-analyzerpath.chmod(0o744)
-simulatorpath = Path(MAINPATH,'backend','simulate.sh')
-simulatorpath.chmod(0o744)
-backendcompilerpath = Path(MAINPATH,'backend','compilebackend.sh')
-backendcompilerpath.chmod(0o744)
-subprocess.Popen(
-                    [backendcompilerpath],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=Path(MAINPATH,'backend') 
-            )
+# In the container the backend is compiled in the image (backend/setup-image.sh) and this user
+# cannot write there. This is for running from a checkout.
+if os.access(Path(MAINPATH,'backend'),os.W_OK):
+    for script in ('ghwhierarchy.sh','ghwgetsignals.sh','analyze.sh','simulate.sh','compilebackend.sh'):
+        Path(MAINPATH,'backend',script).chmod(0o755)
+    subprocess.Popen(
+                        [Path(MAINPATH,'backend','compilebackend.sh')],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        cwd=Path(MAINPATH,'backend') 
+                )
 # print('Backend compiled.\nStarting server...')
 
 cwork = os.environ.get("ENVCACHEDWORK", "False")

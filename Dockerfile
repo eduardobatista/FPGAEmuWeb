@@ -12,6 +12,9 @@ EXPOSE 5000
 # EXPOSE 6379
 
 COPY --from=ghcr.io/astral-sh/uv:0.8.14 /uv /uvx /bin/
+# Not under /root: the app does not run as root, and /root is closed (mode 0700).
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+ENV HUEY_DB=/home/fpgaemuweb/.worksync/huey.db
 COPY ./ /home/fpgaemuweb/
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginxdefault.conf /etc/nginx/sites-enabled/default
@@ -20,7 +23,8 @@ WORKDIR /home/fpgaemuweb
 RUN uv sync --locked && \
     ln -sf /home/surferdist /home/fpgaemuweb/static/surfer_wasm/dist
 # Yosys (block diagrams) runs as WebAssembly: compile it once here, not on the first diagram.
-RUN .venv/bin/yowasp-yosys -V
+RUN XDG_CACHE_HOME=/opt/fpgaemu-cache .venv/bin/yowasp-yosys -V && chmod -R a+rX /opt/fpgaemu-cache /opt/uv-python .venv
+RUN backend/setup-image.sh
 # COPY ./celerybash /usr/local/bin/celery
 # RUN ln -s /home/fpgaemuweb/.venv/bin/celery /usr/local/bin/celery
 
@@ -44,5 +48,7 @@ RUN touch /home/stdout.err
 ARG GIT_COMMIT
 RUN GIT_COMMIT=${GIT_COMMIT} python3 /home/fpgaemuweb/diagnostics/diagnose.py manifest
 
+# Starts as root (no USER here) and supervisord drops privileges. This also keeps "docker exec"
+# running as root, which the backup of work/ on the production server relies on.
 # ENTRYPOINT ["/usr/bin/supervisord","-c","/home/fpgaemuweb/supervisord.conf"]
 ENTRYPOINT [ "/home/fpgaemuweb/entrypoint.sh" ]
