@@ -115,6 +115,20 @@ sleep 15; docker exec $C test -f /home/fpgaemuweb/work/aluno1@example.invalid/pr
 docker exec $C stat -c "%U %a" /home/fpgaemuweb/work/dbb.sqlite | sed 's/^/database on NFS: /'
 echo "=== development switch cannot reach the container"
 docker run --rm -e FPGAEMU_SANDBOX=off --entrypoint sh $IMG -c '. /dev/null; grep -c "unset FPGAEMU_SANDBOX" /home/fpgaemuweb/entrypoint.sh'
+echo "=== diagnostics: a service still starting is not a FAIL, one that is down is"
+docker run --rm --entrypoint sh $IMG -c '
+  install -d -o fpgarun -g fpgaweb -m 0750 /run/fpgaemu
+  CHK="import sys; sys.path.insert(0,\"/home/fpgaemuweb\")
+from diagnostics import diagnose as d
+c=d.Check(\"sandbox\",\"x\"); d._sandbox_runtime(c); print(c.status,c.summary)"
+  FPGAEMU_DIAG_SANDBOX_WAIT=2 setpriv --reuid=fpgaweb --regid=fpgaweb --init-groups python3 -c "$CHK" | sed "s/^/down: /"
+  ( sleep 6; exec setpriv --reuid=fpgarun --regid=fpgajob --init-groups env -i PATH=/usr/bin:/bin python3 /home/fpgaemuweb/backend/sandboxd.py >/dev/null ) &
+  setpriv --reuid=fpgaweb --regid=fpgaweb --init-groups python3 -c "$CHK" | sed "s/^/starting: /"
+  kill %1 2>/dev/null' 2>&1 | cut -c1-120 | tee /tmp/ds.$$
+grep -q '^down: fail' /tmp/ds.$$ && echo "PASS real outage is a FAIL" || { echo "FAIL outage not reported"; fail=1; }
+grep -q '^starting: \(ok\|info\|warn\)' /tmp/ds.$$ && echo "PASS waits for the service" || { echo "FAIL false FAIL while starting"; fail=1; }
+rm -f /tmp/ds.$$
+
 echo "=== migration when root cannot chown (root_squash): nothing changes, status tells"
 docker run --rm -v $V:/x --entrypoint sh $IMG -c 'mkdir -p /home/fpgaemuweb/work/f@example.invalid; echo s > /home/fpgaemuweb/work/f@example.invalid/a; chmod 644 /home/fpgaemuweb/work/f@example.invalid/a
   setpriv --bounding-set=-chown --inh-caps=-chown python3 /home/fpgaemuweb/migrate_work.py probe; echo "probe rc=$?"

@@ -1414,6 +1414,9 @@ def check_sandbox(c, mode):
     _sandbox_runtime(c)
 
 
+SANDBOX_WAIT = int(os.environ.get("FPGAEMU_DIAG_SANDBOX_WAIT", "60"))
+
+
 def _sandbox_runtime(c):
     """State of the sandbox service and of the migration of work/ (absent in old images)."""
     mig = APP_DIR / ".worksync" / "migration.json"
@@ -1438,9 +1441,20 @@ def _sandbox_runtime(c):
     import socket as _socket
     import struct as _struct
     try:
-        s = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
-        s.settimeout(10)
-        s.connect(sock)
+        # The check run by entrypoint.sh starts before supervisord: give the service time to come up.
+        # (a server without cache has no later automatic run to replace a false FAIL)
+        deadline = time.monotonic() + SANDBOX_WAIT
+        while True:
+            s = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+            s.settimeout(10)
+            try:
+                s.connect(sock)
+                break
+            except (FileNotFoundError, ConnectionRefusedError):
+                s.close()
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(2)
         s.sendall(b'{"op": "status"}\n')
         buf = b""
         while len(buf) < 5 or len(buf) < 5 + _struct.unpack("=I", buf[1:5])[0]:
